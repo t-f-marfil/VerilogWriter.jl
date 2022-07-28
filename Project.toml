@@ -1,0 +1,13 @@
+name = "VerilogWriter"
+uuid = "609488a3-1988-4612-be37-e0d5b22d8f97"
+authors = ["t-f-marfil and contributors"]
+version = "0.1.0"
+
+[compat]
+julia = "1.7"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
