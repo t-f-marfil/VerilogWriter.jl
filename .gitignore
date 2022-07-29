@@ -1,4 +1,8 @@
 /Manifest.toml
+
 /src/test.ipynb
+/src/test.v
+/src/test.sv
+
 /docs/*
 !/docs/build

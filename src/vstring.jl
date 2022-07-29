@@ -18,10 +18,16 @@ function Base.string(x::Portdirec)
 end
 
 function Base.string(x::Oneport)
-    if x.width > 1
-        txt = string(string(x.direc), " [$(x.width-1):0] ", x.name)
+    if x.wtype == wire 
+        swtype = ""
     else
-        txt = string(string(x.direc), " ", x.name)
+        swtype = string(" ", string(x.wtype))
+    end
+
+    if x.width > 1
+        txt = string(string(x.direc), swtype, " [$(x.width-1):0] ", x.name)
+    else
+        txt = string(string(x.direc), swtype, " ", x.name)
     end
     return txt
 end
@@ -37,26 +43,6 @@ function Base.string(x::Ports)
     return txt
 end
 
-# function Base.string(x::Lhs)
-#     if x.msb < 0 
-#         txt = x.name 
-#     elseif x.msb == x.lsb 
-#         txt = string(x.name, "[", string(x.msb), "]")
-#     else
-#         txt = string(x.name, "[", string(x.msb), ":", string(x.lsb), "]")
-#     end
-
-#     return txt 
-# end
-
-# wunaopdict = Dict([
-#     neg => :~
-# ])
-# wbinopdict = Dict([
-#     add => :+, 
-#     lshift => :<<,
-#     rshift => :>>
-# ])
 function Base.string(x::Wireexpr)
     if x.operation == id 
         txt = x.name 
@@ -148,6 +134,23 @@ end
 
 function Base.string(x::Assign) 
     return string("assign ", string(x.lhs), " = ", string(x.rhs), ";")
+end
+
+function Base.string(x::Onedecl)
+    if x.width == 1
+        widtxt = ""
+    else
+        widtxt = "[$(x.width-1):0] "
+    end
+    return string(string(x.wtype), " ", widtxt, x.name, ";")
+end
+
+function Base.string(x::Decls)
+    if length(x.val) == 0
+        txt = ""
+    else
+        txt = reduce(newlineconcat, string.(x.val))
+    end
 end
 
 function Base.string(x::Vmodule)

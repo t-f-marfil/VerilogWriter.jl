@@ -9,16 +9,22 @@ struct Parameters
     val::Vector{Oneparam}
 end
 
+"Port direction object."
 @enum Portdirec pin pout
 
+@enum Wiretype wire reg logic 
+
+"Represent a single port declaration."
 struct Oneport
     direc::Portdirec
+    wtype::Wiretype
     width::Int
     name::String
 
-    Oneport(d, w, n) = w > 0 ? new(d, w, n) : error("width should be positive (in Oneport)")
+    # Oneport(d, t, w, n) = w > 0 ? new(d, t, w, n) : error("width should be positive (in Oneport)")
 end
 
+"Gather multiple ports."
 struct Ports
     val::Vector{Oneport}
 end
@@ -56,6 +62,12 @@ Wire expressions in verilog.
 
 Contains unnecessary information to handle all the wires
 in the same type. 
+
+One motivation that I avoid making different types of 
+wires (e.g. using parametric types) is that it seemed
+beneficial to have multiple wires in a vector, and that 
+it is sometime a disadvantage in performance to use 
+abstract type when creating vectors.
 """
 struct Wireexpr
     # name == "" for no name (intermediate node)
@@ -67,6 +79,7 @@ struct Wireexpr
     value::Int 
 end
 
+"Type of always blocks."
 @enum Atype ff comb aunknown
 
 "Assign statement inside always blocks."
@@ -79,7 +92,8 @@ end
 """
 Container of one if-block (, one elseif block, or one else block).
 
-Parametrized by `T` only for mutual recursion with `Ifelseblock`.
+Parametrized by `T` only for mutual recursion with `Ifelseblock`, 
+thus used as `Ifcontent_inner{Ifelseblock}`, which is aliased as `Ifcontent`.
 """
 struct Ifcontent_inner{T}
     """
@@ -87,6 +101,9 @@ struct Ifcontent_inner{T}
 
     Prioritizing assigns over ifelseblock may be good 
     thinking the case of always_comb (default value is often useful).
+
+    May better obtain the order in which assigns and ifelseblocks
+    are added?
     """
     assigns::Vector{Alassign}
     """
@@ -113,7 +130,10 @@ end
 
 const Ifcontent = Ifcontent_inner{Ifelseblock}
 
+"Edge in sensitivity lists."
 @enum Edge posedge negedge unknownedge
+
+"Represent always blocks."
 mutable struct Alwayscontent
     atype::Atype 
     edge::Edge
@@ -125,6 +145,17 @@ end
 struct Assign 
     lhs::Wireexpr
     rhs::Wireexpr
+end
+
+
+struct Onedecl
+    wtype::Wiretype
+    width::Int
+    name::String 
+end
+
+struct Decls 
+    val::Vector{Onedecl}
 end
 
 struct Vmodule 
