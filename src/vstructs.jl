@@ -12,23 +12,15 @@ end
 @enum Portdirec pin pout
 
 struct Oneport
-    name::String
-    width::Int
     direc::Portdirec
+    width::Int
+    name::String
 
-    Oneport(n, w, d) = w > 0 ? new(n, w, d) : error("width should be positive (in Oneport)")
+    Oneport(d, w, n) = w > 0 ? new(d, w, n) : error("width should be positive (in Oneport)")
 end
 
 struct Ports
     val::Vector{Oneport}
-end
-
-"Expression appear at the left hand side in verilog. "
-struct Lhs
-    # msb == lsb == -1 for no slice
-    name::String 
-    msb::Int 
-    lsb::Int
 end
 
 "Verilog operators."
@@ -42,6 +34,8 @@ end
     uminus
     
     id 
+    slice
+    literal
     hex 
     dec
 end
@@ -68,8 +62,6 @@ struct Wireexpr
     # -1 for Int field that should not contain any data
     operation::Wireop 
     name::String
-    msb::Int 
-    lsb::Int 
     subnodes::Vector{Wireexpr}
     bitwidth::Int
     value::Int 
@@ -79,7 +71,7 @@ end
 
 "Assign statement inside always blocks."
 struct Alassign 
-    lhs::Lhs 
+    lhs::Wireexpr
     rhs::Wireexpr
     atype::Atype
 end
@@ -131,7 +123,7 @@ mutable struct Alwayscontent
 end
 
 struct Assign 
-    lhs::Lhs 
+    lhs::Wireexpr
     rhs::Wireexpr
 end
 

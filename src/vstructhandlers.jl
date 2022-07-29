@@ -1,6 +1,6 @@
-function Base.convert(::Type{Lhs}, x::Wireexpr)
-    return Lhs(x.name, x.msb, x.lsb)
-end
+# function Base.convert(::Type{Lhs}, x::Wireexpr)
+#     return Lhs(x.name, x.msb, x.lsb)
+# end
 
 """
 ifadd!(ifblock::Ifelseblock, cond, ifcont)

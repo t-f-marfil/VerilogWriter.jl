@@ -18,7 +18,11 @@ function Base.string(x::Portdirec)
 end
 
 function Base.string(x::Oneport)
-    txt = string(string(x.direc), " [$(x.width-1):0] $(x.name)")
+    if x.width > 1
+        txt = string(string(x.direc), " [$(x.width-1):0] ", x.name)
+    else
+        txt = string(string(x.direc), " ", x.name)
+    end
     return txt
 end
 
@@ -33,17 +37,17 @@ function Base.string(x::Ports)
     return txt
 end
 
-function Base.string(x::Lhs)
-    if x.msb < 0 
-        txt = x.name 
-    elseif x.msb == x.lsb 
-        txt = string(x.name, "[", string(x.msb), "]")
-    else
-        txt = string(x.name, "[", string(x.msb), ":", string(x.lsb), "]")
-    end
+# function Base.string(x::Lhs)
+#     if x.msb < 0 
+#         txt = x.name 
+#     elseif x.msb == x.lsb 
+#         txt = string(x.name, "[", string(x.msb), "]")
+#     else
+#         txt = string(x.name, "[", string(x.msb), ":", string(x.lsb), "]")
+#     end
 
-    return txt 
-end
+#     return txt 
+# end
 
 # wunaopdict = Dict([
 #     neg => :~
@@ -55,21 +59,24 @@ end
 # ])
 function Base.string(x::Wireexpr)
     if x.operation == id 
-        if x.msb < 0
-            txt = x.name 
-        elseif x.msb == x.lsb 
-            txt = string(x.name, "[", string(x.msb), "]")
+        txt = x.name 
+    elseif x.operation == literal 
+        txt = string(x.value)
+    elseif x.operation == slice 
+        if length(x.subnodes) == 1 
+            txt = string(x.name, "[", string(x.subnodes[1]), "]")
         else
-            txt = string(x.name, "[", string(x.msb), ":", string(x.lsb), "]")
+            @assert length(x.subnodes) == 2
+            txt = string(x.name, "[", string(x.subnodes[1]), ":", string(x.subnodes[2]), "]",)
         end
     elseif x.operation in keys(wunaopdict)
         txt = string(wunaopdict[x.operation], string(x.subnodes[begin]))
     elseif x.operation in keys(wbinopdict)
         txt = string("(", string(x.subnodes[1]), spacewrap(wbinopdict[x.operation]), string(x.subnodes[2]), ")")
-    elseif x.operation == dec 
-        txt = string(string(x.bitwidth), "'d", string(x.value))
+    # elseif x.operation == dec 
+    #     txt = string(string(x.bitwidth), "'d", string(x.value))
     else
-        txt = ""
+        throw(error("string undef with $(x.operation)."))
     end
 
     return txt 
