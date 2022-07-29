@@ -25,3 +25,7 @@ function vshow(x)
     println(string(x))
     println(string("type: ", typeof(x)))
 end
+
+function vshow(x::Vector{T}) where {T}
+    vshow.(x)
+end

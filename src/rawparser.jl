@@ -378,14 +378,33 @@ function ralways(expr::Ref{T}) where {T}
 end
 
 
-function pportoneline(expr::Expr, ::Symbol)
+function portoneline(expr::Expr)
+    return portoneline(expr, expr.args[3:end]...)
+end
+
+"""
+    portoneline(expr::Expr, ::Symbol)
+
+Parse one port.
+"""
+function portoneline(expr::Expr, ::Symbol)
     direc = expr.args[1] == Symbol("@in") ? pin : (
         @assert expr.args[1] == Symbol("@out"); pout)
     name = string(expr.args[3])
     return [Oneport(direc, name)]
 end
 
-function pportoneline(expr::Expr, ::Expr)
+"""
+    portoneline(expr::Expr, ::Expr)
+
+Parse multiple wires with the same port direction.
+
+When given e.g.`@in din1, din2` create each port for 
+din1 and din2 both with the direction `input`.
+Note that `@in din1, din2` is in AST `(@in (din1, din2))`
+while `@in n din` is `(@in n din)`.
+"""
+function portoneline(expr::Expr, ::Expr)
     direc = expr.args[1] == Symbol("@in") ? pin : (
         @assert expr.args[1] == Symbol("@out"); pout)
     args = expr.args[3].args 
@@ -393,7 +412,52 @@ function pportoneline(expr::Expr, ::Expr)
     return [Oneport(direc, string(sym)) for sym in args]
 end
 
+"""
+    portoneline(expr::Expr, ::Int, ::Symbol)
+
+Parse one port whose width is more than one.
+"""
+function portoneline(expr::Expr, ::Int, ::Symbol)
+    direc = expr.args[1] == Symbol("@in") ? pin : (
+        @assert expr.args[1] == Symbol("@out"); pout)
+    width = expr.args[3]
+    name = string(expr.args[4])
+
+    return [Oneport(direc, width, name)]
+end
+
+"""
+    portoneline(expr::Expr, ::Int, ::Expr)
+
+Parse multiple ports whose width is more than one.
+"""
+function portoneline(expr::Expr, ::Int, ::Expr)
+    direc = expr.args[1] == Symbol("@in") ? pin : (
+        @assert expr.args[1] == Symbol("@out"); pout)
+    width = expr.args[3]
+    args = expr.args[4].args
+
+    return [Oneport(direc, width, string(sym)) for sym in args]
+end
+
+function portoneline(expr::Ref{T}) where {T}
+    return portoneline(expr[])
+end
+
+macro portoneline(arg)
+    return Expr(:call, :portoneline, Ref(arg))
+end
+
+
 function ports(expr::Expr)
+    return ports(expr, Val(expr.head))
+end
+
+function ports(expr::Expr, ::Val{:macrocall})
+    return Ports(portoneline(expr))
+end
+
+function ports(expr::Expr, ::Val{:block})
     @assert expr.head == :block 
     anslist = Oneport[]
 
@@ -402,9 +466,137 @@ function ports(expr::Expr)
         if item isa LineNumberNode 
             lineinfo = item
         else
-            push!(anslist, pportoneline(item, item.args[3])...)
+            push!(anslist, portoneline(item)...)
         end
     end
 
     return Ports(anslist)
+end
+
+function ports(expr::Ref{T}) where {T}
+    return ports(expr[])
+end
+
+macro ports(arg)
+    return Expr(:call, :ports, Ref(arg))
+end
+
+
+function decloneline(expr::Expr)
+    return decloneline(expr, expr.args[3:end]...)
+end
+
+"""
+    decloneline(expr::Expr, ::Symbol)
+
+Parse one declaration.
+"""
+function decloneline(expr::Expr, ::Symbol)
+    dtypesym = expr.args[1]
+    if dtypesym == Symbol("@wire")
+        dtype = wire
+    elseif dtypesym == Symbol("@reg")
+        dtype = reg
+    else
+        @assert dtypesym == Symbol("@logic")
+        dtype = logic
+    end
+    name = string(expr.args[3])
+    return [Onedecl(dtype, name)]
+end
+
+"""
+    decloneline(expr::Expr, ::Expr)
+
+Parse multiple wires with the same wiretype (`wire`, `reg`, and `logic`).
+"""
+function decloneline(expr::Expr, ::Expr)
+    dtypesym = expr.args[1]
+    if dtypesym == Symbol("@wire")
+        dtype = wire
+    elseif dtypesym == Symbol("@reg")
+        dtype = reg
+    else
+        @assert dtypesym == Symbol("@logic")
+        dtype = logic
+    end
+    args = expr.args[3].args 
+
+    return [Onedecl(dtype, string(sym)) for sym in args]
+end
+
+"""
+    decloneline(expr::Expr, ::Int, ::Symbol)
+
+Parse one declaration whose width is more than one.
+"""
+function decloneline(expr::Expr, ::Int, ::Symbol)
+    dtypesym = expr.args[1]
+    if dtypesym == Symbol("@wire")
+        dtype = wire
+    elseif dtypesym == Symbol("@reg")
+        dtype = reg
+    else
+        @assert dtypesym == Symbol("@logic")
+        dtype = logic
+    end
+    width = expr.args[3]
+    name = string(expr.args[4])
+
+    return [Onedecl(dtype, width, name)]
+end
+
+"""
+    decloneline(expr::Expr, ::Int, ::Expr)
+
+Parse multiple declarations whose width is more than one.
+"""
+function decloneline(expr::Expr, ::Int, ::Expr)
+    dtypesym = expr.args[1]
+    if dtypesym == Symbol("@wire")
+        dtype = wire
+    elseif dtypesym == Symbol("@reg")
+        dtype = reg
+    else
+        @assert dtypesym == Symbol("@logic")
+        dtype = logic
+    end
+    width = expr.args[3]
+    args = expr.args[4].args
+
+    return [Onedecl(dtype, width, string(sym)) for sym in args]
+end
+
+
+
+function decls(expr::Expr)
+    return decls(expr, Val(expr.head))
+end
+
+function decls(expr::Expr, ::Val{:macrocall})
+    return Decls(decloneline(expr))
+end
+
+function decls(expr::Expr, ::Val{:block})
+    @assert expr.head == :block 
+    anslist = Onedecl[]
+
+    lineinfo = LineNumberNode(0, "noinfo")
+    for item in expr.args 
+        if item isa LineNumberNode 
+            lineinfo = item
+        else
+            push!(anslist, decloneline(item)...)
+        end
+    end
+
+    return Decls(anslist)
+end
+
+function decls(expr::Ref{T}) where {T}
+    return decls(expr[])
+end
+
+macro decls(arg)
+    return Expr(:call, :decls, Ref(arg))
 end

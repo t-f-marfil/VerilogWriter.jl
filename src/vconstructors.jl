@@ -1,8 +1,14 @@
+Oneport(d::Portdirec, w::Int, n::String) = Oneport(d, wire, w, n)
 Oneport(d::Portdirec, n::String) = Oneport(d, 1, n)
 Oneport(d::Portdirec, n::Ref{Symbol}) = Oneport(d, string(n[]))
 Oneport(d::Portdirec, w::Int, n::Ref{Symbol}) = Oneport(d, w, string(n[]))
 
 Ports(args::Oneport...) = Ports([args...])
+
+Onedecl(t::Wiretype, n::String) = Onedecl(t, 1, n)
+Onedecl(t::Wiretype, n::Ref{Symbol}) = Onedecl(t, string(n[]))
+Onedecl(t::Wiretype, w::Int, n::Ref{Symbol}) = Onedecl(t, w, string(n[]))
+
 
 """
     Wireexpr(n::String, msb::T1, lsb::T2) where {T1 <: Union{Int, Wireexpr}, T2 <: Union{Int, Wireexpr}}
