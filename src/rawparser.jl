@@ -1,10 +1,19 @@
 """
-    roneblock(expr::Symbol)
+    roneblock(expr::T) where {T <: Union{Symbol, Int}}
 
 Convert `expr` to `Wireexpr`.
 """
 function roneblock(expr::T) where {T <: Union{Symbol, Int}}
-    return Wireexpr(string(expr))
+    return Wireexpr(expr)
+end
+
+"""
+    roneblock(expr::UInt8)
+
+UInt8 may be given when user writes e.g. 0b10, 0x1f.
+"""
+function roneblock(expr::UInt8)
+    return Wireexpr(Int(expr))
 end
 
 # """
@@ -366,4 +375,36 @@ end
 
 function ralways(expr::Ref{T}) where {T}
     ralways(expr[])
+end
+
+
+function pportoneline(expr::Expr, ::Symbol)
+    direc = expr.args[1] == Symbol("@in") ? pin : (
+        @assert expr.args[1] == Symbol("@out"); pout)
+    name = string(expr.args[3])
+    return [Oneport(direc, name)]
+end
+
+function pportoneline(expr::Expr, ::Expr)
+    direc = expr.args[1] == Symbol("@in") ? pin : (
+        @assert expr.args[1] == Symbol("@out"); pout)
+    args = expr.args[3].args 
+
+    return [Oneport(direc, string(sym)) for sym in args]
+end
+
+function ports(expr::Expr)
+    @assert expr.head == :block 
+    anslist = Oneport[]
+
+    lineinfo = LineNumberNode(0, "noinfo")
+    for item in expr.args 
+        if item isa LineNumberNode 
+            lineinfo = item
+        else
+            push!(anslist, pportoneline(item, item.args[3])...)
+        end
+    end
+
+    return Ports(anslist)
 end

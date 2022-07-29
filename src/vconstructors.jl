@@ -1,42 +1,59 @@
-"""
-    Lhs(n::String, msb::Int)
+Oneport(d::Portdirec, n::String) = Oneport(d, 1, n)
+Oneport(d::Portdirec, n::Ref{Symbol}) = Oneport(d, string(n[]))
+Oneport(d::Portdirec, w::Int, n::Ref{Symbol}) = Oneport(d, w, string(n[]))
 
-Slice one bit of wire `n`.
-"""
-Lhs(n::String, msb::Int) = Lhs(n, msb, msb)
-"""
-    Lhs(n::String)
-
-Case where no slice is needed (use all bits in `n`).
-"""
-Lhs(n::String) = Lhs(n, -1)
+Ports(args::Oneport...) = Ports([args...])
 
 """
-    Wireexpr(n::String, msb::Int, lsb::Int)
+    Wireexpr(n::String, msb::T1, lsb::T2) where {T1 <: Union{Int, Wireexpr}, T2 <: Union{Int, Wireexpr}}
 
 Slice of `n` from `msb` to `lsb`.
+
+Index for wires can be Int or Wireexpr.
 """
-Wireexpr(n::String, msb::Int, lsb::Int) = Wireexpr(id, n, msb, lsb, [], -1, -1)
+Wireexpr(n::String, msb::T1, lsb::T2) where {
+    T1 <: Union{Int, Wireexpr}, T2 <: Union{Int, Wireexpr}
+} = Wireexpr(slice, n, [Wireexpr(msb), Wireexpr(lsb)], -1, -1)
 """
     Wireexpr(n:String, msb::Int)
 
 Get one bit at `msb` from `n`.
 """
-Wireexpr(n::String, msb::Int) = Wireexpr(n, msb, msb)
+Wireexpr(n::String, msb::T) where {T <: Union{Int, Wireexpr}
+} = Wireexpr(slice, n, [Wireexpr(msb)], -1, -1)
 """
     Wireexpr(n::String)
 
 Case where no slice is needed.
 """
-Wireexpr(n::String) = Wireexpr(n, -1)
+Wireexpr(n::String) = Wireexpr(id, n, [], -1, -1)
+"""
+    Wireexpr(n::Symbol)
+
+Convert Symbol to String and construct Wireexpr.
+"""
+Wireexpr(n::Symbol) = Wireexpr(string(n))
+"""
+    Wireexpr(n::Int)
+
+Literal of Integer.
+"""
+Wireexpr(n::Int) = Wireexpr(literal, "", [], -1, n)
+"""
+    Wireexpr(expr::Wireexpr)
+
+Return the argument itself, used in slice construction
+to make it possible to apply the same method to msb as Int and as Wireexpr.
+"""
+Wireexpr(expr::Wireexpr) = expr
 """
     Wireexpr()
 
-Create empty expression.
+Create an empty expression.
 """
 Wireexpr() = Wireexpr("")
 
-Wireexpr(op::Wireop, v::Vector{Wireexpr}) = Wireexpr(op, "", -1, -1, v, -1, -1)
+Wireexpr(op::Wireop, v::Vector{Wireexpr}) = Wireexpr(op, "", v, -1, -1)
 Wireexpr(op::Wireop, uno::Wireexpr) = Wireexpr(op, [uno])
 Wireexpr(op::Wireop, uno::Wireexpr, dos::Wireexpr) = Wireexpr(op, [uno, dos])
 
