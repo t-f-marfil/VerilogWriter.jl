@@ -1,6 +1,6 @@
 module VerilogWriter
 
-export vshow, ralways, addatype!
+export vshow, always, @always, ralways
 
 include("textutils.jl")
 include("vstructs.jl")

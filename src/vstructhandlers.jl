@@ -19,3 +19,16 @@ function addatype!(x::Alwayscontent)
     x.atype = atypealways(x)
     return x 
 end
+
+function always(expr::Expr)
+    alcont = ralways(expr)
+    return addatype!(alcont)
+end
+
+macro always(arg)
+    return Expr(:call, always, Ref(arg))
+end
+
+function always(expr::Ref{T}) where {T}
+    always(expr[])
+end
