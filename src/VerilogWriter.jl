@@ -14,9 +14,9 @@ export
     Vmodule
 
 export
-    portoneline, ports,
-    decloneline, decls,
-    roneblock, always
+    portoneline, ports, @portoneline, @ports,
+    decloneline, decls, @decloneline, @decls,
+    roneblock, always, @roneblock, @always
 
 export 
     ifadd!
