@@ -25,7 +25,7 @@ unaopoverload()
 function binopoverload()
     for op in keys(wbinopdict)
         fovload = """
-        function Base.:$(wbinopdict[op])(uno::Wireexpr, dos::Wireexpr)
+        function Base.:($(wbinopdict[op]))(uno::Wireexpr, dos::Wireexpr)
             return Wireexpr($(string(op)), uno, dos)
         end
         """

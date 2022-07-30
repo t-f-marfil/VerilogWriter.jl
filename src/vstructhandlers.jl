@@ -20,6 +20,66 @@ function addatype!(x::Alwayscontent)
     return x 
 end
 
+"""
+    always(expr::Expr)
+
+Parse AST into always block as [Alwayscontent](@ref).
+
+# Syntax 
+## `<roneblock>;<roneblock>[;<roneblock>;...]`
+`<roneblock>` is the expression that can be parsed by [roneblock](@ref).
+`;` in between `<roneblock>`s are strictly needed.
+
+## `@posedge <wirename>; <ifelsestatements>/<assignments>`
+Set sensitivity list using macro syntax. `@negedge` is also possible. 
+You must put `@posegde/@negedge` statement at the beginning, and only once.
+
+# Examples
+
+```jldoctest
+a1 = always(:(
+    w1 = w2;
+    if b2 
+        w1 = w3 
+    end
+))
+vshow(a1)
+
+# output
+
+always_comb begin
+    w1 = w2;
+    if (b2) begin
+        w1 = w3;
+    end
+end
+type: Alwayscontent
+```
+
+```jldoctest
+a1 = always(:(
+    @posedge clk;
+    
+    if b1 == b2
+        w1 <= w2 + w3 
+    else
+        w1 <= ~w1 
+    end
+))
+vshow(a1)
+
+# output
+
+always_ff @( posedge clk ) begin
+    if ((b1 == b2)) begin
+        w1 <= (w2 + w3);
+    end else begin
+        w1 <= ~w1;
+    end
+end
+type: Alwayscontent
+```
+"""
 function always(expr::Expr)
     alcont = ralways(expr)
     return addatype!(alcont)

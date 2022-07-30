@@ -28,15 +28,89 @@ end
 """
     roneblock(expr::Expr)
 
-Parse AST in Julia grammar to one if-block in Verilog. 
+Parse AST in Julia grammar to one if-else statement or 
+one assignment inside always blocks in Verilog, 
+which are [Ifelseblock](@ref) and [Alassign](@ref), respectively. 
 
 As using Julia expression and Julia parser as if 
 it is of Verilog, there can be difference in grammatical matters 
 between what can be given as the `expr` and real Verilog 
 (e.g. operator precedence of `<=`).
 
-In order to enable multiple dispatch according to the head of `expr`,
-dispatches `roneblock` with an additional argument `Val(expr.head)`.
+# Syntax 
+## `<wirename1> = <wirename2>`, `<wirename1> = <value::Int>`
+One blocking assignment. (Note that bit width cannot be 
+specified yet, nor can it be printed.)
+
+## `<wirename1> <= <wirename2>/<value::Int>`
+One non blocking assignment.
+
+## `<wirename1> <=/= <wireoperation>`
+`<wireoperation>` at the rhs is `~<wirename>`, `<wirename> + <wirename>`, and 
+so one, which are the operation of wires. (Note that not 
+all operators in Verilog are supported, in fact, really few of them are supported now.)
+
+## If-else statement
+```
+if <wireoperation>
+    <oneassignment>
+    <oneassignment>
+    ...
+elseif <wireoperation> 
+    <oneassignment>
+    <ifelsestatement>
+    ...
+else
+    <ifelsestatement>
+    ...
+end
+```
+If-else statement written in 'Julia syntax', not in Verilog 
+syntax, can be accepted. `else` block and `elseif` are not compulsory.
+Since `if` `end` are at the top level no `;` inside if-else statement is needed.
+Nested if-else statement can be also accepted as in usual Julia.
+
+# Examples 
+```jldoctest
+julia> a1 = roneblock(:(w1 <= w2)); 
+
+julia> vshow(a1);
+w1 <= w2;
+type: Alassign
+
+julia> a2 = roneblock(:(w3 = w4 + ~w2)); vshow(a2);
+w3 = (w4 + ~w2);
+type: Alassign
+```
+```jldoctest
+a3 = roneblock(:(
+    if b1 == b2
+        w5 = ~w6
+        w7 = w8 
+    elseif b2 
+        w9 = w9 + w10
+    else
+        if b3 
+            w11 = w12 
+        end
+    end
+))
+vshow(a3)
+
+# output
+
+if ((b1 == b2)) begin
+    w5 = ~w6;
+    w7 = w8;
+end else if (b2) begin
+    w9 = (w9 + w10);
+end else begin
+    if (b3) begin
+        w11 = w12;
+    end
+end
+type: Ifelseblock
+```
 """
 function roneblock(expr::Expr)
     return roneblock(expr, Val(expr.head))
@@ -401,7 +475,45 @@ end
 """
     portoneline(expr::Expr)
 
-Parse Julia AST to one line of port declaration.
+Parse Julia AST to one line of port declaration as [Oneport](@ref).
+
+# Syntax 
+## `@in <wirename>`, `@out <wirename>`
+One port declaration of width 1.
+
+## `@in/@out <wirename1, wirename2, ...> `
+Multiple port declaration of width 1 in one line.
+
+## `@in/@out <width::Int> <wirename1[, wirename2, ...]>`
+Port declarations of width `<width>`.
+
+## `@in/@out <wiretype> [<width::Int>] <wirename1[, wirename2, ...]>`
+Port declaration with wiretypes [of width `<width>`].
+
+# Examples
+```jldoctest
+julia> p1 = portoneline(:(@in din));
+
+julia> vshow(p1);
+input din
+type: Oneport
+
+julia> p2 = portoneline(:(@out din1, din2, din3)); vshow(p2);
+output din1
+type: Oneport
+output din2
+type: Oneport
+output din3
+type: Oneport
+
+julia> p3 = portoneline(:(@in 8 din)); vshow(p3);
+input [7:0] din
+type: Oneport
+
+julia> p4 = portoneline(:(@out reg 8 dout)); vshow(p4);
+output reg [7:0] dout
+type: Oneport
+```
 """
 function portoneline(expr::Expr)
     @assert expr.head == :macrocall
@@ -566,7 +678,36 @@ end
 """
     ports(expr::Expr)
 
-Convert Julia AST into port declarations as `Ports` object.
+Convert Julia AST into port declarations as [Ports](@ref) object.
+
+# Syntax 
+## `<portoneline>[;<portoneline>;...]`
+Multiple lines of [`portoneline`](@ref) expressions 
+separated by `;` can be accepted. 
+
+# Example 
+```jldoctest
+pp = ports(:(
+    @in p1;
+    @in wire 8 p2, p3, p4;
+    @out reg 2 p5, p6
+))
+
+vshow(pp)
+
+# output
+
+(
+    input p1,
+    input [7:0] p2,
+    input [7:0] p3,
+    input [7:0] p4,
+    output reg [1:0] p5,
+    output reg [1:0] p6
+);
+
+type: Ports
+```
 """
 function ports(expr::Expr)
     return ports(expr, Val(expr.head))
@@ -624,11 +765,31 @@ end
 """
     decloneline(expr::Expr)
 
-Parse Julia AST into wire declaration.
+Parse Julia AST into wire declaration as Vector{[Onedecl](@ref)}.
 
 The number of `Onedecl` objects returned may differ 
 according to the number of wires declared in one line 
 (e.g. `input dout` <=> `input din1, din2, din3`).
+
+# Syntax 
+Similar to that of [portoneline](@ref).
+## `@wire/@reg/@logic [<width>] <wirename1>[, <wirename2>,...]`
+
+# Examples 
+```jldoctest
+julia> d = decloneline(:(@reg 10 d1)); vshow(d);
+reg [9:0] d1;
+type: Onedecl
+
+julia> d = decloneline(:(@logic 8 d1,d2,d3)); vshow(d);
+logic [7:0] d1;
+type: Onedecl
+logic [7:0] d2;
+type: Onedecl
+logic [7:0] d3;
+type: Onedecl
+```
+
 """
 function decloneline(expr::Expr)
     return decloneline(expr, expr.args[3:end]...)
@@ -720,7 +881,31 @@ end
 """
     decls(expr::Expr)
 
-Parse Julia AST into wire declaration section object `Decls`.
+Parse Julia AST into wire declaration section object [Decls](@ref).
+
+# Syntax 
+## `<onedecl>[;<onedecl>;...]`
+Multiple [decloneline](@ref) expressions which are concatenated 
+by `;` can be accepted.
+
+# Example 
+```jldoctest
+d = decls(:(
+    @wire w1;
+    @reg 8 w2,w3,w4;
+    @logic 32 w5
+))
+vshow(d)
+
+# output
+
+wire w1;
+reg [7:0] w2;
+reg [7:0] w3;
+reg [7:0] w4;
+logic [31:0] w5;
+type: Decls
+```
 """
 function decls(expr::Expr)
     return decls(expr, Val(expr.head))
