@@ -337,13 +337,13 @@ end
 
 Disambiguate `Val{:-}` between unary and binary minuses.
 """
-function roneblock(expr, ::Val{:-})
+function roneblock(expr, ::T) where {T <: arityambigVals}
     if length(expr.args) == 2
-        return Wireexpr(uminus, roneblock(expr.args[2]))
+        return Wireexpr(wunasym2op[T], roneblock(expr.args[2]))
     else
-        @assert length(expr.args) == 3
+        @assert length(expr.args) == 3 || (@show length(expr.args); false)
         uno, dos = roneblock(expr.args[2]), roneblock(expr.args[3])
-        return Wireexpr(minus, uno, dos)
+        return Wireexpr(wbinsym2op[T], uno, dos)
     end
 end
 
