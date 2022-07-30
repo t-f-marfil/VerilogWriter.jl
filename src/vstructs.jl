@@ -31,15 +31,26 @@ struct Ports
     val::Vector{Oneport}
 end
 
-"Verilog operators."
+"""
+Verilog operators.
+
+Unary `&, |` does not exists so explicitly call as function 
+e.g. `&(wire), |(wire)` (& behaves in a wickedmanner...?)
+Xor in verilog `^` is in Julia exponential operator, and the difference
+in association exists.
+"""
 @enum Wireop begin 
     add
     minus
     lshift 
     rshift
+    band
+    bor
 
     neg 
     uminus
+    redand 
+    redor
 
     leq
     
@@ -53,15 +64,20 @@ end
 const wunaopdict = Dict([
     neg => :~
     uminus => :-
+    redor => :|
 ])
 const wbinopdict = Dict([
     add => :+, 
     minus => :-,
     lshift => :<<,
     rshift => :>>,
+    band => :&,
+    bor => :|,
 
     leq => :(==)
 ])
+const arityambigs = [:-, :|]
+const arityambigVals = Union{[Val{i} for i in arityambigs]...}
 
 """
 Wire expressions in verilog. 
