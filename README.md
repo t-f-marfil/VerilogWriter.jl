@@ -1,5 +1,7 @@
 # VerilogWriter.jl
 
+A module to write verilog on Julia.
+
 Full document is available [here](https://t-f-marfil.github.io/VerilogWriter.jl/).
 
 ## Brief Introduction 
@@ -38,7 +40,7 @@ always_comb begin
         dout = ~d2;
     end
 end
-type: VerilogWriter.Alwayscontent
+type: Alwayscontent
 ```
 
 Another example is 
@@ -106,7 +108,7 @@ module mymodule #(
         end
     end
 endmodule
-type: VerilogWriter.Vmodule
+type: Vmodule
 ```
 
 (of course this verilog module itself is far from being useful.)
