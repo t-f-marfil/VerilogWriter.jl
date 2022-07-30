@@ -1,6 +1,6 @@
 # VerilogWriter.jl
 
-Full document is available [here](https://t-f-marfil.github.io/VerilogWriter.jl/structs/).
+Full document is available [here](https://t-f-marfil.github.io/VerilogWriter.jl/).
 
 ## Brief Introduction 
 
