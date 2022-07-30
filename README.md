@@ -127,7 +127,11 @@ This module is not yet registered, so
 using Pkg
 Pkg.add(PackageSpec(url="https://github.com/t-f-marfil/VerilogWriter.jl"))
 ```
-would work.
+would work. Or simply 
+```
+git clone "https://github.com/t-f-marfil/VerilogWriter.jl"
+```
+and try `tutorial.ipynb` in `/src`.
 
 Dockerfile to build environment with julia and this module is also available in this repository.
 
