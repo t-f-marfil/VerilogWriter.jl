@@ -299,8 +299,10 @@ end
 """
     ralways(expr::Expr)
 
-Convert Julia AST to Verilog always-block.
-Dispatch methods here according to `expr.head`.
+Convert Julia AST to Verilog always-block. 
+
+Does not infer type of alwaysblock here.
+Dispatches methods here according to `expr.head`.
 """
 function ralways(expr::Expr) 
     return ralways(expr, Val(expr.head))
@@ -316,6 +318,11 @@ function ralways(expr, ::T) where {T <: Val}
     return Alwayscontent(roneblock(expr, T()))
 end
 
+"""
+    ralwayswithSensitivity(expr)
+
+Parse always block with sensitivity list (e.g. @posedge clk).
+"""
 function ralwayswithSensitivity(expr)
     alblock = ralways(Expr(expr.head, expr.args[2:end]...))
     sensitivity = expr.args[1]
@@ -369,94 +376,216 @@ function ralways(expr, ::Val{:block})
     return Alwayscontent(assignlist, ifblocklist)
 end
 
+"""
+    ralways(arg)
+
+`ralways` macro version. 
+    
+Not supposed to be used in most cases, 
+`@always` and `always` are often better.
+"""
 macro ralways(arg)
     return Expr(:call, ralways, Ref(arg))
 end
 
+"""
+    ralways(expr::Ref{T}) where {T}
+
+For macro call.
+"""
 function ralways(expr::Ref{T}) where {T}
     ralways(expr[])
 end
 
 
+"""
+    portoneline(expr::Expr)
+
+Parse Julia AST to one line of port declaration.
+"""
 function portoneline(expr::Expr)
-    return portoneline(expr, expr.args[3:end]...)
+    @assert expr.head == :macrocall
+    args = expr.args
+
+    direc = args[1] 
+    if direc == Symbol("@in")
+        d = pin 
+    else
+        @assert direc == Symbol("@out")
+        d = pout 
+    end
+    # ignore LineNumberNode
+    try
+        portonelinecore(d, args[3:end]...)
+    catch e
+        println("Port parsing error at $(string(args[2])).")
+        rethrow(e)
+    end
 end
 
 """
-    portoneline(expr::Expr, ::Symbol)
+    portoneline(expr::Ref{T}) where {T}
 
-Parse one port.
+For macro call.
 """
-function portoneline(expr::Expr, ::Symbol)
-    direc = expr.args[1] == Symbol("@in") ? pin : (
-        @assert expr.args[1] == Symbol("@out"); pout)
-    name = string(expr.args[3])
-    return [Oneport(direc, name)]
-end
-
-"""
-    portoneline(expr::Expr, ::Expr)
-
-Parse multiple wires with the same port direction.
-
-When given e.g.`@in din1, din2` create each port for 
-din1 and din2 both with the direction `input`.
-Note that `@in din1, din2` is in AST `(@in (din1, din2))`
-while `@in n din` is `(@in n din)`.
-"""
-function portoneline(expr::Expr, ::Expr)
-    direc = expr.args[1] == Symbol("@in") ? pin : (
-        @assert expr.args[1] == Symbol("@out"); pout)
-    args = expr.args[3].args 
-
-    return [Oneport(direc, string(sym)) for sym in args]
-end
-
-"""
-    portoneline(expr::Expr, ::Int, ::Symbol)
-
-Parse one port whose width is more than one.
-"""
-function portoneline(expr::Expr, ::Int, ::Symbol)
-    direc = expr.args[1] == Symbol("@in") ? pin : (
-        @assert expr.args[1] == Symbol("@out"); pout)
-    width = expr.args[3]
-    name = string(expr.args[4])
-
-    return [Oneport(direc, width, name)]
-end
-
-"""
-    portoneline(expr::Expr, ::Int, ::Expr)
-
-Parse multiple ports whose width is more than one.
-"""
-function portoneline(expr::Expr, ::Int, ::Expr)
-    direc = expr.args[1] == Symbol("@in") ? pin : (
-        @assert expr.args[1] == Symbol("@out"); pout)
-    width = expr.args[3]
-    args = expr.args[4].args
-
-    return [Oneport(direc, width, string(sym)) for sym in args]
-end
-
 function portoneline(expr::Ref{T}) where {T}
-    return portoneline(expr[])
+    portoneline(expr[])
 end
 
+"""
+    portoneline(arg)
+
+Macro version of `portoneline`.
+"""
 macro portoneline(arg)
-    return Expr(:call, :portoneline, Ref(arg))
+    Expr(:call, :portoneline, Ref(arg))
 end
 
+"""
+    portonelinecore(d::Portdirec, arg1::Symbol, args...)
 
+Helper function to determine behavior according to
+`args` types and length.
+"""
+function portonelinecore(d::Portdirec, arg1::Symbol, args...)
+
+    if length(args) == 0
+        portnotype(d, arg1)
+    else
+        if arg1 in Symbol.(instances(Wiretype))
+            if arg1 == :wire 
+                wtype = wire 
+            elseif arg1 == :reg 
+                wtype = reg 
+            else
+                @assert arg1 == :logic
+                wtype = logic 
+            end
+            porttyped(d, wtype, args...)
+        else
+            portnotype(d, arg1, args...)
+        end
+    end
+end
+
+"""
+    portonelinecore(d::Portdirec, arg1::Int, arg2)
+
+Wrapper for `portnotype`.
+"""
+function portonelinecore(d::Portdirec, arg1::Int, arg2)
+    portnotype(d, arg1, arg2)
+end
+
+"""
+    portonelinecore(d::Portdirec, arg1::Expr)
+
+Wrapper for `portnotype`.
+"""
+function portonelinecore(d::Portdirec, arg1::Expr)
+    @assert arg1.head == :tuple 
+    portnotype(d, arg1)
+end
+
+"""
+    portnotype(d::Portdirec, arg::Symbol)
+
+Port declaration with no wire type, no wire width.
+"""
+function portnotype(d::Portdirec, arg::Symbol)
+    [Oneport(d, string(arg))]
+end
+
+"""
+    portnotype(d::Portdirec, arg::Expr)
+
+Multiple port declarations with no wire type, no wire width.
+"""
+function portnotype(d::Portdirec, arg::Expr)
+    @assert arg.head == :tuple 
+    [Oneport(d, string(nm)) for nm in arg.args]
+end
+
+"""
+    portnotype(d::Portdirec, arg1::Int, arg2::Symbol)
+
+Wire width specified, no wire type given.
+"""
+function portnotype(d::Portdirec, arg1::Int, arg2::Symbol)
+    [Oneport(d, arg1, string(arg2))]
+end
+
+"""
+    portnotype(d::Portdirec, arg1::Int, arg2::Expr)
+
+Wire width specified, no wire type given for multiple declarations.
+"""
+function portnotype(d::Portdirec, arg1::Int, arg2::Expr)
+    @assert arg2.head == :tuple
+    [Oneport(d, arg1, string(nm)) for nm in arg2.args]
+end
+
+"""
+    porttyped(d::Portdirec, arg1::Wiretype, arg2::Symbol)
+
+Wire type given, no wire width given.
+"""
+function porttyped(d::Portdirec, arg1::Wiretype, arg2::Symbol)
+    [Oneport(d, arg1, 1, string(arg2))]
+end
+
+"""
+    porttyped(d::Portdirec, arg1::Wiretype, arg2::Expr)
+
+Wire type given, no wire width given for multiple declaration.
+"""
+function porttyped(d::Portdirec, arg1::Wiretype, arg2::Expr)
+    @assert arg2.head == :tuple 
+    [Oneport(d, arg1, 1, string(nm)) for nm in arg2.args]
+end
+
+"""
+    porttyped(d::Portdirec, arg1::Wiretype, arg2::Int, arg3::Symbol)
+
+Both wire type and width given.
+"""
+function porttyped(d::Portdirec, arg1::Wiretype, arg2::Int, arg3::Symbol)
+    [Oneport(d, arg1, arg2, arg3)]
+end
+
+"""
+    porttyped(d::Portdirec, arg1::Wiretype, arg2::Int, arg3::Expr)
+
+Both wire type and width given for multiple declarations in one line.
+"""
+function porttyped(d::Portdirec, arg1::Wiretype, arg2::Int, arg3::Expr)
+    @assert arg3.head == :tuple 
+    [Oneport(d, arg1, arg2, string(nm)) for nm in arg3.args]
+end
+
+"""
+    ports(expr::Expr)
+
+Convert Julia AST into port declarations as `Ports` object.
+"""
 function ports(expr::Expr)
     return ports(expr, Val(expr.head))
 end
 
+"""
+    ports(expr::Expr, ::Val{:macrocall})
+
+Contain only single line declaration.
+"""
 function ports(expr::Expr, ::Val{:macrocall})
     return Ports(portoneline(expr))
 end
 
+"""
+    ports(expr::Expr, ::Val{:block})
+
+Contain multiple lines of port declaration.
+"""
 function ports(expr::Expr, ::Val{:block})
     @assert expr.head == :block 
     anslist = Oneport[]
@@ -473,15 +602,34 @@ function ports(expr::Expr, ::Val{:block})
     return Ports(anslist)
 end
 
+"""
+    ports(expr::Ref{T}) where {T}
+
+For macro call.
+"""
 function ports(expr::Ref{T}) where {T}
     return ports(expr[])
 end
 
+"""
+    ports(arg)
+
+Macro version of `ports`.
+"""
 macro ports(arg)
     return Expr(:call, :ports, Ref(arg))
 end
 
 
+"""
+    decloneline(expr::Expr)
+
+Parse Julia AST into wire declaration.
+
+The number of `Onedecl` objects returned may differ 
+according to the number of wires declared in one line 
+(e.g. `input dout` <=> `input din1, din2, din3`).
+"""
 function decloneline(expr::Expr)
     return decloneline(expr, expr.args[3:end]...)
 end
@@ -569,14 +717,29 @@ end
 
 
 
+"""
+    decls(expr::Expr)
+
+Parse Julia AST into wire declaration section object `Decls`.
+"""
 function decls(expr::Expr)
     return decls(expr, Val(expr.head))
 end
 
+"""
+    decls(expr::Expr, ::Val{:macrocall})
+
+Parse single line of declaration.
+"""
 function decls(expr::Expr, ::Val{:macrocall})
     return Decls(decloneline(expr))
 end
 
+"""
+    decls(expr::Expr, ::Val{:block})
+
+Multiple lines of wire declarations.
+"""
 function decls(expr::Expr, ::Val{:block})
     @assert expr.head == :block 
     anslist = Onedecl[]
@@ -593,10 +756,20 @@ function decls(expr::Expr, ::Val{:block})
     return Decls(anslist)
 end
 
+"""
+    decls(expr::Ref{T}) where {T}
+
+For macro calls.
+"""
 function decls(expr::Ref{T}) where {T}
     return decls(expr[])
 end
 
+"""
+    decls(arg)
+
+Macro version of `decls`.
+"""
 macro decls(arg)
     return Expr(:call, :decls, Ref(arg))
 end
