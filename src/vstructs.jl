@@ -35,7 +35,7 @@ end
 Verilog operators.
 
 Unary `&, |` does not exists so explicitly call as function 
-e.g. `&(wire), |(wire)` (& behaves in a wickedmanner...?)
+e.g. `&(wire), |(wire)` (& behaves in a wickedmanner...?).
 Xor in verilog `^` is in Julia exponential operator, and the difference
 in association exists.
 """
@@ -46,11 +46,13 @@ in association exists.
     rshift
     band
     bor
+    bxor
 
     neg 
     uminus
     redand 
     redor
+    redxor
 
     leq
     
@@ -64,7 +66,9 @@ end
 const wunaopdict = Dict([
     neg => :~
     uminus => :-
+    redand => :&
     redor => :|
+    redxor => :^
 ])
 const wbinopdict = Dict([
     add => :+, 
@@ -73,10 +77,11 @@ const wbinopdict = Dict([
     rshift => :>>,
     band => :&,
     bor => :|,
+    bxor => :^,
 
     leq => :(==)
 ])
-const arityambigs = [:-, :|]
+const arityambigs = [:-, :|, :&, :^]
 const arityambigVals = Union{[Val{i} for i in arityambigs]...}
 
 """
