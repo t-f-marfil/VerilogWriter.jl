@@ -4,5 +4,6 @@
 /src/test.v
 /src/test.sv
 
-/docs/*
-!/docs/build
+/docs/make.jl
+/docs/build
+/docs/src
