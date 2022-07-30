@@ -132,7 +132,7 @@ end
 Dispatch methods of `roneblock` according to `expr.args[1]`.
 """
 function roneblock(expr, ::Val{:call})
-    return roneblock(expr, Val(expr.args[1]))
+    return roneblock(expr, Val(expr.args[1]), Val(:call))
 end
 
 """
@@ -143,7 +143,7 @@ Parse `expr` whose head is `call` and `expr.args[1]` is `<=`.
 Parse as a comparison opertor in Julia, interpret as 
 sequential assignment in Verilog.
 """
-function roneblock(expr, ::Val{:<=})
+function roneblock(expr, ::Val{:<=}, ::Val{:call})
     return Alassign(roneblock(expr.args[2]), roneblock(expr.args[3]), ff)
 end
 
@@ -321,23 +321,24 @@ const wbinsym2op = Dict([Val{item} => key for (key, item) in wbinopdict])
 const unaopvals = Union{[i for i in keys(wunasym2op)]...}
 const binopvals = Union{[i for i in keys(wbinsym2op)]...}
 
-function roneblock(expr, ::T) where {T <: unaopvals}
+function roneblock(expr, ::T, ::Val{:call}) where {T <: unaopvals}
     uno = roneblock(expr.args[2])
     return Wireexpr(wunasym2op[T], uno)
 end
 
-function roneblock(expr, ::T) where {T <: binopvals}
+function roneblock(expr, ::T, ::Val{:call}) where {T <: binopvals}
     uno = roneblock(expr.args[2])
     dos = roneblock(expr.args[3])
     return Wireexpr(wbinsym2op[T], uno, dos)
 end
 
 """
-    roneblock(expr, ::Val{:-})
+roneblock(expr, ::T) where {T <: arityambigVals}
 
-Disambiguate `Val{:-}` between unary and binary minuses.
+Disambiguate symbols in `arityambigVals` between 
+unary and binary operators.
 """
-function roneblock(expr, ::T) where {T <: arityambigVals}
+function roneblock(expr, ::T, ::Val{:call}) where {T <: arityambigVals}
     if length(expr.args) == 2
         return Wireexpr(wunasym2op[T], roneblock(expr.args[2]))
     else
@@ -345,6 +346,17 @@ function roneblock(expr, ::T) where {T <: arityambigVals}
         uno, dos = roneblock(expr.args[2]), roneblock(expr.args[3])
         return Wireexpr(wbinsym2op[T], uno, dos)
     end
+end
+
+"""
+    roneblock(expr::Expr, ::Val{:&})
+
+Unary `&` parses differently from `|(wire)` and `^(wire)`.
+What is `&(wire)` originally used for in Julia?
+"""
+function roneblock(expr::Expr, ::Val{:&})
+    @assert length(expr.args) == 1
+    Wireexpr(redand, roneblock(expr.args[1]))
 end
 
 """
