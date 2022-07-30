@@ -1,4 +1,6 @@
-"Parameter in verilog."
+"""
+Parameter in verilog.
+"""
 struct Oneparam 
     name::String
     val::Int
@@ -12,6 +14,7 @@ end
 "Port direction object."
 @enum Portdirec pin pout
 
+"Wiretype object."
 @enum Wiretype wire reg logic 
 
 "Represent a single port declaration."
@@ -37,6 +40,8 @@ end
 
     neg 
     uminus
+
+    leq
     
     id 
     slice
@@ -53,7 +58,9 @@ const wbinopdict = Dict([
     add => :+, 
     minus => :-,
     lshift => :<<,
-    rshift => :>>
+    rshift => :>>,
+
+    leq => :(==)
 ])
 
 """
@@ -62,11 +69,11 @@ Wire expressions in verilog.
 Contains unnecessary information to handle all the wires
 in the same type. 
 
-One motivation that I avoid making different types of 
+One motivation to avoid making different types of 
 wires (e.g. using parametric types) is that it seemed
 beneficial to have multiple wires in a vector, and that 
 it is sometime a disadvantage in performance to use 
-abstract type when creating vectors.
+abstract types when creating vectors.
 """
 struct Wireexpr
     # name == "" for no name (intermediate node)
@@ -112,10 +119,7 @@ struct Ifcontent_inner{T}
 end
 
 """
-Container of if-else block.
-
-`length(conds) - length(contents)` may differ according to 
-the structure, i.e. if-end <=> if-else-end
+Container of an if-else block.
 """
 struct Ifelseblock 
     # if cond1 
@@ -123,6 +127,9 @@ struct Ifelseblock
     # elseif cond2 
     #   content2 
     # ...
+
+    # `length(conds) - length(contents)` may differ according to 
+    # the structure, i.e. if-end <=> if-else-end
     conds::Vector{Wireexpr}
     contents::Vector{Ifcontent_inner{Ifelseblock}}
 end
@@ -141,26 +148,31 @@ mutable struct Alwayscontent
     ifelseblocks::Vector{Ifelseblock}
 end
 
+"Assign one statement."
 struct Assign 
     lhs::Wireexpr
     rhs::Wireexpr
 end
 
-
+"Represent one wire declaration."
 struct Onedecl
     wtype::Wiretype
     width::Int
     name::String 
 end
 
+"Multiple wire declarations."
 struct Decls 
     val::Vector{Onedecl}
 end
 
+"Represents one verilog module."
 struct Vmodule 
     name::String
     params::Parameters
     ports::Ports
+
+    decls::Decls
 
     assigns::Vector{Assign}
     always::Vector{Alwayscontent}

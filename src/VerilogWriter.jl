@@ -1,7 +1,27 @@
 module VerilogWriter
 
-export vshow, always, @always, ralways
+export 
+    showfield, vshow,
+    Oneparam, Parameters,
+    Portdirec, Wiretype,
+    Oneport, Ports,
+    Wireop,
+    Wireexpr,
+    Atype,
+    Alassign, Ifcontent, Ifelseblock, Edge, Alwayscontent,
+    Assign,
+    Onedecl, Decls, 
+    Vmodule
 
+export
+    portoneline, ports,
+    decloneline, decls,
+    roneblock, always
+
+export 
+    ifadd!
+    
+include("baseutils.jl")
 include("textutils.jl")
 include("vstructs.jl")
 include("vstructhandlers.jl")
