@@ -20,7 +20,6 @@ struct Oneport
     wtype::Wiretype
     width::Int
     name::String
-
     # Oneport(d, t, w, n) = w > 0 ? new(d, t, w, n) : error("width should be positive (in Oneport)")
 end
 
