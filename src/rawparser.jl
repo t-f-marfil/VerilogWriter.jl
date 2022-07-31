@@ -282,7 +282,7 @@ function roneblock(expr, ::Val{:elseif})
     @assert cond.head == :block 
 
     # block appears in elseif -> cond
-    pcond = roneblock(cond, Val(Wireexpr))
+    pcond = wireexpr(cond.args[2])
 
     # block appears in elseif -> if-clause
     pelseif = roneblock(expr.args[2], Val(Ifcontent))
@@ -451,6 +451,22 @@ What is `&(wire)` originally used for in Julia?
 function wireexpr(expr::Expr, ::Val{:&})
     @assert length(expr.args) == 1
     Wireexpr(redand, wireexpr(expr.args[1]))
+end
+
+function wireexpr(expr::Expr, ::Val{:||})
+    Wireexpr(
+        lor,
+        wireexpr(expr.args[1]),
+        wireexpr(expr.args[2])
+    )
+end
+
+function wireexpr(expr::Expr, ::Val{:&&})
+    Wireexpr(
+        land,
+        wireexpr(expr.args[1]),
+        wireexpr(expr.args[2])
+    )
 end
 
 macro wireexpr(arg)

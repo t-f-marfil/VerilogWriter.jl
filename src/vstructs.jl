@@ -65,6 +65,7 @@ in association exists.
     dec
 end
 
+"`&&` and `||` are invalid identifier in julia."
 const noJuliaop = (land, lor)
 "Must be explicitly called as function e.g. `|(wire1)`, `&(wire2)`."
 const explicitCallop = (redand, redor, redxor)
