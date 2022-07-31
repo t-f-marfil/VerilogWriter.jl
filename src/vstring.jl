@@ -49,11 +49,12 @@ function Base.string(x::Wireexpr)
     elseif x.operation == literal 
         txt = string(x.value)
     elseif x.operation == slice 
-        if length(x.subnodes) == 1 
-            txt = string(x.name, "[", string(x.subnodes[1]), "]")
+        if length(x.subnodes) == 2
+            txt = string(string(x.subnodes[1]), "[", string(x.subnodes[2]), "]")
         else
-            @assert length(x.subnodes) == 2
-            txt = string(x.name, "[", string(x.subnodes[1]), ":", string(x.subnodes[2]), "]",)
+            @assert length(x.subnodes) == 3
+            txt = string(string(x.subnodes[1]), x.name, "[", 
+                string(x.subnodes[2]), ":", string(x.subnodes[3]), "]",)
         end
     elseif x.operation in keys(wunaopdict)
         txt = string(wunaopdict[x.operation], string(x.subnodes[begin]))

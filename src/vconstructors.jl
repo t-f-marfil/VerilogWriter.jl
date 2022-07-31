@@ -63,8 +63,9 @@ Create an empty expression.
 Wireexpr() = Wireexpr("")
 
 Wireexpr(op::Wireop, v::Vector{Wireexpr}) = Wireexpr(op, "", v, -1, -1)
-Wireexpr(op::Wireop, uno::Wireexpr) = Wireexpr(op, [uno])
-Wireexpr(op::Wireop, uno::Wireexpr, dos::Wireexpr) = Wireexpr(op, [uno, dos])
+# Wireexpr(op::Wireop, uno::Wireexpr) = Wireexpr(op, [uno])
+# Wireexpr(op::Wireop, uno::Wireexpr, dos::Wireexpr) = Wireexpr(op, [uno, dos])
+Wireexpr(op::Wireop, w::Wireexpr...) = Wireexpr(op, [w...])
 
 Alassign(lhs, rhs) = Alassign(lhs, rhs, aunknown)
 

@@ -315,17 +315,50 @@ function roneblock(expr, ::Val{:elseif})
     return fullblock
 end
 
+"""
+    roneblock(expr, ::Val{:ref})
+
+Bit select or slice of wires, e.g. `x[1]` and `x[p:1]`.
+"""
+function roneblock(expr, ::Val{:ref})
+    body = roneblock(expr.args[1])
+    sl = roneblock(expr.args[2])
+    # length(sl) may be 1 or 2
+    Wireexpr(slice, body, sl...)
+end
+
+"""
+    roneblock(expr, ::Val{:(:)}, ::Val{:call})
+
+Parse wire slice with range object, e.g. `x[a:b]`.
+"""
+function roneblock(expr, ::Val{:(:)}, ::Val{:call})
+    msb = expr.args[2]
+    lsb = expr.args[3]
+    (roneblock(msb), roneblock(lsb))
+end
+
 const wunasym2op = Dict([Val{item} => key for (key, item) in wunaopdict])
 const wbinsym2op = Dict([Val{item} => key for (key, item) in wbinopdict])
 
 const unaopvals = Union{[i for i in keys(wunasym2op)]...}
 const binopvals = Union{[i for i in keys(wbinsym2op)]...}
 
+"""
+    roneblock(expr, ::T, ::Val{:call}) where {T <: unaopvals}
+
+Parse unary operators.
+"""
 function roneblock(expr, ::T, ::Val{:call}) where {T <: unaopvals}
     uno = roneblock(expr.args[2])
     return Wireexpr(wunasym2op[T], uno)
 end
 
+"""
+    roneblock(expr, ::T, ::Val{:call}) where {T <: binopvals}
+
+Parse binary operators.
+"""
 function roneblock(expr, ::T, ::Val{:call}) where {T <: binopvals}
     uno = roneblock(expr.args[2])
     dos = roneblock(expr.args[3])
@@ -333,7 +366,7 @@ function roneblock(expr, ::T, ::Val{:call}) where {T <: binopvals}
 end
 
 """
-roneblock(expr, ::T) where {T <: arityambigVals}
+    roneblock(expr, ::T, ::Val{:call}) where {T <: arityambigVals}
 
 Disambiguate symbols in `arityambigVals` between 
 unary and binary operators.
