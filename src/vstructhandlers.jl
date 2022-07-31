@@ -28,9 +28,9 @@ end
 Parse AST into always block as [Alwayscontent](@ref).
 
 # Syntax 
-## `<roneblock>;<roneblock>[;<roneblock>;...]`
-`<roneblock>` is the expression that can be parsed by [roneblock](@ref).
-`;` in between `<roneblock>`s are strictly needed.
+## `<oneblock>;<oneblock>[;<oneblock>;...]`
+`<oneblock>` is the expression that can be parsed by [oneblock](@ref).
+`;` in between `<oneblock>`s are strictly needed.
 
 ## `@posedge <wirename>; <ifelsestatements>/<assignments>`
 Set sensitivity list using macro syntax. `@negedge` is also possible. 

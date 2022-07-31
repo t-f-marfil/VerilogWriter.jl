@@ -19,7 +19,7 @@ export
     portoneline, ports, @portoneline, @ports,
     wireexpr, @wireexpr,
     decloneline, decls, @decloneline, @decls,
-    roneblock, always, @roneblock, @always
+    oneblock, always, @oneblock, @always
 
 export 
     ifadd!, 

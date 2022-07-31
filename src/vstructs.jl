@@ -54,7 +54,10 @@ in association exists.
     redor
     redxor
 
+    logieq
     leq
+    lt
+
     land 
     lor
     
@@ -86,7 +89,10 @@ const wbinopdict = Dict([
     bor => :|,
     bxor => :^,
 
-    leq => :(==),
+    logieq => :(==),
+    leq => :<=,
+    lt => :<,
+
     land => :&&,
     lor => :||
 ])
@@ -104,6 +110,30 @@ wires (e.g. using parametric types) is that it seemed
 beneficial to have multiple wires in a vector, and that 
 it is sometime a disadvantage in performance to use 
 abstract types when creating vectors.
+
+Some operators on wires in Verilog are overloaded for `Wireexpr`.
+Note that reduction operators (unary `&, |, ^`) are not in Julia, 
+and logical and, or (`&&, ||`) can be applied only for booleans in Julia, thus 
+are not available as an operator for `Wireexpr` objects.
+
+# Examples 
+```jldoctest
+julia> w1 = @wireexpr x + y;
+
+julia> w2 = @wireexpr z;
+
+julia> vshow(w1 & w2);
+((x + y) & z)
+type: Wireexpr
+
+julia> w3 = @wireexpr x;
+
+julia> w4 = @wireexpr y && z; # && is available inside `@wireexpr` and `wireexpr` methods.
+
+julia> vshow(w3 | w4)
+(x | (y && z))
+type: Wireexpr
+```
 """
 struct Wireexpr
     # name == "" for no name (intermediate node)

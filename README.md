@@ -156,7 +156,7 @@ One example might be making functions to infer wire bit width from always blocks
 
 Macros and functions accepts 'raw' Verilog-like expressions, while there is no method to somehow insert the objects into expressions for the functions/macros. Instead you need to call certain constructors to create an object that contains another object. For example, 
 ```Julia
-blk = @roneblock (
+blk = @oneblock (
     if b 
         x = z 
     end
