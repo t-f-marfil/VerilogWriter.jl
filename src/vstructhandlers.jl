@@ -92,3 +92,32 @@ end
 function always(expr::Ref{T}) where {T}
     always(expr[])
 end
+
+"""
+    invport(onep::Oneport)
+
+Return [Oneport](@ref) object whose directions are reversed
+from `ps`. Wiretype information (`reg`, `wire`, `logic`) is 
+lost when inverted for `reg` cannot be at input port.
+"""
+function invport(onep::Oneport)
+    Oneport(
+        (onep.direc == pin ? pout : pin),
+        onep.width,
+        onep.name
+    )
+end
+
+"""
+    invports(ps::Ports)
+
+Return [Ports](@ref) object whose directions are reversed
+from `ps`.
+"""
+function invports(ps::Ports)
+    ans = Oneport[]
+    for onep in ps.val 
+        push!(ans, invport(onep))
+    end
+    Ports(ans)
+end
