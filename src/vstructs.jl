@@ -55,6 +55,8 @@ in association exists.
     redxor
 
     leq
+    land 
+    lor
     
     id 
     slice
@@ -62,6 +64,10 @@ in association exists.
     hex 
     dec
 end
+
+const noJuliaop = (land, lor)
+"Must be explicitly called as function e.g. `|(wire1)`, `&(wire2)`."
+const explicitCallop = (redand, redor, redxor)
 
 const wunaopdict = Dict([
     neg => :~
@@ -79,7 +85,9 @@ const wbinopdict = Dict([
     bor => :|,
     bxor => :^,
 
-    leq => :(==)
+    leq => :(==),
+    land => :&&,
+    lor => :||
 ])
 const arityambigs = [:-, :|, :&, :^]
 const arityambigVals = Union{[Val{i} for i in arityambigs]...}

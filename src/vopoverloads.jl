@@ -24,12 +24,14 @@ unaopoverload()
 
 function binopoverload()
     for op in keys(wbinopdict)
-        fovload = """
-        function Base.:($(wbinopdict[op]))(uno::Wireexpr, dos::Wireexpr)
-            return Wireexpr($(string(op)), uno, dos)
+        if !(op in noJuliaop)
+            fovload = """
+            function Base.:($(wbinopdict[op]))(uno::Wireexpr, dos::Wireexpr)
+                return Wireexpr($(string(op)), uno, dos)
+            end
+            """
+            eval(Meta.parse(fovload))
         end
-        """
-        eval(Meta.parse(fovload))
     end
 end
 

@@ -1,7 +1,7 @@
 """
     roneblock(expr::T) where {T <: Union{Symbol, Int}}
 
-Convert `expr` to `Wireexpr`.
+Convert `expr` to `Wireexpr`. Needed in parsing `block`.
 """
 function roneblock(expr::T) where {T <: Union{Symbol, Int}}
     return Wireexpr(expr)
@@ -11,19 +11,11 @@ end
     roneblock(expr::UInt8)
 
 UInt8 may be given when user writes e.g. 0b10, 0x1f.
+Used when parsing `block`
 """
 function roneblock(expr::UInt8)
     return Wireexpr(Int(expr))
 end
-
-# """
-#     roneblock(expr::Int)
-
-# Convert `expr` to `Wireexpr`.
-# """
-# function roneblock(expr::Int)
-#     return Wireexpr(string(expr))
-# end
 
 """
     roneblock(expr::Expr)
@@ -38,17 +30,10 @@ between what can be given as the `expr` and real Verilog
 (e.g. operator precedence of `<=`).
 
 # Syntax 
-## `<wirename1> = <wirename2>`, `<wirename1> = <value::Int>`
+## `<wirename1> = <wireoperation>`
 One blocking assignment. (Note that bit width cannot be 
 specified yet, nor can it be printed.)
-
-## `<wirename1> <= <wirename2>/<value::Int>`
-One non blocking assignment.
-
-## `<wirename1> <=/= <wireoperation>`
-`<wireoperation>` at the rhs is `~<wirename>`, `<wirename> + <wirename>`, and 
-so one, which are the operation of wires. (Note that not 
-all operators in Verilog are supported, in fact, really few of them are supported now.)
+`<wireoperation>` is a expression accepted by [wireexpr](@ref).
 
 ## If-else statement
 ```
@@ -123,7 +108,7 @@ Assignment in Julia, stands for combinational assignment in Verilog.
 """
 function roneblock(expr, ::Val{:(=)})
     @assert expr.head == :(=)
-    return Alassign(roneblock.(expr.args)..., comb)
+    return Alassign(wireexpr.(expr.args)..., comb)
 end
 
 """
@@ -144,7 +129,7 @@ Parse as a comparison opertor in Julia, interpret as
 sequential assignment in Verilog.
 """
 function roneblock(expr, ::Val{:<=}, ::Val{:call})
-    return Alassign(roneblock(expr.args[2]), roneblock(expr.args[3]), ff)
+    return Alassign(wireexpr(expr.args[2]), wireexpr(expr.args[3]), ff)
 end
 
 "Types to which AST of `block` can be converted."
@@ -231,7 +216,7 @@ function roneblock(expr, ::Val{:if})
     @assert expr.head == :if 
 
     cond = expr.args[1]
-    pcond = roneblock(cond)::Wireexpr
+    pcond = wireexpr(cond)::Wireexpr
 
     ifcont = roneblock(expr.args[2], Val(Ifcontent))
 
@@ -316,84 +301,7 @@ function roneblock(expr, ::Val{:elseif})
 end
 
 """
-    roneblock(expr, ::Val{:ref})
-
-Bit select or slice of wires, e.g. `x[1]` and `x[p:1]`.
-"""
-function roneblock(expr, ::Val{:ref})
-    body = roneblock(expr.args[1])
-    sl = roneblock(expr.args[2])
-    # length(sl) may be 1 or 2
-    Wireexpr(slice, body, sl...)
-end
-
-"""
-    roneblock(expr, ::Val{:(:)}, ::Val{:call})
-
-Parse wire slice with range object, e.g. `x[a:b]`.
-"""
-function roneblock(expr, ::Val{:(:)}, ::Val{:call})
-    msb = expr.args[2]
-    lsb = expr.args[3]
-    (roneblock(msb), roneblock(lsb))
-end
-
-const wunasym2op = Dict([Val{item} => key for (key, item) in wunaopdict])
-const wbinsym2op = Dict([Val{item} => key for (key, item) in wbinopdict])
-
-const unaopvals = Union{[i for i in keys(wunasym2op)]...}
-const binopvals = Union{[i for i in keys(wbinsym2op)]...}
-
-"""
-    roneblock(expr, ::T, ::Val{:call}) where {T <: unaopvals}
-
-Parse unary operators.
-"""
-function roneblock(expr, ::T, ::Val{:call}) where {T <: unaopvals}
-    uno = roneblock(expr.args[2])
-    return Wireexpr(wunasym2op[T], uno)
-end
-
-"""
-    roneblock(expr, ::T, ::Val{:call}) where {T <: binopvals}
-
-Parse binary operators.
-"""
-function roneblock(expr, ::T, ::Val{:call}) where {T <: binopvals}
-    uno = roneblock(expr.args[2])
-    dos = roneblock(expr.args[3])
-    return Wireexpr(wbinsym2op[T], uno, dos)
-end
-
-"""
-    roneblock(expr, ::T, ::Val{:call}) where {T <: arityambigVals}
-
-Disambiguate symbols in `arityambigVals` between 
-unary and binary operators.
-"""
-function roneblock(expr, ::T, ::Val{:call}) where {T <: arityambigVals}
-    if length(expr.args) == 2
-        return Wireexpr(wunasym2op[T], roneblock(expr.args[2]))
-    else
-        @assert length(expr.args) == 3 || (@show length(expr.args); false)
-        uno, dos = roneblock(expr.args[2]), roneblock(expr.args[3])
-        return Wireexpr(wbinsym2op[T], uno, dos)
-    end
-end
-
-"""
-    roneblock(expr::Expr, ::Val{:&})
-
-Unary `&` parses differently from `|(wire)` and `^(wire)`.
-What is `&(wire)` originally used for in Julia?
-"""
-function roneblock(expr::Expr, ::Val{:&})
-    @assert length(expr.args) == 1
-    Wireexpr(redand, roneblock(expr.args[1]))
-end
-
-"""
-    @roneblock arg
+    roneblock(arg)
 
 Parse `arg` (which is AST) using macro. Uses reference 
 to prevent `arg` being evaluated.
@@ -412,6 +320,145 @@ See also [`@roneblock`](@ref).
 """
 function roneblock(expr::Ref{T}) where {T}
     roneblock(expr[])
+end
+
+
+"""
+    wireexpr(expr, ::Val{:ref})
+
+Bit select or slice of wires, e.g. `x[1]` and `x[p:1]`.
+"""
+function wireexpr(expr, ::Val{:ref})
+    body = wireexpr(expr.args[1])
+    sl = wireexpr(expr.args[2])
+    # length(sl) may be 1 or 2
+    Wireexpr(slice, body, sl...)
+end
+function wireexpr(expr::T) where {T <: Union{Symbol, Int}}
+    return Wireexpr(expr)
+end
+function wireexpr(expr::UInt8)
+    return Wireexpr(Int(expr))
+end
+"""
+    wireexpr(expr::Expr)
+
+Parse one wire expression. Be sure to put 'two e's'
+in wir'ee'xpr, not 'wirexpr'.
+
+# Syntax 
+Part of what can be done in Verilog can be accepted, 
+such as `din[7:0]`, `(w1 + w2) << 5`
+## `<wirename>`
+One wire, without slicing or bit-selecting.
+
+## `<val::Int>`, `<val::hex>`, `<val::bin>`
+Literals, e.g. `5`, `0x1f`, `0b10`.
+
+## `<wire> <op> <wire>`, `<op> <wire>`
+Unary and binary operators. 
+For reduction operators (unary `&, |, ^`), since these are 
+not operators in Julia, write it in the form of function 
+call explicitly, i.e. `&(wire)`, `|(wire)` instead of doing `^wire`.
+Note that we use `^` as xor just as in Verilog, though this is not 
+a xor operator in Julia.
+
+## `<wire>[<wire>:<wire>]`, `<wire>[<wire>]`
+Bit select and slicing as in Verilog/SystemVerilog.
+
+# Examples 
+```jldoctest
+julia> w = wireexpr(:(w)); vshow(w);
+w
+type: Wireexpr
+
+julia> w = wireexpr(:(w1 & &(w2) )); vshow(w);
+(w1 & &(w2))
+type: Wireexpr
+
+julia> w = wireexpr(:(w[i:0])); vshow(w);
+w[i:0]
+type: Wireexpr
+```
+"""
+function wireexpr(expr::Expr)
+    return wireexpr(expr, Val(expr.head))
+end
+function wireexpr(expr, ::Val{:call})
+    return wireexpr(expr, Val(expr.args[1]), Val(:call))
+end
+
+"""
+    wireexpr(expr, ::Val{:(:)}, ::Val{:call})
+
+Parse wire slice with range object, e.g. `x[a:b]`.
+"""
+function wireexpr(expr, ::Val{:(:)}, ::Val{:call})
+    msb = expr.args[2]
+    lsb = expr.args[3]
+    (wireexpr(msb), wireexpr(lsb))
+end
+
+const wunasym2op = Dict([Val{item} => key for (key, item) in wunaopdict])
+const wbinsym2op = Dict([Val{item} => key for (key, item) in wbinopdict])
+
+const unaopvals = Union{[i for i in keys(wunasym2op)]...}
+const binopvals = Union{[i for i in keys(wbinsym2op)]...}
+
+"""
+    wireexpr(expr, ::T, ::Val{:call}) where {T <: unaopvals}
+
+Parse unary operators.
+"""
+function wireexpr(expr, ::T, ::Val{:call}) where {T <: unaopvals}
+    uno = wireexpr(expr.args[2])
+    return Wireexpr(wunasym2op[T], uno)
+end
+
+"""
+    wireexpr(expr, ::T, ::Val{:call}) where {T <: binopvals}
+
+Parse binary operators.
+"""
+function wireexpr(expr, ::T, ::Val{:call}) where {T <: binopvals}
+    uno = wireexpr(expr.args[2])
+    dos = wireexpr(expr.args[3])
+    return Wireexpr(wbinsym2op[T], uno, dos)
+end
+
+"""
+    wireexpr(expr, ::T, ::Val{:call}) where {T <: arityambigVals}
+
+Disambiguate symbols in `arityambigVals` between 
+unary and binary operators.
+"""
+function wireexpr(expr, ::T, ::Val{:call}) where {T <: arityambigVals}
+    if length(expr.args) == 2
+        return Wireexpr(wunasym2op[T], wireexpr(expr.args[2]))
+    else
+        @assert length(expr.args) == 3 || (@show length(expr.args); false)
+        uno, dos = wireexpr(expr.args[2]), wireexpr(expr.args[3])
+        return Wireexpr(wbinsym2op[T], uno, dos)
+    end
+end
+
+"""
+    wireexpr(expr::Expr, ::Val{:&})
+
+Unary `&` parses differently from `|(wire)` and `^(wire)`.
+What is `&(wire)` originally used for in Julia?
+"""
+function wireexpr(expr::Expr, ::Val{:&})
+    @assert length(expr.args) == 1
+    Wireexpr(redand, wireexpr(expr.args[1]))
+end
+
+macro wireexpr(arg)
+    Expr(:call, wireexpr, Ref(arg))
+end
+
+function wireexpr(expr::Ref{T}) where {T}
+    wireexpr(expr[])
 end
 
 
