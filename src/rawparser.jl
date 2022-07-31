@@ -1,24 +1,24 @@
 """
-    roneblock(expr::T) where {T <: Union{Symbol, Int}}
+    oneblock(expr::T) where {T <: Union{Symbol, Int}}
 
 Convert `expr` to `Wireexpr`. Needed in parsing `block`.
 """
-function roneblock(expr::T) where {T <: Union{Symbol, Int}}
+function oneblock(expr::T) where {T <: Union{Symbol, Int}}
     return Wireexpr(expr)
 end
 
 """
-    roneblock(expr::UInt8)
+    oneblock(expr::UInt8)
 
 UInt8 may be given when user writes e.g. 0b10, 0x1f.
 Used when parsing `block`
 """
-function roneblock(expr::UInt8)
+function oneblock(expr::UInt8)
     return Wireexpr(Int(expr))
 end
 
 """
-    roneblock(expr::Expr)
+    oneblock(expr::Expr)
 
 Parse AST in Julia grammar to one if-else statement or 
 one assignment inside always blocks in Verilog, 
@@ -57,18 +57,18 @@ Nested if-else statement can be also accepted as in usual Julia.
 
 # Examples 
 ```jldoctest
-julia> a1 = roneblock(:(w1 <= w2)); 
+julia> a1 = oneblock(:(w1 <= w2)); 
 
 julia> vshow(a1);
 w1 <= w2;
 type: Alassign
 
-julia> a2 = roneblock(:(w3 = w4 + ~w2)); vshow(a2);
+julia> a2 = oneblock(:(w3 = w4 + ~w2)); vshow(a2);
 w3 = (w4 + ~w2);
 type: Alassign
 ```
 ```jldoctest
-a3 = roneblock(:(
+a3 = oneblock(:(
     if b1 == b2
         w5 = ~w6
         w7 = w8 
@@ -97,38 +97,77 @@ end
 type: Ifelseblock
 ```
 """
-function roneblock(expr::Expr)
-    return roneblock(expr, Val(expr.head))
+function oneblock(expr::Expr)
+    return oneblock(expr, Val(expr.head))
 end
 
 """
-    roneblock(expr, ::Val{:(=)})
+    oneblock(expr::T) where {T <: Union{Alassign, Ifelseblock}}
+
+For insertion through metaprogramming.
+# Example 
+```jldoctest
+a = @oneblock r = s & t
+b = @oneblock (
+    if b 
+        x = y 
+    else
+        x = z
+    end
+)
+c = always(:(
+    p = q;
+    \$(a);
+    \$(b)
+))
+vshow(c)
+
+# output
+
+always_comb begin
+    p = q;
+    r = (s & t);
+    if (b) begin
+        x = y;
+    end else begin
+        x = z;
+    end
+end
+type: Alwayscontent
+```
+"""
+function oneblock(expr::T) where {T <: Union{Alassign, Ifelseblock}}
+    expr 
+end
+
+"""
+    oneblock(expr, ::Val{:(=)})
 
 Assignment in Julia, stands for combinational assignment in Verilog.
 """
-function roneblock(expr, ::Val{:(=)})
+function oneblock(expr, ::Val{:(=)})
     @assert expr.head == :(=)
     return Alassign(wireexpr.(expr.args)..., comb)
 end
 
 """
-    roneblock(expr, ::Val{:call})
+    oneblock(expr, ::Val{:call})
 
-Dispatch methods of `roneblock` according to `expr.args[1]`.
+Dispatch methods of `oneblock` according to `expr.args[1]`.
 """
-function roneblock(expr, ::Val{:call})
-    return roneblock(expr, Val(expr.args[1]), Val(:call))
+function oneblock(expr, ::Val{:call})
+    return oneblock(expr, Val(expr.args[1]), Val(:call))
 end
 
 """
-    roneblock(expr, ::Val{:<=})
+    oneblock(expr, ::Val{:<=})
 
 Parse `expr` whose head is `call` and `expr.args[1]` is `<=`.
 
 Parse as a comparison opertor in Julia, interpret as 
 sequential assignment in Verilog.
 """
-function roneblock(expr, ::Val{:<=}, ::Val{:call})
+function oneblock(expr, ::Val{:<=}, ::Val{:call})
     return Alassign(wireexpr(expr.args[2]), wireexpr(expr.args[3]), ff)
 end
 
@@ -137,22 +176,22 @@ const blockconvable = Union{Ifcontent, Ifelseblock, Wireexpr}
 # abstract type blockconvable end
 
 """
-    roneblock(expr, ::Val{:elseif}, ::Val{T}) where {T <: blockconvable}
+    oneblock(expr, ::Val{:elseif}, ::Val{T}) where {T <: blockconvable}
 
 When given `Val{T}` as the third argument, if `expr` is not `block` 
 (= if the second argument is not `Val{:block}`), ignore `Val{T}`.
 
-This is needed in `roneblock(expr, ::Val{:elseif})`, 
+This is needed in `oneblock(expr, ::Val{:elseif})`, 
 for `expr`, whose `expr.head == :elseif`, can have either 
 `block` or `elseif` as its `expr.args[3]`.
 Checks that the return value is of type `T`.
 """
-function roneblock(expr, ::Val{:elseif}, ::Val{T}) where {T <: blockconvable}
-    return roneblock(expr, Val(:elseif))::T
+function oneblock(expr, ::Val{:elseif}, ::Val{T}) where {T <: blockconvable}
+    return oneblock(expr, Val(:elseif))::T
 end
 
 """
-    roneblock(expr, ::Val{:block}, ::Val{T}) where {T <: blockconvable}
+    oneblock(expr, ::Val{:block}, ::Val{T}) where {T <: blockconvable}
 
 Parse `expr` (which is `block`) into `T`. `block` appears at various nodes, thus need
 to explicitly indicate which type the return value should be.
@@ -160,7 +199,7 @@ Types that is allowed as return value is in [`blockconvable`](@ref).
 
 See also [`blockconv`](@ref).
 """
-function roneblock(expr, ::Val{:block}, ::Val{T}) where {T <: blockconvable}
+function oneblock(expr, ::Val{:block}, ::Val{T}) where {T <: blockconvable}
     # intended only for :block inside if/else
     @assert expr.head == :block 
 
@@ -176,7 +215,7 @@ function roneblock(expr, ::Val{:block}, ::Val{T}) where {T <: blockconvable}
             if item isa LineNumberNode
                 lineinfo = item 
             else
-                parsed = roneblock(item)
+                parsed = oneblock(item)
                 # push!(anslist, parsed)
                 
                 if parsed isa Alassign
@@ -202,28 +241,28 @@ function roneblock(expr, ::Val{:block}, ::Val{T}) where {T <: blockconvable}
 end
 
 """
-    roneblock(expr, ::Val{T}) where {T <: blockconvable}
+    oneblock(expr, ::Val{T}) where {T <: blockconvable}
 
-Helper method to make it possible to dispatch `roneblock` without
+Helper method to make it possible to dispatch `oneblock` without
 giving `expr.head` as an argument.
 """
-function roneblock(expr, ::Val{T}) where {T <: blockconvable}
-    return roneblock(expr, Val(expr.head), Val(T))
+function oneblock(expr, ::Val{T}) where {T <: blockconvable}
+    return oneblock(expr, Val(expr.head), Val(T))
 end
 
-function roneblock(expr, ::Val{:if})
+function oneblock(expr, ::Val{:if})
     # ifelseblock
     @assert expr.head == :if 
 
     cond = expr.args[1]
     pcond = wireexpr(cond)::Wireexpr
 
-    ifcont = roneblock(expr.args[2], Val(Ifcontent))
+    ifcont = oneblock(expr.args[2], Val(Ifcontent))
 
     if length(expr.args) == 2
         ans = Ifelseblock(pcond, ifcont)
     else
-        celse = roneblock(expr.args[3], Val(Ifelseblock))
+        celse = oneblock(expr.args[3], Val(Ifelseblock))
         ifadd!(celse, pcond, ifcont)
         ans = celse
     end
@@ -271,11 +310,11 @@ function blockconv(vas, vif, vwire, ::Val{Wireexpr})
 end
 
 """
-    roneblock(expr, ::Val{:elseif})
+    oneblock(expr, ::Val{:elseif})
 
 Parse `expr` into `Ifelseblock` where `expr` is elseif-clause.
 """
-function roneblock(expr, ::Val{:elseif})
+function oneblock(expr, ::Val{:elseif})
     @assert expr.head == :elseif 
 
     cond = expr.args[1]
@@ -285,13 +324,13 @@ function roneblock(expr, ::Val{:elseif})
     pcond = wireexpr(cond.args[2])
 
     # block appears in elseif -> if-clause
-    pelseif = roneblock(expr.args[2], Val(Ifcontent))
+    pelseif = oneblock(expr.args[2], Val(Ifcontent))
 
     if length(expr.args) == 3
         # block may appear in elseif -> else-clause
         # Note that elseif appears instead when more than 
         # two elseif clause occurs.
-        fullblock = roneblock(expr.args[3], Val(Ifelseblock))
+        fullblock = oneblock(expr.args[3], Val(Ifelseblock))
     else
         fullblock = Ifelseblock()
     end
@@ -301,25 +340,25 @@ function roneblock(expr, ::Val{:elseif})
 end
 
 """
-    roneblock(arg)
+    oneblock(arg)
 
 Parse `arg` (which is AST) using macro. Uses reference 
 to prevent `arg` being evaluated.
 """
-macro roneblock(arg)
-    return Expr(:call, roneblock, Ref(arg))
+macro oneblock(arg)
+    return Expr(:call, oneblock, Ref(arg))
 end
 
 """
-    roneblock(expr::Ref{T}) where {T}
+    oneblock(expr::Ref{T}) where {T}
 
 Dereference and parse `expr` given by user. Helper function 
-for macro `@roneblock`.
+for macro `@oneblock`.
 
-See also [`@roneblock`](@ref).
+See also [`@oneblock`](@ref).
 """
-function roneblock(expr::Ref{T}) where {T}
-    roneblock(expr[])
+function oneblock(expr::Ref{T}) where {T}
+    oneblock(expr[])
 end
 
 
@@ -384,6 +423,26 @@ type: Wireexpr
 function wireexpr(expr::Expr)
     return wireexpr(expr, Val(expr.head))
 end
+
+"""
+    wireexpr(expr::Wireexpr)
+
+Insertion through metaprogramming.
+# Example 
+```jldoctest
+julia> w = @wireexpr x + y;
+
+julia> e = :(a + |(\$(w) & z));
+
+julia> ans = wireexpr(e); vshow(ans);
+(a + |(((x + y) & z)))
+type: Wireexpr
+```
+"""
+function wireexpr(expr::Wireexpr)
+    expr 
+end
+
 function wireexpr(expr, ::Val{:call})
     return wireexpr(expr, Val(expr.args[1]), Val(:call))
 end
@@ -497,7 +556,7 @@ The case where `expr.head` is not `block`, which means
 `expr` is one assign (inside always-block) or if-else block.
 """
 function ralways(expr, ::T) where {T <: Val}
-    return Alwayscontent(roneblock(expr, T()))
+    return Alwayscontent(oneblock(expr, T()))
 end
 
 """
@@ -511,7 +570,7 @@ function ralwayswithSensitivity(expr)
     @assert sensitivity.head == :macrocall
     # sensitivity.args == [:@posedge, linenumnode, arg]
     edge = eval(Meta.parse(string(sensitivity.args[1])[2:end]))
-    sens = roneblock(sensitivity.args[3])
+    sens = oneblock(sensitivity.args[3])
 
     alblock.edge = edge 
     alblock.sensitive = sens 
@@ -538,7 +597,7 @@ function ralways(expr, ::Val{:block})
             if item isa LineNumberNode 
                 lineinfo = item 
             else
-                parsed = roneblock(item)
+                parsed = oneblock(item)
 
                 if parsed isa Alassign
                     push!(assignlist, parsed)
@@ -822,6 +881,37 @@ function ports(expr::Expr)
 end
 
 """
+    ports(expr::Vector{Oneport})
+
+Insertion through metaprogramming.
+# Example 
+```jldoctest
+a = @portoneline @in 8 d1, d2, d3
+b = ports(:(
+    @in d0;
+    \$(a);
+    @out reg 8 dout
+))
+vshow(b)
+
+# output
+
+(
+    input d0,
+    input [7:0] d1,
+    input [7:0] d2,
+    input [7:0] d3,
+    output reg [7:0] dout
+);
+
+type: Ports
+```
+"""
+function ports(expr::Vector{Oneport})
+    Ports(expr)
+end
+
+"""
     ports(expr::Expr, ::Val{:macrocall})
 
 Contain only single line declaration.
@@ -843,6 +933,9 @@ function ports(expr::Expr, ::Val{:block})
     for item in expr.args 
         if item isa LineNumberNode 
             lineinfo = item
+        # for insertion through metaprogramming
+        elseif item isa Vector{Oneport}
+            push!(anslist, item...)
         else
             push!(anslist, portoneline(item)...)
         end
@@ -984,6 +1077,23 @@ function decloneline(expr::Expr, ::Int, ::Expr)
     return [Onedecl(dtype, width, string(sym)) for sym in args]
 end
 
+"""
+    decloneline(arg)
+
+Macro version of `decloneline`.
+"""
+macro decloneline(arg)
+    Expr(:call, :decloneline, Ref(arg))
+end
+
+"""
+    decloneline(expr::Ref{T}) where {T}
+
+For macro call.
+"""
+function decloneline(expr::Ref{T}) where {T}
+    decloneline(expr[])
+end
 
 
 """
@@ -1020,6 +1130,32 @@ function decls(expr::Expr)
 end
 
 """
+    decls(expr::Vector{Onedecl})
+
+For insertion with metaprogramming.
+# Example
+```jldoctest
+a = @decloneline @reg 8 x1, x2
+b = decls(:(
+    \$(a);
+    @wire y1, y2
+))
+vshow(b)
+
+# output
+
+reg [7:0] x1;
+reg [7:0] x2;
+wire y1;
+wire y2;
+type: Decls
+```
+"""
+function decls(expr::Vector{Onedecl})
+    Decls(expr)
+end
+
+"""
     decls(expr::Expr, ::Val{:macrocall})
 
 Parse single line of declaration.
@@ -1041,6 +1177,9 @@ function decls(expr::Expr, ::Val{:block})
     for item in expr.args 
         if item isa LineNumberNode 
             lineinfo = item
+        # for insertion with metaprogramming
+        elseif item isa Vector{Onedecl}
+            push!(anslist, item...)
         else
             push!(anslist, decloneline(item)...)
         end
