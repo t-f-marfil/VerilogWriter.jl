@@ -116,11 +116,19 @@ function Base.string(x::Ifelseblock)
 end
 
 # alwaysdict = Dict(ff => "always_ff", comb => "always_comb")
-function Base.string(x::Alwayscontent)
+function Base.string(x::Alwayscontent, systemverilog)
+    if systemverilog 
+        ffhead = "always_ff"
+        combhead = "always_comb"
+    else
+        ffhead = "always" 
+        combhead = "always @*"
+    end
+
     if x.atype == ff
-        txt1 = string("always_ff @( ", string(x.edge), " ", string(x.sensitive), " ) begin\n")
+        txt1 = string(ffhead, " @( ", string(x.edge), " ", string(x.sensitive), " ) begin\n")
     elseif x.atype == comb 
-        txt1 = "always_comb begin\n"
+        txt1 = string(combhead, " begin\n")
     else
         txt1 = "always_unknown begin\n"
     end
@@ -135,6 +143,10 @@ function Base.string(x::Alwayscontent)
     # txt2 = newlineconcat(reduce(newlineconcat, string.(x.assigns, x.atype)),
     #                      reduce(newlineconcat, string.(x.ifelseblocks, x.atype)))
     return string(txt1, indent(txt2), "\nend")
+end
+
+function Base.string(x::Alwayscontent)
+    string(x, true)
 end
 
 function Base.string(x::Assign) 
@@ -158,7 +170,7 @@ function Base.string(x::Decls)
     end
 end
 
-function Base.string(x::Vmodule)
+function Base.string(x::Vmodule, systemverilog)
     txt1 = string("module ", x.name, " ", string(x.params),
                  string(x.ports))
 
@@ -169,8 +181,12 @@ function Base.string(x::Vmodule)
     end
 
     if length(x.always) > 0
-        txt1 *= indent(reduce(newlineconcat, string.(x.always)))
+        txt1 *= indent(reduce(newlineconcat, string.(x.always, systemverilog)))
     end
 
     return string(txt1, "\nendmodule")
+end
+
+function Base.string(x::Vmodule)
+    string(x, true)
 end

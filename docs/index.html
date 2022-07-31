@@ -15,11 +15,11 @@ vshow(x)</code></pre><p>(note that variables such as <code>dout</code>, <code>b1
         dout = ~d2;
     end
 end
-type: VerilogWriter.Alwayscontent</code></pre><p>Another example is </p><h6 id="In[3]"><a class="docs-heading-anchor" href="#In[3]">In[3]</a><a id="In[3]-1"></a><a class="docs-heading-anchor-permalink" href="#In[3]" title="Permalink"></a></h6><pre><code class="language-Julia hljs">prs = Parameters(Oneparam(&quot;dummy&quot;, 10))
+type: Alwayscontent</code></pre><p>Another example is </p><h6 id="In[3]"><a class="docs-heading-anchor" href="#In[3]">In[3]</a><a id="In[3]-1"></a><a class="docs-heading-anchor-permalink" href="#In[3]" title="Permalink"></a></h6><pre><code class="language-Julia hljs">prs = Parameters(Oneparam(&quot;splind&quot;, 5))
 
 ps = @ports (
     @in clk, sig1, sig2;
-    @in 8 din;
+    @in 8 din, din2;
     @out reg 8 dout
 )
 
@@ -30,10 +30,11 @@ ds = @decls (
 proc = @always (
     @posedge clk;
 
-    if sig1
+    if sig2 &amp;&amp; |(din2)
         dbuf &lt;= din 
-    elseif sig2 
-        dout &lt;= dbuf
+    elseif sig1 ^ sig2
+        dout[7:splind] &lt;= dbuf[7:splind]
+        dout[splind-1:0] &lt;= din[splind-1:0]
     else
         dout &lt;= ~din 
     end
@@ -48,25 +49,42 @@ mymod = Vmodule(
     [proc]
 )
 
-vshow(mymod)</code></pre><p>and now you get </p><h6 id="Out[3]"><a class="docs-heading-anchor" href="#Out[3]">Out[3]</a><a id="Out[3]-1"></a><a class="docs-heading-anchor-permalink" href="#Out[3]" title="Permalink"></a></h6><pre><code class="nohighlight hljs">module mymodule #(
-    parameter dummy = 10
+vshow(mymod, systemverilog=false)</code></pre><p>and now you get </p><h6 id="Out[3]"><a class="docs-heading-anchor" href="#Out[3]">Out[3]</a><a id="Out[3]-1"></a><a class="docs-heading-anchor-permalink" href="#Out[3]" title="Permalink"></a></h6><pre><code class="nohighlight hljs">module mymodule #(
+    parameter splind = 5
 )(
     input clk,
     input sig1,
     input sig2,
     input [7:0] din,
+    input [7:0] din2,
     output reg [7:0] dout
 );
     reg [7:0] dbuf;
 
-    always_ff @( posedge clk ) begin
-        if (sig1) begin
+    always @( posedge clk ) begin
+        if ((sig2 &amp;&amp; |(din2))) begin
             dbuf &lt;= din;
-        end else if (sig2) begin
-            dout &lt;= dbuf;
+        end else if ((sig1 ^ sig2)) begin
+            dout[7:splind] &lt;= dbuf[7:splind];
+            dout[(splind - 1):0] &lt;= din[(splind - 1):0];
         end else begin
             dout &lt;= ~din;
         end
     end
 endmodule
-type: VerilogWriter.Vmodule</code></pre><p>(of course this verilog module itself is far from being useful.)</p><h2 id="Introduction"><a class="docs-heading-anchor" href="#Introduction">Introduction</a><a id="Introduction-1"></a><a class="docs-heading-anchor-permalink" href="#Introduction" title="Permalink"></a></h2><p>This module offers a simple method to write on Julia  Verilog/SystemVerilog codes not as raw strings but as objects with certain structures, such as always-block-objects, port-declaration-objects, and so on (not as sophisticated as, for example, Chisel is, though).</p><p>The motivation here is that it would be nice if we could write Verilog/SystemVerilog with the power of the Julia language, with a minimal amount of additional syntaxes (function calls, constructors, etc.). </p><p>As in the examples above, we offer, for instance, simple macros to convert Verilog-like Julia code into certain objects that have proper structure found in Verilog codes.</p><h2 id="What-is-Left-to-be-Done"><a class="docs-heading-anchor" href="#What-is-Left-to-be-Done">What is Left to be Done</a><a id="What-is-Left-to-be-Done-1"></a><a class="docs-heading-anchor-permalink" href="#What-is-Left-to-be-Done" title="Permalink"></a></h2><p>It seems too many things are left to be done to make this <code>VerilogWriter.jl</code>, at least to some extent, useful, but to list few of them, </p><h3 id="Unsupported-Syntaxes"><a class="docs-heading-anchor" href="#Unsupported-Syntaxes">Unsupported Syntaxes</a><a id="Unsupported-Syntaxes-1"></a><a class="docs-heading-anchor-permalink" href="#Unsupported-Syntaxes" title="Permalink"></a></h3><p>Lots of operators and syntaxes in Verilog/SystemVerilog is not supported (e.g. for, generate for, interfaces, tasks, always_latch, wire concatenation and slice, indexed part select, wire width declaration with parameters, and so on), although some of them can be replaced by using Julia syntaxes instead (e.g. using Julia for loop and generate multiple <code>always</code> blocks instead of Verilog), or rather it &#39;should be&#39; replaced to make use of the power of Julia language.</p><p>Some of them may be done soon, such as using parameters in width of wire declaration.</p><h3 id="Not-a-pure-Verilog-output"><a class="docs-heading-anchor" href="#Not-a-pure-Verilog-output">Not a pure Verilog output</a><a id="Not-a-pure-Verilog-output-1"></a><a class="docs-heading-anchor-permalink" href="#Not-a-pure-Verilog-output" title="Permalink"></a></h3><p>As you see the examples there are <code>always_ff</code> and <code>always_comb</code>, which are of SystemVerilog. This may be easily made to be <code>always</code> or <code>always @*</code> only by changing final printing function (which is in fact <code>Base.string</code>).</p><h3 id="No-Useful-Handlers-of-the-Structs"><a class="docs-heading-anchor" href="#No-Useful-Handlers-of-the-Structs">No Useful Handlers of the Structs</a><a id="No-Useful-Handlers-of-the-Structs-1"></a><a class="docs-heading-anchor-permalink" href="#No-Useful-Handlers-of-the-Structs" title="Permalink"></a></h3><p>We offer here some structs to imitate what is done in Verilog codes, but few functions to handle them are offered together. Still you can construct some more functions to handle the structs offered here, making it a little easier to make more complex Verilog modules.</p><p>One example might be making functions to infer wire bit width from always blocks and assign statements, similar to what is done in Chisel.</p></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="structs/">Component structs »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Saturday 30 July 2022 17:40">Saturday 30 July 2022</span>. Using Julia version 1.7.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+type: Vmodule</code></pre><p>(of course this verilog module itself is far from being useful.)</p><h2 id="Introduction"><a class="docs-heading-anchor" href="#Introduction">Introduction</a><a id="Introduction-1"></a><a class="docs-heading-anchor-permalink" href="#Introduction" title="Permalink"></a></h2><p>This module offers a simple method to write on Julia  Verilog/SystemVerilog codes not as raw strings but as objects with certain structures, such as always-block-objects, port-declaration-objects, and so on (not as sophisticated as, for example, Chisel is, though).</p><p>The motivation here is that it would be nice if we could write Verilog/SystemVerilog with the power of the Julia language, with a minimal amount of additional syntaxes (function calls, constructors, etc.). </p><p>As in the examples above, we offer, for instance, simple macros to convert Verilog-like Julia code into certain objects that have proper structure found in Verilog codes.</p><h2 id="What-is-Left-to-be-Done"><a class="docs-heading-anchor" href="#What-is-Left-to-be-Done">What is Left to be Done</a><a id="What-is-Left-to-be-Done-1"></a><a class="docs-heading-anchor-permalink" href="#What-is-Left-to-be-Done" title="Permalink"></a></h2><p>It seems too many things are left to be done to make this <code>VerilogWriter.jl</code>, at least to some extent, useful, but to list few of them, </p><h3 id="Unsupported-Syntaxes"><a class="docs-heading-anchor" href="#Unsupported-Syntaxes">Unsupported Syntaxes</a><a id="Unsupported-Syntaxes-1"></a><a class="docs-heading-anchor-permalink" href="#Unsupported-Syntaxes" title="Permalink"></a></h3><p>Lots of operators and syntaxes in Verilog/SystemVerilog is not supported (e.g. for, generate for, interfaces, tasks, always_latch, indexed part select, and so on), although some of them can be replaced by using Julia syntaxes instead (e.g. using Julia for loop and generate multiple <code>always</code> blocks instead of Verilog), or rather it &#39;should be&#39; replaced to make use of the power of Julia language.</p><h3 id="No-Useful-Handlers-of-the-Structs"><a class="docs-heading-anchor" href="#No-Useful-Handlers-of-the-Structs">No Useful Handlers of the Structs</a><a id="No-Useful-Handlers-of-the-Structs-1"></a><a class="docs-heading-anchor-permalink" href="#No-Useful-Handlers-of-the-Structs" title="Permalink"></a></h3><p>We offer here some structs to imitate what is done in Verilog codes, but few functions to handle them are offered together. Still you can construct some more functions to handle the structs offered here, making it a little easier to make more complex Verilog modules.</p><p>One example might be making functions to infer wire bit width from always blocks and assign statements, similar to what is done in Chisel.</p><h3 id="No-Way-to-Insert-Generated-Objects-in-Verilog-like-Codes"><a class="docs-heading-anchor" href="#No-Way-to-Insert-Generated-Objects-in-Verilog-like-Codes">No Way to Insert Generated Objects in Verilog-like Codes</a><a id="No-Way-to-Insert-Generated-Objects-in-Verilog-like-Codes-1"></a><a class="docs-heading-anchor-permalink" href="#No-Way-to-Insert-Generated-Objects-in-Verilog-like-Codes" title="Permalink"></a></h3><p>Macros and functions accepts &#39;raw&#39; Verilog-like expressions, while there is no method to somehow insert the objects into expressions for the functions/macros. Instead you need to call certain constructors to create an object that contains another object. For example, </p><pre><code class="language-Julia hljs">blk = @roneblock (
+    if b 
+        x = z 
+    end
+)
+
+# cannot use @always here
+alw = Alwayscontent(
+    blk
+)
+vshow(addatype!(alw))</code></pre><p>outputs </p><pre><code class="nohighlight hljs">always_comb begin
+    if (b) begin
+        x = z;
+    end
+end
+type: Alwayscontent</code></pre></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="structs/">Component structs »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Sunday 31 July 2022 18:22">Sunday 31 July 2022</span>. Using Julia version 1.7.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

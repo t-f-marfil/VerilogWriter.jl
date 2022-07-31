@@ -20,15 +20,26 @@ function newlineconcat(uno, dos)
     return string(uno, "\n", dos)
 end
 
-"Print the structs in `VerilogWriter.jl` in a readable 
-format (except for enums)."
-function vshow(x)
+"""
+    vshow(x; systemverilog=true)
+
+Print the structs in `VerilogWriter.jl` in a readable 
+format (except for enums).
+When `systemverilog=false`, output `always`, `always @*` 
+instead of `always_ff`, `always_comb`, respectively.
+"""
+function vshow(x; systemverilog=true)
     println(string(x))
     println(string("type: ", typeof(x)))
 end
 
-function vshow(x::Vector{T}) where {T}
-    vshow.(x)
+function vshow(x::T; systemverilog=true) where {T <: Union{Vmodule, Alwayscontent}}
+    println(string(x, systemverilog))
+    println(string("type: ", typeof(x)))
+end
+
+function vshow(x::Vector{T}; systemverilog=true) where {T}
+    vshow.(x, systemverilog=systemverilog)
 end
 
 "for documentation of structs."
