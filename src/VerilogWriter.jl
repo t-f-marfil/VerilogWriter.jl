@@ -15,15 +15,16 @@ export
 
 export
     portoneline, ports, @portoneline, @ports,
+    wireexpr, @wireexpr,
     decloneline, decls, @decloneline, @decls,
     roneblock, always, @roneblock, @always
 
 export 
     ifadd!
-    
+
+include("vstructs.jl")
 include("baseutils.jl")
 include("textutils.jl")
-include("vstructs.jl")
 include("vstructhandlers.jl")
 include("vconstructors.jl")
 include("vstring.jl")
