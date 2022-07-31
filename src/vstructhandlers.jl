@@ -1,7 +1,3 @@
-# function Base.convert(::Type{Lhs}, x::Wireexpr)
-#     return Lhs(x.name, x.msb, x.lsb)
-# end
-
 """
 ifadd!(ifblock::Ifelseblock, cond, ifcont)
 
@@ -15,6 +11,12 @@ pushfirst!(ifblock.conds, cond)
 pushfirst!(ifblock.contents, ifcont)
 end
 
+"""
+    addatype!(x::Alwayscontent)
+
+Infer type of always block (combinational or sequential) and
+add the information to `x`.
+"""
 function addatype!(x::Alwayscontent)
     x.atype = atypealways(x)
     return x 
@@ -97,7 +99,7 @@ end
     invport(onep::Oneport)
 
 Return [Oneport](@ref) object whose directions are reversed
-from `ps`. Wiretype information (`reg`, `wire`, `logic`) is 
+from `onep`. Wiretype information (`reg`, `wire`, `logic`) is 
 lost when inverted for `reg` cannot be at input port.
 """
 function invport(onep::Oneport)
@@ -113,6 +115,34 @@ end
 
 Return [Ports](@ref) object whose directions are reversed
 from `ps`.
+
+# Examples 
+```jldoctest
+pts = @ports (
+    @in 8 bus1, bus2;
+    @out reg bus3
+)
+ipts = invports(pts)
+vshow(pts)
+vshow(ipts)
+
+# output
+
+(
+    input [7:0] bus1,
+    input [7:0] bus2,
+    output reg bus3
+);
+
+type: Ports
+(
+    output [7:0] bus1,
+    output [7:0] bus2,
+    input bus3
+);
+
+type: Ports
+```
 """
 function invports(ps::Ports)
     ans = Oneport[]

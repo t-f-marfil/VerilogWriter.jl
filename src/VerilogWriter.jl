@@ -1,7 +1,9 @@
 module VerilogWriter
 
 export 
-    showfield, vshow,
+    showfield, vshow
+
+export
     Oneparam, Parameters,
     Portdirec, Wiretype,
     Oneport, Ports,
@@ -20,7 +22,8 @@ export
     roneblock, always, @roneblock, @always
 
 export 
-    ifadd!
+    ifadd!, 
+    invport, invports
 
 include("vstructs.jl")
 include("baseutils.jl")
