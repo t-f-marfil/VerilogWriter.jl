@@ -131,33 +131,7 @@ It seems too many things are left to be done to make this `VerilogWriter.jl`, at
 ### Unsupported Syntaxes
 Lots of operators and syntaxes in Verilog/SystemVerilog is not supported (e.g. for, generate for, interfaces, tasks, always_latch, indexed part select, and so on), although some of them can be replaced by using Julia syntaxes instead (e.g. using Julia for loop and generate multiple `always` blocks instead of Verilog), or rather it 'should be' replaced to make use of the power of Julia language.
 
-### No Useful Handlers of the Structs 
+### Not Enough Handlers of the Structs 
 We offer here some structs to imitate what is done in Verilog codes, but few functions to handle them are offered together. Still you can construct some more functions to handle the structs offered here, making it a little easier to make more complex Verilog modules.
 
 One example might be making functions to infer wire bit width from always blocks and assign statements, similar to what is done in Chisel.
-
-### No Way to Insert Generated Objects in Verilog-like Codes
-
-Macros and functions accepts 'raw' Verilog-like expressions, while there is no method to somehow insert the objects into expressions for the functions/macros. Instead you need to call certain constructors to create an object that contains another object. For example, 
-```Julia
-blk = @oneblock (
-    if b 
-        x = z 
-    end
-)
-
-# cannot use @always here
-alw = Alwayscontent(
-    blk
-)
-vshow(addatype!(alw))
-```
-outputs 
-```
-always_comb begin
-    if (b) begin
-        x = z;
-    end
-end
-type: Alwayscontent
-```

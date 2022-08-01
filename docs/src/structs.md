@@ -269,6 +269,46 @@ oneblock(::Expr)
 oneblock(expr::T) where {T <: Union{Alassign, Ifelseblock}}
 ```
 
+## Embedding Objects
+
+You can embed generated objects back into Verilog-like codes. Note that because we ask you to make use of metaprogramming ([`interpolation`](https://docs.julialang.org/en/v1/manual/metaprogramming/#man-expression-interpolation) in particular), macros cannot be used for the purpose. 
+
+By embedding objects as Julia AST, you can construct new objects that contain the information of embedded objects.
+
+Every object (offered in this package) can be embedded almost anywhere it seems to be possible.
+
+### Examples
+```jldoctest
+julia> a = @portoneline @in clk;
+
+julia> b = ports(:($(a); @out 8 dout)); vshow(b);
+(
+    input clk,
+    output [7:0] dout
+);
+
+type: Ports
+
+julia> a = @ports (@in clk; @out 8 dout);
+
+julia> b = ports(:(@in resetn; $(a))); vshow(b);
+(
+    input resetn,
+    input clk,
+    output [7:0] dout
+);
+
+type: Ports
+
+julia> a = @wireexpr (x + y) & z;
+
+julia> b = always(:(lhs = $(a) | w)); vshow(b);
+always_comb begin
+    lhs = (((x + y) & z) | w);
+end
+type: Alwayscontent
+```
+
 ## Other Functions
 
 ### vshow 

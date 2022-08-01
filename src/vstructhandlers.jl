@@ -25,7 +25,9 @@ end
 """
     always(expr::Expr)
 
-Parse AST into always block as [Alwayscontent](@ref).
+Parse AST into always block as [Alwayscontent](@ref) using `ralways`.
+
+Also infers type of always using `addatype!`.
 
 # Syntax 
 ## `<oneblock>;<oneblock>[;<oneblock>;...]`

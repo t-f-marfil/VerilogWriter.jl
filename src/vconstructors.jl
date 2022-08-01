@@ -12,6 +12,7 @@ Onedecl(t::Wiretype, n::String) = Onedecl(t, 1, n)
 Onedecl(t::Wiretype, n::Ref{Symbol}) = Onedecl(t, string(n[]))
 Onedecl(t::Wiretype, w::Int, n::Ref{Symbol}) = Onedecl(t, w, string(n[]))
 
+Decls() = Decls(Onedecl[])
 
 """
     Wireexpr(n::String, msb::T1, lsb::T2) where {T1 <: Union{Int, Wireexpr}, T2 <: Union{Int, Wireexpr}}
@@ -80,6 +81,11 @@ Alwayscontent(assigns::Vector{Alassign}, ifblocks::Vector{Ifelseblock}) = Always
 Alwayscontent(assign::Alassign) = Alwayscontent([assign], Ifelseblock[])
 Alwayscontent(ifblock::Ifelseblock) = Alwayscontent(Alassign[], [ifblock])
 
+Alwayscontent() = Alwayscontent(aunknown)
+
 Vmodule(n::String, ps::Ports, decls::Decls, 
 ass::Vector{Assign}, als::Vector{Alwayscontent}
 ) = Vmodule(n, Parameters(), ps, decls, ass, als)
+
+Vmodule(n::String, ps::Ports, decls::Decls, als::Vector{Alwayscontent}
+) = Vmodule(n, Parameters(), ps, decls, Assign[], als)

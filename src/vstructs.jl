@@ -34,10 +34,11 @@ end
 """
 Verilog operators.
 
-Unary `&, |` does not exists so explicitly call as function 
-e.g. `&(wire), |(wire)` (& behaves in a wickedmanner...?).
+Unary `&, |` does not exists so explicitly call as function
+e.g. `&(wire), |(wire)` (& behaves in a wickedmanner...?),
+and are only available inside quoted expressions.
 Xor in verilog `^` is in Julia exponential operator, and the difference
-in association exists.
+in an association exists.
 """
 @enum Wireop begin 
     add
@@ -111,7 +112,8 @@ beneficial to have multiple wires in a vector, and that
 it is sometime a disadvantage in performance to use 
 abstract types when creating vectors.
 
-Some operators on wires in Verilog are overloaded for `Wireexpr`.
+Some operators on wires in Verilog, which are listed in `Enum Wireop`, 
+are overloaded for `Wireexpr`.
 Note that reduction operators (unary `&, |, ^`) are not in Julia, 
 and logical and, or (`&&, ||`) can be applied only for booleans in Julia, thus 
 are not available as an operator for `Wireexpr` objects.
