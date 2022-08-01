@@ -1,6 +1,6 @@
 # VerilogWriter.jl
 
-A package to write verilog on Julia.
+A package to generate Verilog/SystemVerilog on Julia.
 
 You may:
 + Convert Verilog-like Julia code into objects
