@@ -50,7 +50,7 @@ end
 type: Alwayscontent
 ```
 
-You may also create objects from constructors.
+You may also create objects from constructors and apply some operations.
 ```jldoctest
 julia> c = Wireexpr("wire1");
 
@@ -62,3 +62,91 @@ julia> vshow((c & d) + e);
 ((wire1 & wire2) + (wire3 << 5))
 type: Wireexpr
 ```
+
+## Embed Generated Objects Back into Verilog-like Codes
+
+Using [metaprogramming](https://docs.julialang.org/en/v1/manual/metaprogramming/), you would do, for example, 
+
+```jldoctest
+a = @always (
+    d1 = d2 + d3;
+    d4 = d4 & d5
+)
+b = always(:(
+    $(a);
+    if b1 == b2 
+        d6 = ~d7
+    end
+))
+vshow(b)
+
+# output
+
+always_comb begin
+    d1 = (d2 + d3);
+    d4 = (d4 & d5);
+    if ((b1 == b2)) begin
+        d6 = ~d7;
+    end
+end
+type: Alwayscontent
+```
+
+Note that you cannot use macros when embedding objects in Verilog-like codes.
+
+One application of this syntax would be 
+```jldoctest
+a = @ports (
+    @in 8 bus1, bus2;
+    @out 8 bus3
+)
+send = Vmodule(
+    "send",
+    ports(:(
+        @in sendin;
+        $(a)
+    )),
+    Decls(),
+    Alwayscontent[]
+)
+recv = Vmodule(
+    "recv",
+    ports(:(
+        @in recvin;
+        $(invports(a))
+    )),
+    Decls(),
+    Alwayscontent[]
+)
+vshow(send)
+println()
+vshow(recv)
+
+# output
+
+module send (
+    input sendin,
+    input [7:0] bus1,
+    input [7:0] bus2,
+    output [7:0] bus3
+);
+    
+
+
+endmodule
+type: Vmodule
+
+module recv (
+    input recvin,
+    output [7:0] bus1,
+    output [7:0] bus2,
+    input [7:0] bus3
+);
+    
+
+
+endmodule
+type: Vmodule
+```
+
+where you can construct `Ports` objects first and embed them in multiple modules.

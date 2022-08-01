@@ -550,12 +550,12 @@ function ralways(expr::Expr)
 end
 
 """
-    ralways(expr, ::T) where {T <: Val}
+    ralways(expr::Expr, ::T) where {T <: Val}
 
 The case where `expr.head` is not `block`, which means
 `expr` is one assign (inside always-block) or if-else block.
 """
-function ralways(expr, ::T) where {T <: Val}
+function ralways(expr::Expr, ::T) where {T <: Val}
     return Alwayscontent(oneblock(expr, T()))
 end
 
@@ -578,11 +578,11 @@ function ralwayswithSensitivity(expr)
 end
 
 """
-    ralways(expr, ::Val{:block})
+    ralways(expr::Expr, ::Val{:block})
 
 Convert multiple ifelse-blocks and assigns to one always-block.
 """
-function ralways(expr, ::Val{:block})
+function ralways(expr::Expr, ::Val{:block})
     if length(expr.args) > 0 && expr.args[1] isa Expr && expr.args[1].head == :macrocall
         return ralwayswithSensitivity(expr)
     end
@@ -596,6 +596,11 @@ function ralways(expr, ::Val{:block})
         for item in expr.args 
             if item isa LineNumberNode 
                 lineinfo = item 
+            # for metaprogramming
+            # ignores sensitivity list
+            elseif item isa Alwayscontent
+                push!(assignlist, item.assigns...)
+                push!(ifblocklist, item.ifelseblocks...)
             else
                 parsed = oneblock(item)
 
@@ -936,6 +941,8 @@ function ports(expr::Expr, ::Val{:block})
         # for insertion through metaprogramming
         elseif item isa Vector{Oneport}
             push!(anslist, item...)
+        elseif item isa Ports 
+            push!(anslist, item.val...)
         else
             push!(anslist, portoneline(item)...)
         end
