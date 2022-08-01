@@ -2,5 +2,7 @@ using VerilogWriter
 using Test
 
 @testset "VerilogWriter.jl" begin
-    # Write your tests here.
+    @testset "Print" begin
+        include("print.jl")
+    end
 end
