@@ -47,7 +47,11 @@ function Base.string(x::Wireexpr)
     if x.operation == id 
         txt = x.name 
     elseif x.operation == literal 
-        txt = string(x.value)
+        if x.bitwidth < 0
+            txt = string(x.value)
+        else
+            txt = string(x.bitwidth, "'d", x.value)
+        end
     elseif x.operation == slice 
         if length(x.subnodes) == 2
             txt = string(string(x.subnodes[1]), "[", string(x.subnodes[2]), "]")

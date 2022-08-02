@@ -48,7 +48,10 @@ Wireexpr(n::Symbol) = Wireexpr(string(n))
 
 Literal of Integer.
 """
-Wireexpr(n::Int) = Wireexpr(literal, "", [], -1, n)
+Wireexpr(n::Int) = Wireexpr(-1, n)
+# Wireexpr(n::Int) = Wireexpr(literal, "", [], -1, n)
+
+Wireexpr(w::Int, n::Int) = Wireexpr(literal, "", [], w, n)
 """
     Wireexpr(expr::Wireexpr)
 
