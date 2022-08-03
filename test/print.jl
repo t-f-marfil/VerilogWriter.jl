@@ -63,4 +63,89 @@ w = @wireexpr (0x12 <= 0b100) && (10 < x[10:1]) || y[z:1]
 w = w = Wireexpr(32, 5)
 @test string(w) == "32'd5"
 
+
 # Alassign 
+a = @oneblock x <= y 
+@test string(a) == "x <= y;"
+
+a = @oneblock x[4:0] <= y & z
+@test string(a) == "x[4:0] <= (y & z);"
+
+
+# Ifelseblock
+a = @oneblock (
+    if b1 && b2 
+        x <= y 
+    else
+        x <= z;
+        y <= z
+    end
+)
+@test string(a) == """
+if ((b1 && b2)) begin
+    x <= y;
+end else begin
+    x <= z;
+    y <= z;
+end"""
+
+a = @oneblock (
+    if b1 && b2 
+        x <= y+z;
+    elseif b3
+        if b4 
+            y <= r[3:0]
+        end
+        if b5 
+            d <= y + z 
+        elseif b6 
+            r <= z ^ t;
+            u <= d | e 
+        end
+    end
+)
+@test string(a) == """
+if ((b1 && b2)) begin
+    x <= (y + z);
+end else if (b3) begin
+    if (b4) begin
+        y <= r[3:0];
+    end
+    if (b5) begin
+        d <= (y + z);
+    end else if (b6) begin
+        r <= (z ^ t);
+        u <= (d | e);
+    end
+end"""
+
+
+# Alwayscontent
+a = @always (
+    x = y;
+    z = b
+)
+@test string(a) == """
+always_comb begin
+    x = y;
+    z = b;
+end"""
+
+a = @always (
+    @posedge clk;
+
+    x <= 3;
+    if b1 || b2 
+        x <= y << z 
+    end
+)
+@test string(a) == """
+always_ff @( posedge clk ) begin
+    x <= 3;
+    if ((b1 || b2)) begin
+        x <= (y << z);
+    end
+end"""
+
+
+# vmodule
