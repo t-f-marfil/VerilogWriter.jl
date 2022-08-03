@@ -549,6 +549,10 @@ function ralways(expr::Expr)
     return ralways(expr, Val(expr.head))
 end
 
+function ralways(expr::T...) where {T <: Union{Alassign, Ifelseblock}}
+    return Alwayscontent(expr...)
+end
+
 """
     ralways(expr::Expr, ::T) where {T <: Val}
 
@@ -917,6 +921,20 @@ function ports(expr::Vector{Oneport})
 end
 
 """
+    ports(expr::Ports...)
+
+Interpolation of one Vector{Ports}, nothing else given.
+e.g. ports(:(\$([ports(:(@in 6 x)), ports(:(@in y))]...)))
+"""
+function ports(expr::Ports...)
+    Ports(reduce(vcat, [e.val for e in expr]))
+end
+
+function ports(expr::Vector{Oneport}...)
+    Ports(reduce(vcat, expr))
+end
+
+"""
     ports(expr::Expr, ::Val{:macrocall})
 
 Contain only single line declaration.
@@ -1134,6 +1152,19 @@ type: Decls
 """
 function decls(expr::Expr)
     return decls(expr, Val(expr.head))
+end
+
+"""
+    decls(expr::Vector{Onedecl}...)
+
+For interpolation of a single vector.
+"""
+function decls(expr::Vector{Onedecl}...)
+    Decls(reduce(vcat, expr))
+end
+
+function decls(expr::Decls...)
+    Decls(reduce(vcat, (i.val for i in expr)))
 end
 
 """

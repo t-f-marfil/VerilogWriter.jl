@@ -50,7 +50,11 @@ Literal of Integer.
 """
 Wireexpr(n::Int) = Wireexpr(-1, n)
 # Wireexpr(n::Int) = Wireexpr(literal, "", [], -1, n)
+"""
+    Wireexpr(w::Int, n::Int)
 
+Literal with width specification, printed in the decimal format.
+"""
 Wireexpr(w::Int, n::Int) = Wireexpr(literal, "", [], w, n)
 """
     Wireexpr(expr::Wireexpr)
@@ -81,8 +85,8 @@ Ifelseblock(cond::Wireexpr, ifcont::Ifcontent, elsecont::Ifcontent) = Ifelsebloc
 
 Alwayscontent(atype::Atype) = Alwayscontent(atype, posedge, Wireexpr(), [], [])
 Alwayscontent(assigns::Vector{Alassign}, ifblocks::Vector{Ifelseblock}) = Alwayscontent(aunknown, unknownedge, Wireexpr(), assigns, ifblocks)
-Alwayscontent(assign::Alassign) = Alwayscontent([assign], Ifelseblock[])
-Alwayscontent(ifblock::Ifelseblock) = Alwayscontent(Alassign[], [ifblock])
+Alwayscontent(assign::Alassign...) = Alwayscontent([i for i in assign], Ifelseblock[])
+Alwayscontent(ifblock::Ifelseblock...) = Alwayscontent(Alassign[], [i for i in ifblock])
 
 Alwayscontent() = Alwayscontent(aunknown)
 
