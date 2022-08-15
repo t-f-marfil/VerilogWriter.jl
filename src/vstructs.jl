@@ -43,6 +43,7 @@ in an association exists.
 @enum Wireop begin 
     add
     minus
+    mul
     lshift 
     rshift
     band
@@ -84,6 +85,7 @@ const wunaopdict = Dict([
 const wbinopdict = Dict([
     add => :+, 
     minus => :-,
+    mul => :*,
     lshift => :<<,
     rshift => :>>,
     band => :&,
@@ -150,6 +152,8 @@ end
 "Type of always blocks."
 @enum Atype ff comb aunknown
 
+const assignopdict = Dict(ff => "<=", comb => "=", aunknown => "<=/=")
+
 "Assign statement inside always blocks."
 struct Alassign 
     lhs::Wireexpr
@@ -206,8 +210,9 @@ mutable struct Alwayscontent
     atype::Atype 
     edge::Edge
     sensitive::Wireexpr
-    assigns::Vector{Alassign}
-    ifelseblocks::Vector{Ifelseblock}
+    # assigns::Vector{Alassign}
+    # ifelseblocks::Vector{Ifelseblock}
+    content::Ifcontent
 end
 
 "Assign one statement."

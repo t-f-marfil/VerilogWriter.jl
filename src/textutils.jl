@@ -7,7 +7,8 @@ const TAB = space(4)
 "Indent `txt` with spaces of length \$eachspalen*depth\$."
 function indent(txt; eachspalen=4, depth=1)
     spalen = eachspalen*depth 
-    return reduce((x,y)->string(x, "\n", y), map((s -> space(spalen)*s), split(txt, "\n")))
+    sptxt = split(txt, "\n")
+    return reduce((x,y)->string(x, "\n", y), map((s -> space(spalen)*s), sptxt))
 end
 
 "Wrap `txt` with space of length `width`."
