@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/t-f-marfil/VerilogWriter.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/t-f-marfil/VerilogWriter.jl/actions/workflows/CI.yml)
 
-A package to generate Verilog/SystemVerilog on Julia.
+A package to generate Verilog/SystemVerilog codes on Julia.
 
 You may:
 + Convert Verilog-like Julia code into objects

@@ -77,7 +77,7 @@ function Base.string(x::Wireexpr)
     return txt 
 end
 
-assignopdict = Dict(ff => "<=", comb => "=", aunknown => "<=/=")
+# assignopdict = Dict(ff => "<=", comb => "=", aunknown => "<=/=")
 function Base.string(x::Alassign)
     txt = string(string(x.lhs), spacewrap(assignopdict[x.atype]), string(x.rhs), ";")
     return txt 
@@ -97,22 +97,24 @@ end
 
 function Base.string(x::Ifelseblock)
     txt = ""
-    for i in 1:(length(x.conds)+1)
-        if i == 1 
-            txt1 = string("if (", string(x.conds[1]), ") begin\n")
-            txt2 = string(x.contents[1])
+    if length(x.conds) > 0
+        for i in 1:(length(x.conds)+1)
+            if i == 1 
+                txt1 = string("if (", string(x.conds[1]), ") begin\n")
+                txt2 = string(x.contents[1])
 
-            txt *= string(txt1, indent(txt2), "\nend")
-        elseif i == length(x.conds)+1 
-            if length(x.contents) == i
-                txt *= string(" else begin\n", indent(string(x.contents[i])), "\nend")
-            else 
-                @assert length(x.contents) == i-1
+                txt *= string(txt1, indent(txt2), "\nend")
+            elseif i == length(x.conds)+1 
+                if length(x.contents) == i
+                    txt *= string(" else begin\n", indent(string(x.contents[i])), "\nend")
+                else 
+                    @assert length(x.contents) == i-1
+                end
+            else
+                txt1 = string(" else if (", string(x.conds[i]), ") begin\n")
+                
+                txt *= string(txt1, indent(string(x.contents[i])), "\nend")
             end
-        else
-            txt1 = string(" else if (", string(x.conds[i]), ") begin\n")
-            
-            txt *= string(txt1, indent(string(x.contents[i])), "\nend")
         end
     end
 
@@ -137,12 +139,13 @@ function Base.string(x::Alwayscontent, systemverilog)
         txt1 = "always_unknown begin\n"
     end
 
-    txt2 = ""
-    for v in (x.assigns, x.ifelseblocks)
-        if length(v) > 0
-            txt2 *= string(reduce(newlineconcat, string.(v)), "\n")
-        end
-    end
+    # txt2 = ""
+    # for v in (x.assigns, x.ifelseblocks)
+    #     if length(v) > 0
+    #         txt2 *= string(reduce(newlineconcat, string.(v)), "\n")
+    #     end
+    # end
+    txt2 = string(x.content)
     txt2 = strip(txt2)
     # txt2 = newlineconcat(reduce(newlineconcat, string.(x.assigns, x.atype)),
     #                      reduce(newlineconcat, string.(x.ifelseblocks, x.atype)))

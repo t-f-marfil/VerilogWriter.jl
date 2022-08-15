@@ -1,12 +1,40 @@
+# """
+#     atypealways(x::T) where {T <: Union{Alwayscontent, Ifcontent}}
+
+# Infer type of always-block (into always_ff or always_comb).
+
+# This is out of date, Alwayscontent now contains Ifcontent.
+# # Duck typing with `Alwayscontent` and `Ifcontent` is done because
+# # both have in common `assigns` and `ifelseblocks` as its fields.
+# """
+# function atypealways(x::T) where {T <: Union{Alwayscontent, Ifcontent}}
+#     tassigns = atypealways(x.assigns)
+#     tifblocks = atypealways(x.ifelseblocks)
+
+#     # unknown occur when either list is empty
+#     ans = aunknown
+#     if tassigns == aunknown 
+#         ans = tifblocks
+#     elseif tifblocks == aunknown
+#         ans = tassigns 
+#     else
+#         if tassigns != tifblocks 
+#             throw(error("discrepancy in atypes, \
+# assigns:$(tassigns) <=> ifelseblocks:$(tifblocks)."))
+#         end 
+
+#         ans = tassigns 
+#     end
+
+#     return ans 
+# end
+
 """
-    atypealways(x::T) where {T <: Union{Alwayscontent, Ifcontent}}
+    atypealways(x::Ifcontent)
 
 Infer type of always-block (into always_ff or always_comb).
-
-Duck typing with `Alwayscontent` and `Ifcontent` is done because
-both have in common `assigns` and `ifelseblocks` as its fields.
 """
-function atypealways(x::T) where {T <: Union{Alwayscontent, Ifcontent}}
+function atypealways(x::Ifcontent)
     tassigns = atypealways(x.assigns)
     tifblocks = atypealways(x.ifelseblocks)
 
@@ -58,3 +86,6 @@ function atypealways(x::Ifelseblock)
     return atypealways(x.contents)
 end
 
+function atypealways(x::Alwayscontent)
+    atypealways(x.content)
+end
