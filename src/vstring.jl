@@ -121,6 +121,18 @@ function Base.string(x::Ifelseblock)
     return txt 
 end
 
+function Base.string(x::Case)
+    txt = string("case ($(string(x.condwire)))\n")
+    subtxt = ""
+    for item in x.conds 
+        subtxt *= "$(string(item[1])): begin\n"
+        subtxt *= indent(string(item[2]))
+        subtxt *= "\nend\n"
+    end
+
+    txt *= indent(rstrip(subtxt)) * "\nendcase"
+end
+
 # alwaysdict = Dict(ff => "always_ff", comb => "always_comb")
 function Base.string(x::Alwayscontent, systemverilog)
     if systemverilog 

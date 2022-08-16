@@ -202,6 +202,34 @@ end
 
 const Ifcontent = Ifcontent_inner{Ifelseblock}
 
+"""
+```
+case (cnd)
+    cnd1: begin
+        foo1
+    end
+    cnd2: begin
+        foo2
+    end
+    ...
+endcase
+```
+
+converts to
+
+```
+Case(cnd, [
+    (cnd1 => foo1),
+    (cnd2 => foo2),
+    ...
+])
+```
+"""
+struct Case 
+    condwire::Wireexpr
+    conds::Vector{Pair{Wireexpr, Ifcontent}}
+end
+
 "Edge in sensitivity lists."
 @enum Edge posedge negedge unknownedge
 

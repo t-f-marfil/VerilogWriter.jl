@@ -119,6 +119,21 @@ end else if (b3) begin
     end
 end"""
 
+# Case
+a = Case(Wireexpr("state"), [
+    (Wireexpr("suno") => @ifcontent x = y),
+    (Wireexpr("sdos") => @ifcontent y <= z)
+])
+
+@test string(a) == """
+case (state)
+    suno: begin
+        x = y;
+    end
+    sdos: begin
+        y <= z;
+    end
+endcase"""
 
 # Alwayscontent
 a = @always (
