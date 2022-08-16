@@ -31,6 +31,17 @@ struct Ports
     val::Vector{Oneport}
 end
 
+"One localparam."
+struct Onelocalparam 
+    name::String 
+    val::Int
+end
+
+"Multiple localparams."
+struct Localparams
+    val::Vector{Onelocalparam} 
+end
+
 """
 Verilog operators.
 

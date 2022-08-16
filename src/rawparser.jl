@@ -1,4 +1,143 @@
 """
+    oneparam(expr::Expr)
+
+One parameter. 
+
+# Syntax 
+## `<paramname> = <val::Int>`
+
+```jldoctest
+julia> vshow(oneparam(:(x = 10)));
+parameter x = 10
+type: Oneparam
+```
+"""
+function oneparam(expr::Expr)
+    args = expr.args
+    Oneparam(args[1], args[2])
+end
+
+"""
+    oneparam(expr::Ref{T}) where {T}
+
+For macro call.
+"""
+function oneparam(expr::Ref{T}) where {T}
+    oneparam(expr[])
+end
+
+"""
+    oneparam(arg)
+
+Macro call.
+"""
+macro oneparam(arg)
+    Expr(:call, oneparam, Ref(arg))
+end
+
+
+"""
+    onelocalparam(expr::Expr)
+
+One localparam object. The syntax is the same as `oneparam`.
+# Example 
+```jldoctest
+julia> vshow(onelocalparam(:(x = 100)))
+localparam x = 100;
+type: Onelocalparam
+```
+"""
+function onelocalparam(expr::Expr)
+    args = expr.args
+    Onelocalparam(args[1], args[2])
+end
+
+"""
+    onelocalparam(expr::Ref{T}) where {T}
+
+For macro call.
+"""
+function onelocalparam(expr::Ref{T}) where {T}
+    onelocalparam(expr[])
+end
+
+"""
+    onelocalparam(arg)
+
+Macro call.
+"""
+macro onelocalparam(arg)
+    Expr(:call, onelocalparam, Ref(arg))
+end
+
+
+"""
+    localparams(expr::Expr)
+
+Multiple localparams.
+# Examples
+```jldoctest
+julia> p = localparams(:(x = 10)); vshow(p);
+localparam x = 10;
+type: Localparams
+```
+```jldoctest
+p = localparams(:(
+    a = 111;
+    b = 222;
+    c = 333
+))
+vshow(p)
+
+# output
+
+localparam a = 111;
+localparam b = 222;
+localparam c = 333;
+type: Localparams
+```
+"""
+function localparams(expr::Expr)
+    localparams(expr, Val(expr.head))
+end
+
+function localparams(expr::Expr, ::Val{:(=)})
+    Localparams(onelocalparam(expr))
+end
+
+function localparams(expr::Expr, ::Val{:block})
+    ansv = Onelocalparam[]
+
+    for item in expr.args
+        if item isa LineNumberNode 
+        else
+            push!(ansv, onelocalparam(item))
+        end
+    end
+
+    Localparams(ansv)
+end
+
+"""
+    localparams(expr::Ref{T}) where {T}
+
+For macro call.
+"""
+function localparams(expr::Ref{T}) where {T}
+    localparams(expr[])
+end
+
+"""
+    localparams(arg)
+
+Macro version.
+"""
+macro localparams(arg)
+    Expr(:call, localparams, Ref(arg))
+end
+
+
+"""
     oneblock(expr::T) where {T <: Union{Symbol, Int}}
 
 Convert `expr` to `Wireexpr`. Needed in parsing `block`.
@@ -652,6 +791,29 @@ end
     ifcontent(x::Expr)
 
 Convert into `Ifcontent` what is convertible to `Alwayscontent`.
+
+# Example
+```jldoctest
+x = @ifcontent ((
+    a = b;
+    if b 
+        x = c
+    else
+        x = d 
+    end
+))
+vshow(x)
+
+# output
+
+a = b;
+if (b) begin
+    x = c;
+end else begin
+    x = d;
+end
+type: Ifcontent
+```
 """
 function ifcontent(x::Expr)
     al = ralways(x)
