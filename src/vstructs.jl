@@ -278,6 +278,7 @@ struct Vmodule
     params::Parameters
     ports::Ports
 
+    locparams::Localparams
     decls::Decls
 
     assigns::Vector{Assign}

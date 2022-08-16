@@ -17,7 +17,7 @@ export
     Vmodule
 
 export
-    oneparam, @oneparam,
+    oneparam, parameters, @oneparam, @parameters,
     portoneline, ports, @portoneline, @ports,
     onelocalparam, localparams, @onelocalparam, @localparams,
     wireexpr, @wireexpr,

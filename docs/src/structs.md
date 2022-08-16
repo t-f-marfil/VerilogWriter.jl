@@ -241,7 +241,8 @@ type: Alwayscontent
 
 Written inside parentheses are the types of objects the functions return.
 
-+ [oneparam](@ref) ([Oneparam](@ref))
++ [parameters](@ref) ([Parameters](@ref))
+  + [oneparam](@ref) ([Oneparam](@ref))
 + [ports](@ref) ([Ports](@ref))
   + [portoneline](@ref) ([Oneport](@ref))
 + [wireexpr](@ref) ([Wireexpr](@ref))
@@ -253,7 +254,12 @@ Written inside parentheses are the types of objects the functions return.
   + [oneblock](@ref)  ([Ifelseblock](@ref),[Alassign](@ref))
     + [ifcontent](@ref)
 
-### oneparam
+### parameters
+```@docs
+parameters(expr::Expr)
+```
+
+#### oneparam
 ```@docs
 oneparam(expr::Expr)
 ```

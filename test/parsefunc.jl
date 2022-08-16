@@ -1,3 +1,29 @@
+# parameters
+a = @parameters (x = 10; z = 2)
+b = @onelocalparam a = 111
+x = localparams(:(
+    y = 5; $([a, b]...)
+))
+
+@test string(x) == """
+localparam y = 5;
+localparam x = 10;
+localparam z = 2;
+localparam a = 111;"""
+
+a = @localparams (x = 1; z = 20)
+b = @oneparam a = 1111
+x = localparams(:(
+    y = 50; $([a, b]...)
+))
+
+@test string(x) == """
+localparam y = 50;
+localparam x = 1;
+localparam z = 20;
+localparam a = 1111;"""
+
+
 # ports 
 
 # interpolation 
@@ -30,6 +56,32 @@ x = ports(:(
     input y
 );
 """
+
+
+# localparams 
+a = @localparams (x = 10; z = 2)
+b = @oneparam a = 111
+x = localparams(:(
+    y = 5; $([a, b]...)
+))
+
+@test string(x) == """
+localparam y = 5;
+localparam x = 10;
+localparam z = 2;
+localparam a = 111;"""
+
+a = @parameters (x = 101; z = 22)
+b = @onelocalparam a = 1110
+x = localparams(:(
+    y = 55; $([a, b]...)
+))
+
+@test string(x) == """
+localparam y = 55;
+localparam x = 101;
+localparam z = 22;
+localparam a = 1110;"""
 
 
 # decls 
