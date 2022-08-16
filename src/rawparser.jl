@@ -649,6 +649,36 @@ end
 
 
 """
+    ifcontent(x::Expr)
+
+Convert into `Ifcontent` what is convertible to `Alwayscontent`.
+"""
+function ifcontent(x::Expr)
+    al = ralways(x)
+    # Ifcontent(al.assigns, al.ifelseblocks)
+    al.content
+end
+
+"""
+    ifcontent(x::Ref{T}) where {T}
+
+For macro call.
+"""
+function ifcontent(x::Ref{T}) where {T}
+    ifcontent(x[])
+end
+
+"""
+    ifcontent(arg)
+
+Macro call.
+"""
+macro ifcontent(arg)
+    Expr(:call, ifcontent, Ref(arg))
+end
+
+
+"""
     portoneline(expr::Expr)
 
 Parse Julia AST to one line of port declaration as [Oneport](@ref).

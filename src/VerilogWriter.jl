@@ -10,7 +10,7 @@ export
     Wireop,
     Wireexpr,
     Atype,
-    Alassign, Ifcontent, Ifelseblock, Edge, Alwayscontent,
+    Alassign, Ifcontent, Case, Ifelseblock, Edge, Alwayscontent,
     Assign,
     Onedecl, Decls, 
     Vmodule
@@ -19,7 +19,7 @@ export
     portoneline, ports, @portoneline, @ports,
     wireexpr, @wireexpr,
     decloneline, decls, @decloneline, @decls,
-    oneblock, ralways, always, @oneblock, @always, @ralways
+    oneblock, ifcontent, ralways, always, @oneblock, @ifcontent, @always, @ralways
 
 export 
     ifadd!, 
