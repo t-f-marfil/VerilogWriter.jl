@@ -603,8 +603,8 @@ function ralways(expr::Expr, ::Val{:block})
             # for metaprogramming
             # ignores sensitivity list
             elseif item isa Alwayscontent
-                push!(assignlist, item.assigns...)
-                push!(ifblocklist, item.ifelseblocks...)
+                push!(assignlist, item.content.assigns...)
+                push!(ifblocklist, item.content.ifelseblocks...)
             else
                 parsed = oneblock(item)
 

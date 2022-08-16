@@ -1,3 +1,8 @@
+# overwrite `string` directly, for 
+# 1. Base.string(x::Alwayscontent, systemverilog) 
+# uses 2nd argument, which is difficult to handle with `show`, `print`.
+# 2. Enums behaves differently from other structs when overwriting `Base.show`.
+
 function Base.string(x::Oneparam)
     txt = string("parameter ", string(x.name), 
                 " = ", string(x.val))

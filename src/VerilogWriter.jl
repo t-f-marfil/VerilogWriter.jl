@@ -36,4 +36,6 @@ include("alwaysinference.jl")
 
 include("vopoverloads.jl")
 
+include("fsm.jl")
+
 end
