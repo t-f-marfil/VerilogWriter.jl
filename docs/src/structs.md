@@ -17,6 +17,8 @@ This module offers several structs that contain a structure of Verilog component
   + [Oneport](@ref)
     + [Portdirec](@ref)
     + [Wiretype](@ref)
++ [Localparams](@ref)
+  + [Onelocalparam](@ref)
 + [Wireexpr](@ref)
   + [Wireop](@ref)
 + [Decls](@ref)
@@ -78,6 +80,22 @@ println(string("Enum ", reduce((x, y)->string(x, " ", y), instances(Wiretype))))
 ```
 ```@docs
 Wiretype
+```
+
+### Localparams
+```@example 1
+println(showfield(Localparams)) # hide
+```
+```@docs
+Localparams
+```
+
+#### Onelocalparam
+```@example 1
+println(showfield(Onelocalparam)) # hide
+```
+```@docs
+Onelocalparam
 ```
 
 ### Wireexpr
@@ -223,14 +241,22 @@ type: Alwayscontent
 
 Written inside parentheses are the types of objects the functions return.
 
++ [oneparam](@ref) ([Oneparam](@ref))
 + [ports](@ref) ([Ports](@ref))
   + [portoneline](@ref) ([Oneport](@ref))
 + [wireexpr](@ref) ([Wireexpr](@ref))
++ [localparams](@ref) ([Localparams](@ref))
+  + [onelocalparam](@ref) ([Onelocalparam](@ref))
 + [decls](@ref) ([Decls](@ref))
   + [decloneline](@ref) ([Onedecl](@ref))
 + [always](@ref) ([Alwayscontent](@ref))
   + [oneblock](@ref)  ([Ifelseblock](@ref),[Alassign](@ref))
     + [ifcontent](@ref)
+
+### oneparam
+```@docs
+oneparam(expr::Expr)
+```
 
 ### ports
 ```@docs 
@@ -247,6 +273,16 @@ portoneline(::Expr)
 ```@docs
 wireexpr(::Expr)
 wireexpr(::Wireexpr)
+```
+
+### localparams
+```@docs
+localparams(expr::Expr)
+```
+
+#### onelocalparam
+```@docs
+onelocalparam(expr::Expr)
 ```
 
 ### decls 

@@ -1,3 +1,8 @@
+# Oneparam
+p = @oneparam p1 = 800
+@test string(p) == "parameter p1 = 800"
+
+
 # Oneport
 # [@in/@out]
 # [wire/reg/logic/None]
@@ -47,6 +52,11 @@ f = @ports (
     input clk
 );
 """
+
+
+# Onelocalparam
+p = @onelocalparam p1 = 111
+@test string(p) == "localparam p1 = 111;"
 
 
 # Wireexpr

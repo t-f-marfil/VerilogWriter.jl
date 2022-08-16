@@ -7,6 +7,7 @@ export
     Oneparam, Parameters,
     Portdirec, Wiretype,
     Oneport, Ports,
+    Onelocalparam, Localparams,
     Wireop,
     Wireexpr,
     Atype,
@@ -16,7 +17,9 @@ export
     Vmodule
 
 export
+    oneparam, @oneparam,
     portoneline, ports, @portoneline, @ports,
+    onelocalparam, localparams, @onelocalparam, @localparams,
     wireexpr, @wireexpr,
     decloneline, decls, @decloneline, @decls,
     oneblock, ifcontent, ralways, always, @oneblock, @ifcontent, @always, @ralways

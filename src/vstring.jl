@@ -48,6 +48,20 @@ function Base.string(x::Ports)
     return txt
 end
 
+function Base.string(x::Onelocalparam)
+    txt = "localparam $(x.name) = $(x.val);"
+end
+
+function Base.string(x::Localparams)
+    if length(x.val) > 0 
+        txt = reduce(newlineconcat, string.(x.val))
+    else
+        txt = ""
+    end
+
+    txt 
+end
+
 function Base.string(x::Wireexpr)
     if x.operation == id 
         txt = x.name 
