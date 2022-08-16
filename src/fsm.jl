@@ -1,5 +1,5 @@
 """
-Struct for a Finite State Machine, not spaghetti monster.
+Struct for a Finite State Machine, not the flying spaghetti monster.
 
 Each column of matrices are for the source state, and row for 
 the destination state.

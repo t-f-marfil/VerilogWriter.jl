@@ -37,6 +37,55 @@ end
 
 
 """
+    parameters(expr::Expr)
+
+Multiple parameters.
+
+Using `convert` and `localparams` inside.
+
+# Example 
+```jldoctest
+v = parameters(:(
+    x = 10;
+    y = 20;
+    z = 30
+))
+vshow(v)
+
+# output
+
+#(
+    parameter x = 10,
+    parameter y = 20,
+    parameter z = 30
+)
+type: Parameters
+```
+"""
+function parameters(expr::Expr)
+    convert(Parameters, localparams(expr))
+end
+
+"""
+    parameters(expr::Ref{T}) where {T}
+
+For macro call.
+"""
+function parameters(expr::Ref{T}) where {T}
+    parameters(expr[])
+end
+
+"""
+    parameters(arg)
+
+Macro call.
+"""
+macro parameters(arg)
+    Expr(:call, parameters, Ref(arg))
+end
+
+
+"""
     onelocalparam(expr::Expr)
 
 One localparam object. The syntax is the same as `oneparam`.
@@ -110,6 +159,10 @@ function localparams(expr::Expr, ::Val{:block})
 
     for item in expr.args
         if item isa LineNumberNode 
+        elseif item isa Oneparam || item isa Onelocalparam 
+            push!(ansv, item)
+        elseif item isa Parameters || item isa Localparams 
+            push!(ansv, item.val...)
         else
             push!(ansv, onelocalparam(item))
         end

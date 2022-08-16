@@ -212,6 +212,8 @@ function Base.string(x::Vmodule, systemverilog)
     txt1 = string("module ", x.name, " ", string(x.params),
                  string(x.ports))
 
+    txt1 *= string(indent(string(x.locparams)), "\n")
+
     txt1 *= string(indent(string(x.decls)), "\n\n")
     
     if length(x.assigns) > 0

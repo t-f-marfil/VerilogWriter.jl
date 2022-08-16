@@ -2,6 +2,26 @@ function Base.convert(::Type{String}, x::Symbol)
     string(x)
 end
 
+"Convert oneparam and onelocalparam with each other."
+function Base.convert(::Type{Oneparam}, x::Onelocalparam)
+    Oneparam(x.name, x.val)
+end
+
+"Convert parameters and localparams with each other."
+function Base.convert(::Type{Parameters}, x::Localparams)
+    Parameters(convert.(Oneparam, x.val))
+end
+
+"Convert oneparam and onelocalparam with each other."
+function Base.convert(::Type{Onelocalparam}, x::Oneparam)
+    Onelocalparam(x.name, x.val)
+end
+
+"Convert parameters and localparams with each other."
+function Base.convert(::Type{Localparams}, x::Parameters)
+    Localparams(convert.(Onelocalparam, x.val))
+end
+
 """
     Base.iterate(x::Wireexpr)
 

@@ -1,4 +1,4 @@
-Parameters() = Parameters([])
+# Parameters() = Parameters([])
 Parameters(args::Oneparam...) = Parameters([args...])
 
 Oneport(d::Portdirec, w::Int, n::String) = Oneport(d, wire, w, n)
@@ -91,6 +91,10 @@ Alwayscontent(assign::Alassign...) = Alwayscontent([i for i in assign], Ifelsebl
 Alwayscontent(ifblock::Ifelseblock...) = Alwayscontent(Alassign[], [i for i in ifblock])
 
 Alwayscontent() = Alwayscontent(aunknown)
+
+Vmodule(n::String, pas::Parameters, ps::Ports, decls::Decls, 
+ass::Vector{Assign}, als::Vector{Alwayscontent}
+) = Vmodule(n, pas, ps, Localparams(), decls, ass, als)
 
 Vmodule(n::String, ps::Ports, decls::Decls, 
 ass::Vector{Assign}, als::Vector{Alwayscontent}

@@ -3,6 +3,23 @@ p = @oneparam p1 = 800
 @test string(p) == "parameter p1 = 800"
 
 
+# Parameters
+p = parameters(:(
+    a = 10; b = 11
+))
+@test string(p) == """
+#(
+    parameter a = 10,
+    parameter b = 11
+)"""
+
+p = parameters(:(c = 1))
+@test string(p) == """
+#(
+    parameter c = 1
+)"""
+
+
 # Oneport
 # [@in/@out]
 # [wire/reg/logic/None]
