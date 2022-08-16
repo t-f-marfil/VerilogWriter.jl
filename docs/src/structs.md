@@ -230,6 +230,7 @@ Written inside parentheses are the types of objects the functions return.
   + [decloneline](@ref) ([Onedecl](@ref))
 + [always](@ref) ([Alwayscontent](@ref))
   + [oneblock](@ref)  ([Ifelseblock](@ref),[Alassign](@ref))
+    + [ifcontent](@ref)
 
 ### ports
 ```@docs 
@@ -267,6 +268,11 @@ always(::Expr)
 ```@docs
 oneblock(::Expr)
 oneblock(expr::T) where {T <: Union{Alassign, Ifelseblock}}
+```
+
+#### ifcontent
+```@docs
+ifcontent(x::Expr)
 ```
 
 ## Embedding Objects
