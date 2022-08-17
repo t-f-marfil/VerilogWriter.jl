@@ -741,7 +741,7 @@ function ralways(expr::Expr)
     return ralways(expr, Val(expr.head))
 end
 
-function ralways(expr::T...) where {T <: Union{Alassign, Ifelseblock}}
+function ralways(expr::T...) where {T <: Union{Alassign, Ifelseblock, Case}}
     return Alwayscontent(expr...)
 end
 
@@ -785,6 +785,7 @@ function ralways(expr::Expr, ::Val{:block})
 
     assignlist = Alassign[]
     ifblocklist = Ifelseblock[]
+    caselist = Case[]
 
     lineinfo = LineNumberNode(0, "noinfo")
 
@@ -794,9 +795,12 @@ function ralways(expr::Expr, ::Val{:block})
                 lineinfo = item 
             # for metaprogramming
             # ignores sensitivity list
+            elseif item isa Case 
+                push!(caselist, item)
             elseif item isa Alwayscontent
                 push!(assignlist, item.content.assigns...)
                 push!(ifblocklist, item.content.ifelseblocks...)
+                push!(cases, item.content.cases...)
             else
                 parsed = oneblock(item)
 
@@ -815,7 +819,7 @@ function ralways(expr::Expr, ::Val{:block})
         rethrow()
     end
 
-    return Alwayscontent(assignlist, ifblocklist)
+    return Alwayscontent(assignlist, ifblocklist, caselist)
 end
 
 """
