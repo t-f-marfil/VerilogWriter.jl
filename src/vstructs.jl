@@ -175,10 +175,10 @@ end
 """
 Container of one if-block (, one elseif block, or one else block).
 
-Parametrized by `T` only for mutual recursion with `Ifelseblock`, 
-thus used as `Ifcontent_inner{Ifelseblock}`, which is aliased as `Ifcontent`.
+Parametrized by `T, U` only for mutual recursion with `Ifelseblock`, 
+thus used as `Ifcontent_inner{Ifelseblock, Case}`, which is aliased as `Ifcontent`.
 """
-struct Ifcontent_inner{T}
+struct Ifcontent_inner{T, U}
     """
     Assign statements.
 
@@ -193,12 +193,14 @@ struct Ifcontent_inner{T}
     Ifelse statements.
     """
     ifelseblocks::Vector{T}
+    cases::Vector{U}
 end
 
 """
-Container of an if-else block.
+Container of an if-else block. Parametrized by `T` for mutual recursion.
+Used as `Ifelseblock = Ifelseblock_inner{Case}`.
 """
-struct Ifelseblock 
+struct Ifelseblock_inner{T}
     # if cond1 
     #   content1
     # elseif cond2 
@@ -208,10 +210,8 @@ struct Ifelseblock
     # `length(conds) - length(contents)` may differ according to 
     # the structure, i.e. if-end <=> if-else-end
     conds::Vector{Wireexpr}
-    contents::Vector{Ifcontent_inner{Ifelseblock}}
+    contents::Vector{Ifcontent_inner{Ifelseblock_inner{T}, T}}
 end
-
-const Ifcontent = Ifcontent_inner{Ifelseblock}
 
 """
 ```
@@ -238,8 +238,15 @@ Case(cnd, [
 """
 struct Case 
     condwire::Wireexpr
-    conds::Vector{Pair{Wireexpr, Ifcontent}}
+    conds::Vector{Pair{Wireexpr,
+        Ifcontent_inner{
+            Ifelseblock_inner{Case}, 
+            Case
+        }}}
 end
+
+const Ifelseblock = Ifelseblock_inner{Case}
+const Ifcontent = Ifcontent_inner{Ifelseblock, Case}
 
 "Edge in sensitivity lists."
 @enum Edge posedge negedge unknownedge

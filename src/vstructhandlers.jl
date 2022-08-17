@@ -89,6 +89,11 @@ function always(expr::Expr)
     return addatype!(alcont)
 end
 
+function always(expr)
+    alcont = ralways(expr)
+    return addatype!(alcont)
+end
+
 macro always(arg)
     return Expr(:call, always, Ref(arg))
 end

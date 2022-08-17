@@ -71,11 +71,11 @@ function fsmconv(::Type{Case}, x::FSM, atype::Atype)
         for i in length(x.states):-1:1
             if x.transvalid[i, ind] 
                 ifadd!(ifb, x.transcond[i, ind],
-                    Ifcontent([Alassign(Wireexpr(x.name), Wireexpr(x.states[i]), atype)], []))
+                    Ifcontent([Alassign(Wireexpr(x.name), Wireexpr(x.states[i]), atype)], Ifelseblock[]))
             end
         end
 
-        ifc = Ifcontent([], [ifb])
+        ifc = Ifcontent(Alassign[], [ifb])
         push!(conds, Wireexpr(state) => ifc)
     end
 

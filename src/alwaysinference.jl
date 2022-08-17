@@ -37,21 +37,30 @@ Infer type of always-block (into always_ff or always_comb).
 function atypealways(x::Ifcontent)
     tassigns = atypealways(x.assigns)
     tifblocks = atypealways(x.ifelseblocks)
+    tcases = atypealways(x.cases)
 
-    # unknown occur when either list is empty
+    # unknown occur when both list is empty
     ans = aunknown
-    if tassigns == aunknown 
-        ans = tifblocks
-    elseif tifblocks == aunknown
-        ans = tassigns 
-    else
-        if tassigns != tifblocks 
-            throw(error("discrepancy in atypes, \
-assigns:$(tassigns) <=> ifelseblocks:$(tifblocks)."))
-        end 
-
-        ans = tassigns 
+    for tnow in (tassigns, tifblocks, tcases)
+        if tnow != aunknown
+            if ans != aunknown && tnow != ans 
+                throw(error("discrepancy in atypes inside ifcontent."))
+            end
+            ans = tnow 
+        end
     end
+#     if tassigns == aunknown 
+#         ans = tifblocks
+#     elseif tifblocks == aunknown
+#         ans = tassigns 
+#     else
+#         if tassigns != tifblocks 
+#             throw(error("discrepancy in atypes, \
+# assigns:$(tassigns) <=> ifelseblocks:$(tifblocks)."))
+#         end 
+
+#         ans = tassigns 
+#     end
 
     return ans 
 end
@@ -65,12 +74,16 @@ function atypealways(x::Vector{T}) where {T}
     if length(x) == 0 
         ans = aunknown 
     else
-        ans = atypealways(x[1])
-        for i in 2:length(x)
-            ansnow = atypealways(x[i])
-            if ans != ansnow 
-                e = error("atype discrepancy occured in \n$(string(x[i])).")
-                throw(e)
+        # ans = atypealways(x[1])
+        ans = aunknown
+        for i in x
+            ansnow = atypealways(i)
+            if ansnow != aunknown
+                if ans != aunknown && ans != ansnow 
+                    e = error("atype discrepancy occured in \n$(string(i)).")
+                    throw(e)
+                end
+                ans = ansnow
             end
         end
     end
@@ -84,6 +97,11 @@ end
 
 function atypealways(x::Ifelseblock)
     return atypealways(x.contents)
+end
+
+function atypealways(x::Case)
+    ifconts = [i[2] for i in x.conds]
+    atypealways(ifconts)
 end
 
 function atypealways(x::Alwayscontent)

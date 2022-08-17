@@ -103,16 +103,21 @@ Wireexpr(op::Wireop, w::Wireexpr...) = Wireexpr(op, [w...])
 
 Alassign(lhs, rhs) = Alassign(lhs, rhs, aunknown)
 
+Ifcontent(x::Case) = Ifcontent([], [], [x])
+Ifcontent(x::Vector{Alassign}, y::Vector{Ifelseblock}) = Ifcontent(x, y, Case[])
 Ifcontent() = Ifcontent([], [])
 
 Ifelseblock() = Ifelseblock([], [])
 Ifelseblock(cond::Wireexpr, ifcont::Ifcontent) = Ifelseblock([cond], [ifcont])
 Ifelseblock(cond::Wireexpr, ifcont::Ifcontent, elsecont::Ifcontent) = Ifelseblock([cond], [ifcont, elsecont])
 
-Alwayscontent(atype::Atype) = Alwayscontent(atype, posedge, Wireexpr(), Ifcontent())
-Alwayscontent(assigns::Vector{Alassign}, ifblocks::Vector{Ifelseblock}) = Alwayscontent(aunknown, unknownedge, Wireexpr(), Ifcontent(assigns, ifblocks))
+Alwayscontent(atype::Atype) = Alwayscontent(atype, unknownedge, Wireexpr(), Ifcontent())
+Alwayscontent(ifcont::Ifcontent) = Alwayscontent(aunknown, unknownedge, Wireexpr(), ifcont)
+Alwayscontent(assigns::Vector{Alassign}, ifblocks::Vector{Ifelseblock}) = Alwayscontent(Ifcontent(assigns, ifblocks))
+Alwayscontent(assigns::Vector{Alassign}, ifblocks::Vector{Ifelseblock}, cases::Vector{Case}) = Alwayscontent(Ifcontent(assigns, ifblocks, cases))
 Alwayscontent(assign::Alassign...) = Alwayscontent([i for i in assign], Ifelseblock[])
 Alwayscontent(ifblock::Ifelseblock...) = Alwayscontent(Alassign[], [i for i in ifblock])
+Alwayscontent(case::Case...) = Alwayscontent(Alassign[], Ifelseblock[], [case...])
 
 Alwayscontent() = Alwayscontent(aunknown)
 

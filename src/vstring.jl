@@ -105,13 +105,18 @@ end
 function Base.string(x::Ifcontent)
     txt1 = length(x.assigns) > 0 ? reduce(newlineconcat, string.(x.assigns)) : ""
     txt2 = length(x.ifelseblocks) > 0 ? reduce(newlineconcat, string.(x.ifelseblocks)) : ""
+    txt3 = length(x.cases) > 0 ? reduce(newlineconcat, string.(x.cases)) : ""
     
-    if txt1 == "" || txt2 == ""
-        txt = txt1*txt2
-    else
-        txt = newlineconcat(txt1, txt2)
+    txt = ""
+    for txtnow in (txt1, txt2, txt3)
+        if txt == "" || txtnow == ""
+            txt *= txtnow 
+        else
+            txt *= string("\n", txtnow) 
+        end
     end
-    return txt
+    
+    txt
 end
 
 function Base.string(x::Ifelseblock)
