@@ -29,6 +29,13 @@ export
     invport, invports
 
 include("vstructs.jl")
+
+for myenum in [Portdirec, Wiretype, Wireop, Atype, Edge]
+    for i in instances(myenum)
+        eval(:(export $(Symbol(i))))
+    end
+end
+
 include("baseutils.jl")
 include("textutils.jl")
 include("vstructhandlers.jl")

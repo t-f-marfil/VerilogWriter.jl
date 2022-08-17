@@ -27,7 +27,7 @@ Wireexpr(n::String, msb::T1, lsb::T2) where {
     T1 <: Union{Int, Wireexpr}, T2 <: Union{Int, Wireexpr}
 } = Wireexpr(slice, n, [Wireexpr(msb), Wireexpr(lsb)], -1, -1)
 """
-    Wireexpr(n:String, msb::Int)
+    Wireexpr(n::String, msb::T) where {T <: Union{Int, Wireexpr}}
 
 Get one bit at `msb` from `n`.
 """
@@ -71,10 +71,34 @@ Wireexpr(expr::Wireexpr) = expr
 Create an empty expression.
 """
 Wireexpr() = Wireexpr("")
+"""
+    Wireexpr(op::Wireop, v::Vector{Wireexpr})
 
+Apply an operation on wires in `v`.
+"""
 Wireexpr(op::Wireop, v::Vector{Wireexpr}) = Wireexpr(op, "", v, -1, -1)
 # Wireexpr(op::Wireop, uno::Wireexpr) = Wireexpr(op, [uno])
 # Wireexpr(op::Wireop, uno::Wireexpr, dos::Wireexpr) = Wireexpr(op, [uno, dos])
+"""
+    Wireexpr(op::Wireop, w::Wireexpr...)
+
+Apply an operation of `w` wires.
+
+# Examples 
+```jldoctest
+julia> a = @wireexpr a; b = @wireexpr b;
+
+julia> c = Wireexpr(add, a, b); # equivalent to wireexpr(:(\$(a) + \$(b)))
+
+julia> vshow(c);
+(a + b)
+type: Wireexpr
+
+julia> d = Wireexpr(redor, a); vshow(d); # wireexpr(:(|(\$(a))))
+|(a)
+type: Wireexpr
+```
+"""
 Wireexpr(op::Wireop, w::Wireexpr...) = Wireexpr(op, [w...])
 
 Alassign(lhs, rhs) = Alassign(lhs, rhs, aunknown)
