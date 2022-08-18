@@ -53,7 +53,7 @@ Another example is
 
 ###### In[3]
 ```Julia
-prs = Parameters(Oneparam("splind", 5))
+prs = @parameters splind = 5
 
 ps = @ports (
     @in clk, sig1, sig2;
