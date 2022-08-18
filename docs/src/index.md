@@ -190,3 +190,5 @@ case (nstate)
 endcase
 type: FSM
 ```
+
+The case statement needs to be contained inside an always block.
