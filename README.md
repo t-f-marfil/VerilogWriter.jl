@@ -2,11 +2,12 @@
 
 [![CI](https://github.com/t-f-marfil/VerilogWriter.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/t-f-marfil/VerilogWriter.jl/actions/workflows/CI.yml)
 
-A package to generate Verilog/SystemVerilog codes on Julia.
+A package to generate Verilog/SystemVerilog codes and offer an introductory HLS (high level synthesis) on Julia.
 
 You may:
 + Convert Verilog-like Julia code into objects
 + Embed generated objects back into Verilog-like codes
++ Construct Finite State Machines in a simple method
 
 Examples and full documents are available [here](https://t-f-marfil.github.io/VerilogWriter.jl/).
 

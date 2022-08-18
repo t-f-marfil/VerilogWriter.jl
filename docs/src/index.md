@@ -152,3 +152,41 @@ type: Vmodule
 ```
 
 where you can construct `Ports` objects first and embed them in multiple modules.
+
+## Easy construction of Finite State Machines
+
+```jldoctest
+julia> fsm = FSM("nstate", "uno", "dos", "tres"); # create a new Finite State Machine
+
+julia> transadd!(fsm, (@wireexpr b1 == b2), "uno" => "dos"); # transition from "uno" to "dos"
+
+julia> transadd!(fsm, (@wireexpr b3), "uno" => "tres"); # "uno" to "tres"
+
+julia> transadd!(fsm, (@wireexpr b4), "dos" => "uno"); # "dos" to "uno"
+
+julia> vshow(fsm);
+reg [1:0] nstate;
+
+localparam uno = 0;
+localparam dos = 1;
+localparam tres = 2;
+
+case (nstate)
+    uno: begin
+        if ((b1 == b2)) begin
+            nstate <= dos;
+        end else if (b3) begin
+            nstate <= tres;
+        end
+    end
+    dos: begin
+        if (b4) begin
+            nstate <= uno;
+        end
+    end
+    tres: begin
+        
+    end
+endcase
+type: FSM
+```
