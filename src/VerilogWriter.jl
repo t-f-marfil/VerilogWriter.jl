@@ -28,6 +28,9 @@ export
     ifadd!, 
     invport, invports
 
+export 
+    FSM, fsmconv, transadd!
+
 include("vstructs.jl")
 
 for myenum in [Portdirec, Wiretype, Wireop, Atype, Edge]

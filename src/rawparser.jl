@@ -745,6 +745,10 @@ function ralways(expr::T...) where {T <: Union{Alassign, Ifelseblock, Case}}
     return Alwayscontent(expr...)
 end
 
+function ralways(expr::Alwayscontent)
+    expr 
+end
+
 """
     ralways(expr::Expr, ::T) where {T <: Val}
 
@@ -800,7 +804,7 @@ function ralways(expr::Expr, ::Val{:block})
             elseif item isa Alwayscontent
                 push!(assignlist, item.content.assigns...)
                 push!(ifblocklist, item.content.ifelseblocks...)
-                push!(cases, item.content.cases...)
+                push!(caselist, item.content.cases...)
             else
                 parsed = oneblock(item)
 

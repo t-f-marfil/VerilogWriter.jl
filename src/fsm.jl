@@ -109,10 +109,42 @@ function fsmconv(::Type{Localparams}, x::FSM)
 end
 
 
-function transadd!(x::FSM, cond::Wireexpr, newtrans)
+"""
+    transadd!(x::FSM, cond::Wireexpr, newtrans::Pair{String, String})
+
+Add a new transition rule for the state machine `x`.
+
+The new rule here is:
++ The transition from state `newtrans[1]` to state `newtrans[2]`
++ This transition occures when `cond` is true and the current state is `newtrans[1]`
+
+# Examples
+```jldoctest
+julia> fsm = FSM("nstate", "uno", "dos", "tres"); # create a FSM
+
+julia> transadd!(fsm, (@wireexpr b1 == b2), "uno" => "dos"); # transition from "uno" to "dos" when "b1 == b2"
+
+julia> vshow(fsmconv(Case, fsm));
+case (nstate)
+    uno: begin
+        if ((b1 == b2)) begin
+            nstate <= dos;
+        end
+    end
+    dos: begin
+        
+    end
+    tres: begin
+        
+    end
+endcase
+type: Case
+```
+"""
+function transadd!(x::FSM, cond::Wireexpr, newtrans::Pair{String, String})
     sfrom, sto = newtrans
     sfromind, stoind = (findall(x -> x == i, x.states)[] for i in (sfrom, sto))
 
-    x.transvalid[stoind, sfromind] = true 
-    x.transcond[stoind, sfromind] = cond 
+    x.transvalid[stoind, sfromind] = true
+    x.transcond[stoind, sfromind] = cond
 end
