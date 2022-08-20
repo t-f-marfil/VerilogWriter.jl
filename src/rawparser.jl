@@ -738,7 +738,7 @@ Does not infer type of alwaysblock here.
 Dispatches methods here according to `expr.head`.
 """
 function ralways(expr::Expr) 
-    return ralways(expr, Val(expr.head))
+    ralways(expr, Val(expr.head))::Alwayscontent
 end
 
 function ralways(expr::T...) where {T <: Union{Alassign, Ifelseblock, Case}}
@@ -877,7 +877,7 @@ type: Ifcontent
 ```
 """
 function ifcontent(x::Expr)
-    al = ralways(x)
+    al::Alwayscontent = ralways(x)
     # Ifcontent(al.assigns, al.ifelseblocks)
     al.content
 end

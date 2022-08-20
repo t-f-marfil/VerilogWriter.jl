@@ -37,3 +37,23 @@ end
 function Base.iterate(x::Wireexpr, ::Nothing)
     nothing
 end
+
+"""
+    Base.:isequal(uno::Wireexpr, dos::Wireexpr)
+
+Equality for `Wireexpr`.
+
+Note that `Base.:(==)` for Wireexpr is defined to create a new Wireexpr object.
+"""
+function Base.isequal(uno::Wireexpr, dos::Wireexpr)
+    hash(uno) == hash(dos)
+end
+
+"""
+    Base.hash(x::Wireexpr, h::UInt)
+
+Hash for `Wireexpr` to make it acceptable as keys for `Dict`.
+"""
+function Base.hash(x::Wireexpr, h::UInt)
+    hash(Tuple(getfield(x, i) for i in fieldnames(Wireexpr)), h)
+end
