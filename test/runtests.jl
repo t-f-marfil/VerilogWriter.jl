@@ -11,4 +11,7 @@ using Test
     @testset "Hash" begin
         include("hash.jl")
     end
+    @testset "Autoreset" begin
+        include("autoreset.jl")
+    end
 end
