@@ -103,10 +103,12 @@ Wireexpr(op::Wireop, w::Wireexpr...) = Wireexpr(op, [w...])
 
 Alassign(lhs, rhs) = Alassign(lhs, rhs, aunknown)
 
-Ifcontent(x::Case) = Ifcontent([], [], [x])
 Ifcontent(x::Vector{Alassign}, y::Vector{Ifelseblock}) = Ifcontent(x, y, Case[])
 Ifcontent() = Ifcontent([], [])
 Ifcontent(x::Vector{Alassign}) = Ifcontent(x, Ifelseblock[])
+Ifcontent(x::Alassign...) = Ifcontent([x...])
+Ifcontent(x::Ifelseblock...) = Ifcontent(Alassign[], [x...])
+Ifcontent(x::Case...) = Ifcontent([], [], [x...])
 
 Ifelseblock() = Ifelseblock([], [])
 Ifelseblock(cond::Wireexpr, ifcont::Ifcontent) = Ifelseblock([cond], [ifcont])

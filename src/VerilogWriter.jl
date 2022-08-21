@@ -26,7 +26,8 @@ export
 
 export 
     ifadd!, 
-    invport, invports
+    invport, invports,
+    lhsextract, lhsunify, autoreset
 
 export 
     FSM, fsmconv, transadd!
@@ -50,5 +51,7 @@ include("alwaysinference.jl")
 include("vopoverloads.jl")
 
 include("fsm.jl")
+
+include("autoreset.jl")
 
 end
