@@ -55,5 +55,5 @@ end
 Hash for `Wireexpr` to make it acceptable as keys for `Dict`.
 """
 function Base.hash(x::Wireexpr, h::UInt)
-    hash(Tuple(getfield(x, i) for i in fieldnames(Wireexpr)), h)
+    hash(Tuple(map(i -> getfield(x, i), fieldnames(Wireexpr))), h)
 end

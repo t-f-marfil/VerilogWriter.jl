@@ -140,6 +140,8 @@ function Base.string(x::Ifelseblock)
                 txt *= string(txt1, indent(string(x.contents[i])), "\nend")
             end
         end
+    elseif length(x.contents) == 1 
+        txt = string(x.contents[1])
     end
 
     return txt 

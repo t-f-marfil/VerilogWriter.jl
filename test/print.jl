@@ -146,6 +146,20 @@ end else if (b3) begin
     end
 end"""
 
+v = @ifcontent (
+    x = z;
+    if b 
+        x = w 
+    end
+) 
+b = Ifelseblock([], [v])
+@test string(b) == """
+x = z;
+if (b) begin
+    x = w;
+end"""
+
+
 # Case
 a = Case(Wireexpr("state"), [
     (Wireexpr("suno") => @ifcontent x = y),
