@@ -106,6 +106,7 @@ Alassign(lhs, rhs) = Alassign(lhs, rhs, aunknown)
 Ifcontent(x::Case) = Ifcontent([], [], [x])
 Ifcontent(x::Vector{Alassign}, y::Vector{Ifelseblock}) = Ifcontent(x, y, Case[])
 Ifcontent() = Ifcontent([], [])
+Ifcontent(x::Vector{Alassign}) = Ifcontent(x, Ifelseblock[])
 
 Ifelseblock() = Ifelseblock([], [])
 Ifelseblock(cond::Wireexpr, ifcont::Ifcontent) = Ifelseblock([cond], [ifcont])

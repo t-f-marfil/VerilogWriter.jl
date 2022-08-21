@@ -8,4 +8,7 @@ using Test
     @testset "Print" begin
         include("print.jl")
     end
+    @testset "Hash" begin
+        include("hash.jl")
+    end
 end
