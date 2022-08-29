@@ -93,6 +93,8 @@ const wunaopdict = Dict([
     redor => :|
     redxor => :^
 ])
+const wunaop = Set(keys(wunaopdict))
+
 const wbinopdict = Dict([
     add => :+, 
     minus => :-,
@@ -110,6 +112,8 @@ const wbinopdict = Dict([
     land => :&&,
     lor => :||
 ])
+const wbinop = Set(keys(wbinopdict))
+
 const arityambigs = [:-, :|, :&, :^]
 const arityambigVals = Union{[Val{i} for i in arityambigs]...}
 
@@ -175,7 +179,7 @@ end
 """
 Container of one if-block (, one elseif block, or one else block).
 
-Parametrized by `T, U` only for mutual recursion with `Ifelseblock`, 
+Parametrized by `T, U` only for mutual recursion with `Ifelseblock` and `Case`,
 thus used as `Ifcontent_inner{Ifelseblock, Case}`, which is aliased as `Ifcontent`.
 """
 struct Ifcontent_inner{T, U}

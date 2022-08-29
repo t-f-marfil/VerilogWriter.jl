@@ -53,5 +53,6 @@ include("vopoverloads.jl")
 include("fsm.jl")
 
 include("autoreset.jl")
+include("widthinference.jl")
 
 end

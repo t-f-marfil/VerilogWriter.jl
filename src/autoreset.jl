@@ -64,6 +64,7 @@ function lhsunify(wvec::Vector{Wireexpr})
         if wexpr.operation == id 
             push!(ans, wexpr)
         elseif wexpr.operation == slice 
+            @assert wexpr.subnodes[1].operation == id
             push!(ans, wexpr.subnodes[1])
         end
     end
@@ -73,13 +74,12 @@ function lhsunify(wvec::Vector{Wireexpr})
 end
 
 
+# Detection of Lhs depends on [`lhsextract`](@ref) and [`lhsunify`](@ref).
 """
     autoreset(x::Ifcontent; clk=Wireexpr("CLK"), rst=Wireexpr("RST"), edge=posedge)
 
 Given `x::Ifcontent`, returns `always_ff/always` block that 
 resets every `wire/reg`s appear at Lhs of `x`.
-
-Detection of Lhs depends on [`lhsextract`](@ref) and [`lhsunify`](@ref).
 """
 function autoreset(x::Ifcontent; clk=Wireexpr("CLK"), rst=Wireexpr("RST"), edge=posedge)
     ext = lhsextract(x)

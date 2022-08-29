@@ -332,6 +332,10 @@ function oneblock(expr::T) where {T <: Union{Alassign, Ifelseblock}}
     expr 
 end
 
+function oneblock(expr::Case)
+    expr 
+end
+
 """
     oneblock(expr, ::Val{:(=)})
 
