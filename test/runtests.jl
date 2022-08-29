@@ -14,4 +14,7 @@ using Test
     @testset "Autoreset" begin
         include("autoreset.jl")
     end
+    @testset "Wireextract" begin
+        include("wireextract.jl")
+    end
 end

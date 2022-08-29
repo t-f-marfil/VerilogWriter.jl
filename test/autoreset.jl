@@ -1,6 +1,6 @@
 v = ifcontent(:(
-    a = m;
-    c[0] = 10;
+    a <= m;
+    c <= 10;
     if b1 
         b[x:0] <= n 
     else
@@ -18,8 +18,8 @@ always_ff @( posedge CLK ) begin
         b <= 0;
         c <= 0;
     end else begin
-        a = m;
-        c[0] = 10;
+        a <= m;
+        c <= 10;
         if (b1) begin
             b[x:0] <= n;
         end else begin
