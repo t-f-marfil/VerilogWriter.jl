@@ -45,7 +45,7 @@ end
 """
 Verilog operators.
 
-Unary `&, |` does not exists so explicitly call as function
+Unary `&, |` does not exist so explicitly call as function
 e.g. `&(wire), |(wire)` (& behaves in a wickedmanner...?),
 and are only available inside quoted expressions.
 Xor in verilog `^` is in Julia exponential operator, and the difference
@@ -77,8 +77,8 @@ in an association exists.
     id 
     slice
     literal
-    hex 
-    dec
+    # hex 
+    # dec
 end
 
 "`&&` and `||` are invalid identifier in julia."
