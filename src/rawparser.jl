@@ -859,14 +859,14 @@ Convert into `Ifcontent` what is convertible to `Alwayscontent`.
 
 # Example
 ```jldoctest
-x = @ifcontent ((
+x = @ifcontent (
     a = b;
     if b 
         x = c
     else
         x = d 
     end
-))
+)
 vshow(x)
 
 # output

@@ -226,7 +226,7 @@ is equivalent to
 
 (be care full not to foreget `(one space)` between macros and `(`, i.e. `@macro(a;b)` and `@macro (a;b)` are different.)
 
-But sometimes there are things what macros cannot do (at least to me it seems impossible in macros), an example is having `for` loop inside expressions.
+But sometimes there are things what macros cannot do (for now), an example is having `for` loop inside expressions.
 ```Julia
 d = always(:(
     if b1 
