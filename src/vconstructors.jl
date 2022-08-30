@@ -14,7 +14,8 @@ Onedecl(t::Wiretype, n::String) = Onedecl(t, 1, n)
 Onedecl(t::Wiretype, n::Ref{Symbol}) = Onedecl(t, string(n[]))
 Onedecl(t::Wiretype, w::Int, n::Ref{Symbol}) = Onedecl(t, w, string(n[]))
 
-Decls() = Decls(Onedecl[])
+# Decls() = Decls(Onedecl[])
+Decls(args::Onedecl...) = Decls([args...])
 
 """
     Wireexpr(n::String, msb::T1, lsb::T2) where {T1 <: Union{Int, Wireexpr}, T2 <: Union{Int, Wireexpr}}
