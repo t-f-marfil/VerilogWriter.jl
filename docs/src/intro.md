@@ -41,7 +41,7 @@ type: Alwayscontent
 
 Another example is 
 
-###### In[3]
+<!-- ###### In[3]
 ```Julia
 prs = @parameters splind = 5
 
@@ -110,7 +110,7 @@ endmodule
 type: Vmodule
 ```
 
-(of course this verilog module itself is far from being useful.)
+(of course this verilog module itself is far from being useful.) -->
 
 ## Introduction
 
@@ -134,4 +134,4 @@ Lots of operators and syntaxes in Verilog/SystemVerilog is not supported (e.g. f
 ### Not Enough Handlers of the Structs 
 We offer here some structs to imitate what is done in Verilog codes, but few functions to handle them are offered together. Still you can construct some more functions to handle the structs offered here, making it a little easier to make more complex Verilog modules.
 
-One example might be making functions to infer wire bit width from always blocks and assign statements, similar to what is done in Chisel.
+<!-- One example might be making functions to infer wire bit width from always blocks and assign statements, similar to what is done in Chisel. -->

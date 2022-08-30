@@ -49,6 +49,72 @@ always_ff @( posedge clk ) begin
 end
 type: Alwayscontent
 ```
+```jldoctest
+prs = @parameters splind = 5
+
+ps = @ports (
+    @in clk, sig1, sig2;
+    @in 8 din, din2;
+    @out reg 8 dout
+)
+
+ds = @decls (
+    @reg 8 dbuf
+)
+
+proc = @always (
+    @posedge clk;
+
+    if sig2 && |(din2)
+        dbuf <= din 
+    elseif sig1 ^ sig2
+        dout[7:splind] <= dbuf[7:splind]
+        dout[splind-1:0] <= din[splind-1:0]
+    else
+        dout <= ~din 
+    end
+)
+
+mymod = Vmodule(
+    "mymodule",
+    prs,
+    ps,
+    ds,
+    Assign[],
+    [proc]
+)
+
+vshow(mymod, systemverilog=false)
+
+# output
+
+module mymodule #(
+    parameter splind = 5
+)(
+    input clk,
+    input sig1,
+    input sig2,
+    input [7:0] din,
+    input [7:0] din2,
+    output reg [7:0] dout
+);
+
+    reg [7:0] dbuf;
+
+    always @( posedge clk ) begin
+        if ((sig2 && |(din2))) begin
+            dbuf <= din;
+        end else if ((sig1 ^ sig2)) begin
+            dout[7:splind] <= dbuf[7:splind];
+            dout[(splind - 1):0] <= din[(splind - 1):0];
+        end else begin
+            dout <= ~din;
+        end
+    end
+endmodule
+type: Vmodule
+```
+
 
 You may also create objects from constructors and apply some operations.
 ```jldoctest
@@ -191,4 +257,4 @@ endcase
 type: FSM
 ```
 
-The case statement needs to be contained inside an always block.
+You may need to include the case statement inside an always block.

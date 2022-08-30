@@ -80,6 +80,40 @@ end
 
 Given `x::Ifcontent`, returns `always_ff/always` block that 
 resets every `wire/reg`s appear at Lhs of `x`.
+
+# Example 
+```jldoctest
+c = @ifcontent (
+    r1 <= r2;
+    if b1 
+        r2 <= 0
+        r3 <= r3 + r4
+    else 
+        r3 <= 0
+    end
+) 
+r = autoreset(c; clk=(@wireexpr clk), rst=(@wireexpr ~resetn))
+vshow(r)
+
+# output
+
+always_ff @( posedge clk ) begin
+    if (~resetn) begin
+        r1 <= 0;
+        r2 <= 0;
+        r3 <= 0;
+    end else begin
+        r1 <= r2;
+        if (b1) begin
+            r2 <= 0;
+            r3 <= (r3 + r4);
+        end else begin
+            r3 <= 0;
+        end
+    end
+end
+type: Alwayscontent
+```
 """
 function autoreset(x::Ifcontent; clk=Wireexpr("CLK"), rst=Wireexpr("RST"), edge=posedge)
     ext = lhsextract(x)
@@ -89,5 +123,6 @@ function autoreset(x::Ifcontent; clk=Wireexpr("CLK"), rst=Wireexpr("RST"), edge=
 
     ifb = Ifelseblock([rst], [rstcont, x])
     ans = Alwayscontent(ff, edge, clk, Ifcontent(ifb))
+    @assert atypealways(ans) == ff
     ans 
 end
