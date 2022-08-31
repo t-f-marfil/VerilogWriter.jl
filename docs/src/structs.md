@@ -112,6 +112,7 @@ Wireexpr(op::Wireop, w::Wireexpr...)
 Wireexpr(op::Wireop, v::Vector{Wireexpr})
 Wireexpr(n::String, msb::T) where {T <: Union{Int, Wireexpr}}
 Wireexpr(n::String, msb::T1, lsb::T2) where {T1 <: Union{Int, Wireexpr}, T2 <: Union{Int, Wireexpr}}
+Wireexpr(w::Int, n::Int)
 Wireexpr(expr::Wireexpr)
 Wireexpr()
 ```
