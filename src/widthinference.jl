@@ -66,11 +66,11 @@ Wirewid() = Wirewid(wwinvalid)
 struct Vmodenv
     prms::Parameters
     prts::Ports
-    dcls::Decls
     lprms::Localparams
+    dcls::Decls
 end
 
-Vmodenv() = Vmodenv(Parameters(), Ports(), Decls(), Localparams())
+Vmodenv() = Vmodenv(Parameters(), Ports(), Localparams(), Decls())
 
 
 """
@@ -269,7 +269,7 @@ infer width of wires which appear in the conditions.
 """
 function widunify(declonly::Vector{Wireexpr}, 
     equality::Vector{Tuple{Wireexpr, Wireexpr}}, env::Vmodenv)
-    prms, prts, dcls, lprms = map(x -> getfield(env, x), fieldnames(Vmodenv))
+    prms, prts, lprms, dcls = map(x -> getfield(env, x), fieldnames(Vmodenv))
 
 
     prmdict = Dict([p.name => Wirewid() for p in prms.val])
@@ -305,6 +305,7 @@ function widunify(declonly::Vector{Wireexpr},
 end
 
 
+"Error thrown when wire width inferenece is not possible."
 struct WirewidthUnresolved <: Exception 
     mes::String
 end
@@ -313,6 +314,11 @@ Base.showerror(io::IO, e::WirewidthUnresolved) = print(
     io, "Wire width cannot be inferred for the following wires.\n", e.mes
 )
 
+"""
+    strwidunknown(widvars)
+
+Format `widvars`, returned from [`widunify`](@ref), to a string.
+"""
 function strwidunknown(widvars)
     # sort by the first element of wire names
     debuglst = sort([i for i in widvars], by=(x -> x[2][1]))
@@ -327,6 +333,63 @@ function strwidunknown(widvars)
     rstrip(txt)
 end
 
+
+"""
+    autodecl(x::Ifcontent, env::Vmodenv)
+
+Declare wires in `x::Ifcontent` which are not yet declared in `env`.
+Raise error when not enough information to determine width of all wires is given.
+
+# Examples 
+
+## Inference Success 
+
+```jldoctest
+pts = @ports (
+        @in 16 din;
+        @in b1
+)
+env = Vmodenv(Parameters(), pts, Localparams(), Decls())
+
+c = @ifcontent (
+    reg1 = 0;
+    reg2 = din;
+    if b1 
+        reg1 = din[10:7]
+    end
+) 
+
+newds = autodecl(c, env)
+vshow(newds)
+
+# output
+
+reg [3:0] reg1;
+reg [15:0] reg2;
+type: Decls
+```
+
+## Fail in Inference
+
+```jldoctest
+c = @ifcontent (
+    reg1 = 0;
+    reg2 = din;
+    if b1 
+        reg1 = din[10:7]
+    end
+) 
+
+autodecl(c)
+
+# output
+
+ERROR: Wire width cannot be inferred for the following wires.
+1. b1
+2. reg2 = din
+```
+
+"""
 function autodecl(x::Ifcontent, env::Vmodenv)
     don, equ = wireextract(x)
     ansset, widvars = widunify(don, equ, env)
@@ -342,6 +405,11 @@ function autodecl(x::Ifcontent, env::Vmodenv)
     Decls(newdecls)
 end
 
+"""
+    autodecl(x::Ifcontent)
+
+Call `autodecl` under an empty environment.
+"""
 function autodecl(x::Ifcontent)
     autodecl(x, Vmodenv())
 end

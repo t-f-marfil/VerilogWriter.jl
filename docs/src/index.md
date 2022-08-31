@@ -219,6 +219,47 @@ type: Vmodule
 
 where you can construct `Ports` objects first and embed them in multiple modules.
 
+## Wire Width Inference
+
+```jldoctest wwi; output=false
+ds = @decls (
+    @wire dwire1;
+    @wire 10 dwire2
+)
+
+c = @ifcontent (
+    reg1 = 0;
+    reg2 = 0;
+    if dwire1
+        reg1 = dwire2[0] & dwire2[1]
+        reg2 = dwire2 + 1
+    end
+)
+
+env = Vmodenv(
+    Parameters(),
+    Ports(),
+    Localparams(),
+    ds
+)
+
+# output
+
+Vmodenv(Parameters(Oneparam[]), Ports(Oneport[]), Localparams(Onelocalparam[]), Decls(Onedecl[Onedecl(wire, 1, "dwire1"), Onedecl(wire, 10, "dwire2")]))
+```
+
+```jldoctest wwi
+julia> autodecl(c); # fail in width inference with no additional information
+ERROR: Wire width cannot be inferred for the following wires.
+1. dwire1
+2. reg2 = dwire2
+
+julia> d = autodecl(c, env); vshow(d); # using information in `env`
+reg reg1;
+reg [9:0] reg2;
+type: Decls
+```
+
 ## Easy construction of Finite State Machines
 
 ```jldoctest

@@ -7,6 +7,7 @@ A package to generate Verilog/SystemVerilog codes and offer an introductory HLS 
 You may:
 + Convert Verilog-like Julia code into objects
 + Embed generated objects back into Verilog-like codes
++ Automatically infer wire width in always-blocks
 + Construct Finite State Machines in a simple method
 
 Examples and full documents are available [here](https://t-f-marfil.github.io/VerilogWriter.jl/).
@@ -38,7 +39,7 @@ vshow(x)
 and now you see the following:
 
 ###### Out[2]
-```
+```systemverilog
 always_comb begin
     dout = (d1 + d2);
     if (b1) begin
@@ -51,81 +52,69 @@ type: Alwayscontent
 ```
 
 Another example is 
-
 ###### In[3]
 ```Julia
-prs = @parameters splind = 5
-
 ps = @ports (
-    @in clk, sig1, sig2;
-    @in 8 din, din2;
-    @out reg 8 dout
+    @in b1, RST
 )
-
 ds = @decls (
-    @reg 8 dbuf
+    @reg 8 dreg1
 )
-
-proc = @always (
-    @posedge clk;
-
-    if sig2 && |(din2)
-        dbuf <= din 
-    elseif sig1 ^ sig2
-        dout[7:splind] <= dbuf[7:splind]
-        dout[splind-1:0] <= din[splind-1:0]
-    else
-        dout <= ~din 
+c = ifcontent(:(
+    reg1 <= dreg1;
+    if b1 
+        reg2 <= reg1[7:6]
+        reg3 <= reg1[0]
+        reg4 <= reg1
+        reg5 <= $(Wireexpr(32, 4))
+    else 
+        reg5 <= 0
     end
-)
+))
+ac = autoreset(c)
+env = Vmodenv(Parameters(), ps, Localparams(), ds)
+ad = autodecl(ac.content, env)
 
-mymod = Vmodule(
-    "mymodule",
-    prs,
-    ps,
-    ds,
-    Assign[],
-    [proc]
-)
-
-vshow(mymod, systemverilog=false)
+vshow(ad)
+vshow(ac)
 ```
-
-and now you get 
 
 ###### Out[3]
-```
-module mymodule #(
-    parameter splind = 5
-)(
-    input clk,
-    input sig1,
-    input sig2,
-    input [7:0] din,
-    input [7:0] din2,
-    output reg [7:0] dout
-);
-    reg [7:0] dbuf;
 
-    always @( posedge clk ) begin
-        if ((sig2 && |(din2))) begin
-            dbuf <= din;
-        end else if ((sig1 ^ sig2)) begin
-            dout[7:splind] <= dbuf[7:splind];
-            dout[(splind - 1):0] <= din[(splind - 1):0];
+```systemverilog
+reg [7:0] reg1;
+reg [1:0] reg2;
+reg reg3;
+reg [7:0] reg4;
+reg [31:0] reg5;
+type: Decls
+always_ff @( posedge CLK ) begin
+    if (RST) begin
+        reg1 <= 0;
+        reg2 <= 0;
+        reg3 <= 0;
+        reg4 <= 0;
+        reg5 <= 0;
+    end else begin
+        reg1 <= dreg1;
+        if (b1) begin
+            reg2 <= reg1[7:6];
+            reg3 <= reg1[0];
+            reg4 <= reg1;
+            reg5 <= 32'd4;
         end else begin
-            dout <= ~din;
+            reg5 <= 0;
         end
     end
-endmodule
-type: Vmodule
+end
+type: Alwayscontent
 ```
 
 (of course this verilog module itself is far from being useful.)
 
 ## Introduction
 
-This module offers a simple method to write on Julia  Verilog/SystemVerilog codes not as raw strings but as objects with certain structures, such as always-block-objects, port-declaration-objects, and so on (not as sophisticated as, for example, Chisel is, though).
+This package offers a simple method to write on Julia Verilog/SystemVerilog codes not as raw strings but as objects with certain structures, such as always-block-objects, port-declaration-objects, and so on (not as sophisticated as, for example, Chisel is, though).
 
 The motivation here is that it would be nice if we could write Verilog/SystemVerilog with the power of the Julia language, with a minimal amount of additional syntaxes (function calls, constructors, etc.). 
 
@@ -156,5 +145,3 @@ Lots of operators and syntaxes in Verilog/SystemVerilog is not supported (e.g. f
 
 ### Not Enough Handlers of the Structs 
 We offer here some structs to imitate what is done in Verilog codes, but few functions to handle them are offered together. Still you can construct some more functions to handle the structs offered here, making it a little easier to make more complex Verilog modules.
-
-One example might be making functions to infer wire bit width from always blocks and assign statements, similar to what is done in Chisel.

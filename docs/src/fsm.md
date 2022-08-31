@@ -4,7 +4,7 @@ We offer here an easy way to construct a Finite State Machine (FSM).
 
 Finite State Machine is a common structure used in a hardware design. Offering a simple method to construct a FSM may be useful.
 
-## Procedure of designing a FSM
+## Procedure of Designing a FSM
 
 ### Construct a FSM
 
@@ -15,7 +15,7 @@ FSM(name, state::String...)
 FSM(name, states::Vector{String})
 ```
 
-### Add transition rules
+### Add Transition Rules
 
 Add a new rule with `transadd!`.
 
@@ -25,7 +25,7 @@ transadd!(x::FSM, cond::Wireexpr, newtrans::Pair{String, String})
 
 As shown above `cond` is the condition to be true when the transition occurs, and as `newtrans` argument you assign a `Pair` object of strings, `"src. state" => "dest. state"`.
 
-### Convert from FSM to verilog codes
+### Convert from FSM to Verilog Codes
 
 We offer methods to generate several components in verilog, which compose FSM structure.
 
@@ -42,7 +42,7 @@ fsmconv(::Type{Case}, x::FSM)
 
 You may also prewiew all of these with `vshow(fsm)`.
 
-## struct FSM description
+## Struct FSM Description
 
 ```@setup 1
 push!(LOAD_PATH,"../../src/")

@@ -1,5 +1,10 @@
 # VerilogWriter.jl Document
-
+```@meta 
+CurrentModule = VerilogWriter
+```
+```@setup top
+using VerilogWriter
+```
 ## Brief Introduction 
 
 If you have IJulia locally, execute
@@ -27,7 +32,7 @@ vshow(x)
 and now you see the following:
 
 ###### Out[2]
-```
+```systemverilog
 always_comb begin
     dout = (d1 + d2);
     if (b1) begin
@@ -40,11 +45,69 @@ type: Alwayscontent
 ```
 
 Another example is 
-<!-- autoreset & width inference -->
+###### In[3]
+```Julia
+ps = @ports (
+    @in b1, RST
+)
+ds = @decls (
+    @reg 8 dreg1
+)
+c = ifcontent(:(
+    reg1 <= dreg1;
+    if b1 
+        reg2 <= reg1[7:6]
+        reg3 <= reg1[0]
+        reg4 <= reg1
+        reg5 <= $(Wireexpr(32, 4))
+    else 
+        reg5 <= 0
+    end
+))
+ac = autoreset(c)
+env = Vmodenv(Parameters(), ps, Localparams(), ds)
+ad = autodecl(ac.content, env)
+
+vshow(ad)
+vshow(ac)
+```
+
+###### Out[3]
+
+```systemverilog
+reg [7:0] reg1;
+reg [1:0] reg2;
+reg reg3;
+reg [7:0] reg4;
+reg [31:0] reg5;
+type: Decls
+always_ff @( posedge CLK ) begin
+    if (RST) begin
+        reg1 <= 0;
+        reg2 <= 0;
+        reg3 <= 0;
+        reg4 <= 0;
+        reg5 <= 0;
+    end else begin
+        reg1 <= dreg1;
+        if (b1) begin
+            reg2 <= reg1[7:6];
+            reg3 <= reg1[0];
+            reg4 <= reg1;
+            reg5 <= 32'd4;
+        end else begin
+            reg5 <= 0;
+        end
+    end
+end
+type: Alwayscontent
+```
+
+(of course this verilog module itself is far from being useful.)
 
 ## Introduction
 
-This module offers a simple method to write on Julia Verilog/SystemVerilog codes not as raw strings but as objects with certain structures, such as always-block-objects, port-declaration-objects, and so on (not as sophisticated as, for example, Chisel is, though).
+This package offers a simple method to write on Julia Verilog/SystemVerilog codes not as raw strings but as objects with certain structures, such as always-block-objects, port-declaration-objects, and so on (not as sophisticated as, for example, Chisel is, though).
 
 The motivation here is that it would be nice if we could write Verilog/SystemVerilog with the power of the Julia language, with a minimal amount of additional syntaxes (function calls, constructors, etc.). 
 
@@ -63,5 +126,3 @@ Lots of operators and syntaxes in Verilog/SystemVerilog is not supported (e.g. f
 
 ### Not Enough Handlers of the Structs 
 We offer here some structs to imitate what is done in Verilog codes, but few functions to handle them are offered together. Still you can construct some more functions to handle the structs offered here, making it a little easier to make more complex Verilog modules.
-
-<!-- One example might be making functions to infer wire bit width from always blocks and assign statements, similar to what is done in Chisel. -->
