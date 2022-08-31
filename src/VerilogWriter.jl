@@ -27,7 +27,8 @@ export
 export 
     ifadd!, 
     invport, invports,
-    lhsextract, lhsunify, autoreset
+    lhsextract, lhsunify, autoreset,
+    Vmodenv, autodecl
 
 export 
     FSM, fsmconv, transadd!

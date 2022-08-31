@@ -1,7 +1,9 @@
-using VerilogWriter
-using Test
+using VerilogWriter, Test, Documenter
 
 @testset "VerilogWriter.jl" begin
+    DocMeta.setdocmeta!(VerilogWriter, :DocTestSetup, :(using VerilogWriter); recursive=true)
+    doctest(VerilogWriter)
+
     @testset "Parsefunc" begin
         include("parsefunc.jl")
     end

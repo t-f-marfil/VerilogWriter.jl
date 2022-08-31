@@ -1,8 +1,6 @@
-/Manifest.toml
+*Manifest.toml
 
-/src/test.ipynb
-/src/test.v
-/src/test.sv
+/src/test.*
 
 /docs/make.jl
 /docs/build

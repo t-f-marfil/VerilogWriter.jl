@@ -42,7 +42,7 @@ function wireextract!(x::Ifcontent, declonly, equality)
 end
 
 
-"update julia to v1.8 and replace with `wirewidid::Int = 0` "
+"update julia to v1.8 and replace with `wirewidid::Int = 0`."
 wirewidid = 0
 
 "Value which indicates that the `Wirewid` object does not have a valid value."
@@ -155,6 +155,12 @@ function eqwidflatten!(x::Wireexpr, envdicts, ansset, eqwids::Vector{Wirewid})
                 push!(eqwids, Wirewid(widval))
             end
         end
+
+    elseif op == literal
+        bw = x.bitwidth
+        if bw > 0
+            push!(eqwids, Wirewid(bw))
+        end
     end
 
     return nothing
@@ -264,9 +270,7 @@ infer width of wires which appear in the conditions.
 function widunify(declonly::Vector{Wireexpr}, 
     equality::Vector{Tuple{Wireexpr, Wireexpr}}, env::Vmodenv)
     prms, prts, dcls, lprms = map(x -> getfield(env, x), fieldnames(Vmodenv))
-    # prms = env.prms
-    # dcls = env.dcls 
-    # lprms = env.lprms
+
 
     prmdict = Dict([p.name => Wirewid() for p in prms.val])
     lprmdict = Dict([p.name => Wirewid() for p in lprms.val])
@@ -286,4 +290,58 @@ function widunify(declonly::Vector{Wireexpr},
     equality_widunify!(equality, envdicts, ansset, widvars)
 
     ansset, widvars 
+end
+
+
+"""
+    widunify(declonly::Vector{Wireexpr}, equality::Vector{Tuple{Wireexpr, Wireexpr}})
+
+Call `widunify` under an empty `env` (, where no ports, parameters,... are declared).
+"""
+function widunify(declonly::Vector{Wireexpr}, 
+    equality::Vector{Tuple{Wireexpr, Wireexpr}})
+
+    widunify(declonly, equality, Vmodenv())
+end
+
+
+struct WirewidthUnresolved <: Exception 
+    mes::String
+end
+
+Base.showerror(io::IO, e::WirewidthUnresolved) = print(
+    io, "Wire width cannot be inferred for the following wires.\n", e.mes
+)
+
+function strwidunknown(widvars)
+    # sort by the first element of wire names
+    debuglst = sort([i for i in widvars], by=(x -> x[2][1]))
+    txt = ""
+    for (ind, (var, lst)) in enumerate(debuglst)
+        txt *= "$(ind). "
+        subtxt = reduce((x, y) -> x * " = " * y, lst)
+        txt *= subtxt
+        txt *= "\n"
+    end
+
+    rstrip(txt)
+end
+
+function autodecl(x::Ifcontent, env::Vmodenv)
+    don, equ = wireextract(x)
+    ansset, widvars = widunify(don, equ, env)
+
+    length(widvars) == 0 || throw(
+        WirewidthUnresolved(
+            strwidunknown(widvars)
+        )
+    )
+
+    newdecls = [Onedecl(reg, ww.val, n) for (n, ww) in ansset]
+    sort!(newdecls, by=(x -> x.name))
+    Decls(newdecls)
+end
+
+function autodecl(x::Ifcontent)
+    autodecl(x, Vmodenv())
 end
