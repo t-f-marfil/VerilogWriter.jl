@@ -1,9 +1,6 @@
 using VerilogWriter, Test, Documenter
 
 @testset "VerilogWriter.jl" begin
-    DocMeta.setdocmeta!(VerilogWriter, :DocTestSetup, :(using VerilogWriter); recursive=true)
-    doctest(VerilogWriter)
-
     @testset "Parsefunc" begin
         include("parsefunc.jl")
     end
@@ -16,7 +13,10 @@ using VerilogWriter, Test, Documenter
     @testset "Autoreset" begin
         include("autoreset.jl")
     end
-    @testset "Wireextract" begin
-        include("wireextract.jl")
+    @testset "Widthinference" begin
+        include("widthinference.jl")
     end
+    
+    DocMeta.setdocmeta!(VerilogWriter, :DocTestSetup, :(using VerilogWriter); recursive=true)
+    doctest(VerilogWriter)
 end

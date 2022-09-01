@@ -1475,6 +1475,8 @@ function decls(expr::Expr, ::Val{:block})
         # for insertion with metaprogramming
         elseif item isa Vector{Onedecl}
             push!(anslist, item...)
+        elseif item isa Decls 
+            push!(anslist, item.val...)
         else
             push!(anslist, decloneline(item)...)
         end

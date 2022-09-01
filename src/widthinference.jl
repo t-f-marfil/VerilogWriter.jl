@@ -108,7 +108,7 @@ function wirepush_widunify!(w::Wireexpr, envdicts, ansset, widvars)
         f!(w.name)
     elseif op == slice 
         map((x -> g!(x)), w.subnodes)
-        
+
     elseif op in wunaop || op in wbinop 
         map((x -> g!(x)), w.subnodes)
     end
@@ -127,7 +127,13 @@ function eqwidflatten!(x::Wireexpr, envdicts, ansset, eqwids::Vector{Wirewid})
     f!(xx) = eqwidflatten!(xx, envdicts, ansset, eqwids)
 
     op = x.operation 
-    if op in wunaop
+    if op == neg
+        # unary bitwise operator
+        f!(x.subnodes[1])
+    elseif op in wunaop 
+        # reduction
+        push!(eqwids, Wirewid(1))
+    elseif op == lshift || op == rshift 
         f!(x.subnodes[1])
     elseif op in wbinop
         f!.(x.subnodes[1:2])
