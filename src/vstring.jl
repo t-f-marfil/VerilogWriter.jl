@@ -49,7 +49,7 @@ function Base.string(x::Ports)
 end
 
 function Base.string(x::Onelocalparam)
-    txt = "localparam $(x.name) = $(x.val);"
+    txt = "localparam $(x.name) = $(string(x.val));"
 end
 
 function Base.string(x::Localparams)
