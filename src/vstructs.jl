@@ -1,16 +1,3 @@
-"""
-Parameter in verilog.
-"""
-struct Oneparam 
-    name::String
-    val::Int
-end
-
-"List of parameters."
-struct Parameters
-    val::Vector{Oneparam}
-end
-
 "Port direction object."
 @enum Portdirec pin pout
 
@@ -29,17 +16,6 @@ end
 "Gather multiple ports."
 struct Ports
     val::Vector{Oneport}
-end
-
-"One localparam."
-struct Onelocalparam 
-    name::String 
-    val::Int
-end
-
-"Multiple localparams."
-struct Localparams
-    val::Vector{Onelocalparam} 
 end
 
 """
@@ -162,6 +138,30 @@ struct Wireexpr
     subnodes::Vector{Wireexpr}
     bitwidth::Int
     value::Int 
+end
+
+"""
+Parameter in verilog.
+"""
+struct Oneparam 
+    name::String
+    val::Wireexpr
+end
+
+"List of parameters."
+struct Parameters
+    val::Vector{Oneparam}
+end
+
+"One localparam."
+struct Onelocalparam 
+    name::String 
+    val::Wireexpr
+end
+
+"Multiple localparams."
+struct Localparams
+    val::Vector{Onelocalparam} 
 end
 
 "Type of always blocks."

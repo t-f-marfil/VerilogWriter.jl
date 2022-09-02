@@ -1,4 +1,7 @@
 # Parameters() = Parameters([])
+
+Oneparam(n, val::Int) = Oneparam(n, Wireexpr(val))
+
 Parameters(args::Oneparam...) = Parameters([args...])
 
 Oneport(d::Portdirec, w::Int, n::String) = Oneport(d, wire, w, n)
@@ -7,6 +10,8 @@ Oneport(d::Portdirec, n::Ref{Symbol}) = Oneport(d, string(n[]))
 Oneport(d::Portdirec, w::Int, n::Ref{Symbol}) = Oneport(d, w, string(n[]))
 
 Ports(args::Oneport...) = Ports([args...])
+
+Onelocalparam(n, val::Int) = Onelocalparam(n, Wireexpr(val))
 
 Localparams(args::Onelocalparam...) = Localparams([i for i in args])
 
