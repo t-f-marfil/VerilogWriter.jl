@@ -205,3 +205,51 @@ end"""
 
 
 # vmodule
+
+# module instantiation check
+inst = Vmodinst(
+    "test1",
+    "u0",
+    ["x" => (@wireexpr 10)],
+    [i => Wireexpr(i) for i in ["din", "dout"]]
+)
+
+md = Vmodule(
+    "test",
+    (@parameters x = 2),
+    (@ports (
+        @in 4 din, dum1;
+        @out reg 4 dout, dum2
+    )),
+    Localparams(),
+    Decls(),
+
+    [inst],
+    Assign[],
+    [@always (
+        dum2 = dum1
+    )]
+)
+
+@test string(md) == """
+module test #(
+    parameter x = 2
+)(
+    input [3:0] din,
+    input [3:0] dum1,
+    output reg [3:0] dout,
+    output reg [3:0] dum2
+);
+    
+    
+
+    test1 #(
+        .x(10)
+    ) u0 (
+        .din(din),
+        .dout(dout)
+    );
+    always_comb begin
+        dum2 = dum1;
+    end
+endmodule"""
