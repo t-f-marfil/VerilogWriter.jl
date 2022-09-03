@@ -217,6 +217,31 @@ function Base.string(x::Decls)
     end
 end
 
+function Base.string(x::Vmodinst; wildconn=false)
+    txt = x.vmodname
+    if length(x.params) > 0 
+        txt *= " #(\n"
+        subtxt = ""
+        for (uno, dos) in x.params
+            subtxt *= ".$(string(uno))($(string(dos))),\n"
+        end
+        txt *= string(indent(rstrip(subtxt, [' ', ',', '\n'])), "\n", ")")
+    end
+
+    txt1 = ""
+    for (uno, dos) in x.ports 
+        txt1 *= ".$(string(uno))($(string(dos))),\n"
+    end
+    if wildconn 
+        txt1 *= ".*\n"
+    end
+    ans = string(txt, " ", x.instname, " (\n", 
+        indent(rstrip(txt1, [' ', ',', '\n'])), "\n",
+        ");" 
+    )
+    ans
+end
+
 function Base.string(x::Vmodule, systemverilog)
     txt1 = string("module ", x.name, " ", string(x.params),
                  string(x.ports))
@@ -224,6 +249,10 @@ function Base.string(x::Vmodule, systemverilog)
     txt1 *= string(indent(string(x.locparams)), "\n")
 
     txt1 *= string(indent(string(x.decls)), "\n\n")
+
+    if length(x.insts) > 0
+        txt1 *= string(indent(reduce(newlineconcat, string.(x.insts))), "\n")
+    end
     
     if length(x.assigns) > 0
         txt1 *= string(indent(reduce(newlineconcat, string.(x.assigns))), "\n")

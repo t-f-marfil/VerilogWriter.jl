@@ -13,7 +13,8 @@ export
     Atype, Sensitivity,
     Alassign, Ifcontent, Case, Ifelseblock, Edge, Alwayscontent,
     Assign,
-    Onedecl, Decls, 
+    Onedecl, Decls,
+    Vmodinst, 
     Vmodule
 
 export

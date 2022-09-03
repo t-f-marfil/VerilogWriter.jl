@@ -288,6 +288,18 @@ struct Decls
     val::Vector{Onedecl}
 end
 
+"Module instantiation."
+struct Vmodinst
+    vmodname::String 
+    instname::String
+    params::Vector{
+        Pair{String, Wireexpr}
+    }
+    ports::Vector{
+        Pair{String, Wireexpr}
+    }
+end
+
 "Represents one verilog module."
 struct Vmodule 
     name::String
@@ -296,6 +308,8 @@ struct Vmodule
 
     locparams::Localparams
     decls::Decls
+    
+    insts::Vector{Vmodinst}
 
     assigns::Vector{Assign}
     always::Vector{Alwayscontent}

@@ -14,7 +14,7 @@ type: Oneparam
 """
 function oneparam(expr::Expr)
     args = expr.args
-    Oneparam(args[1], args[2])
+    Oneparam(args[1], wireexpr(args[2]))
 end
 
 """
@@ -98,7 +98,7 @@ type: Onelocalparam
 """
 function onelocalparam(expr::Expr)
     args = expr.args
-    Onelocalparam(args[1], args[2])
+    Onelocalparam(args[1], wireexpr(args[2]))
 end
 
 """
