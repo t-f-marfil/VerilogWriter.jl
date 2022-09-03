@@ -776,8 +776,11 @@ function ralwayswithSensitivity(expr)
     edge = eval(Meta.parse(string(sensitivity.args[1])[2:end]))
     sens = oneblock(sensitivity.args[3])
 
-    alblock.edge = edge 
-    alblock.sensitive = sens 
+    # alblock.edge = edge 
+    # alblock.sensitive = sens 
+    ss = Sensitivity(edge, sens)
+    alblock.sens = ss
+
     return alblock 
 end
 

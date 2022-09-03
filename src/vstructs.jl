@@ -255,13 +255,18 @@ const Ifcontent = Ifcontent_inner{Ifelseblock, Case}
 "Edge in sensitivity lists."
 @enum Edge posedge negedge unknownedge
 
+"Sensitivity list for always blocks."
+struct Sensitivity
+    edge::Edge 
+    sensitive::Wireexpr
+end
+
 "Represent always blocks."
 mutable struct Alwayscontent
     atype::Atype 
-    edge::Edge
-    sensitive::Wireexpr
-    # assigns::Vector{Alassign}
-    # ifelseblocks::Vector{Ifelseblock}
+    # edge::Edge
+    # sensitive::Wireexpr
+    sens::Sensitivity
     content::Ifcontent
 end
 

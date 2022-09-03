@@ -120,6 +120,8 @@ Ifelseblock() = Ifelseblock([], [])
 Ifelseblock(cond::Wireexpr, ifcont::Ifcontent) = Ifelseblock([cond], [ifcont])
 Ifelseblock(cond::Wireexpr, ifcont::Ifcontent, elsecont::Ifcontent) = Ifelseblock([cond], [ifcont, elsecont])
 
+Alwayscontent(atype::Atype, edge::Edge, sens::Wireexpr, cont::Ifcontent) = Alwayscontent(atype, Sensitivity(edge, sens), cont)
+
 Alwayscontent(atype::Atype) = Alwayscontent(atype, unknownedge, Wireexpr(), Ifcontent())
 Alwayscontent(ifcont::Ifcontent) = Alwayscontent(aunknown, unknownedge, Wireexpr(), ifcont)
 Alwayscontent(assigns::Vector{Alassign}, ifblocks::Vector{Ifelseblock}) = Alwayscontent(Ifcontent(assigns, ifblocks))

@@ -170,7 +170,9 @@ function Base.string(x::Alwayscontent, systemverilog)
     end
 
     if x.atype == ff
-        txt1 = string(ffhead, " @( ", string(x.edge), " ", string(x.sensitive), " ) begin\n")
+        ss = x.sens
+        # txt1 = string(ffhead, " @( ", string(x.edge), " ", string(x.sensitive), " ) begin\n")
+        txt1 = string(ffhead, " @( ", string(ss.edge), " ", string(ss.sensitive), " ) begin\n")
     elseif x.atype == comb 
         txt1 = string(combhead, " begin\n")
     else

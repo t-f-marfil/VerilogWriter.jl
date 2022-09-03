@@ -10,7 +10,7 @@ export
     Onelocalparam, Localparams,
     Wireop,
     Wireexpr,
-    Atype,
+    Atype, Sensitivity,
     Alassign, Ifcontent, Case, Ifelseblock, Edge, Alwayscontent,
     Assign,
     Onedecl, Decls, 
