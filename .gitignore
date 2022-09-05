@@ -1,6 +1,7 @@
 *Manifest.toml
 
 /src/test*
+!/src/testutils.jl
 
 /docs/make.jl
 /docs/build
