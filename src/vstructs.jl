@@ -2,7 +2,7 @@
 @enum Portdirec pin pout
 
 "Wiretype object."
-@enum Wiretype wire reg logic 
+@enum Wiretype wire reg logic
 
 "Represent a single port declaration."
 struct Oneport
@@ -281,7 +281,8 @@ end
 "Represent one wire declaration."
 struct Onedecl
     wtype::Wiretype
-    width::Int
+    # width::Int
+    width::Wireexpr
     name::String 
 end
 

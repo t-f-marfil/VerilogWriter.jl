@@ -15,6 +15,8 @@ Onelocalparam(n, val::Int) = Onelocalparam(n, Wireexpr(val))
 
 Localparams(args::Onelocalparam...) = Localparams([i for i in args])
 
+Onedecl(t::Wiretype, wid::Int, n::String) = Onedecl(t, Wireexpr(wid), n)
+
 Onedecl(t::Wiretype, n::String) = Onedecl(t, 1, n)
 Onedecl(t::Wiretype, n::Ref{Symbol}) = Onedecl(t, string(n[]))
 Onedecl(t::Wiretype, w::Int, n::Ref{Symbol}) = Onedecl(t, w, string(n[]))

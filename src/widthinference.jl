@@ -289,8 +289,10 @@ function widunify(declonly::Vector{Wireexpr},
     prmdict = Dict([p.name => Wirewid() for p in prms.val])
     lprmdict = Dict([p.name => Wirewid() for p in lprms.val])
 
+    psolved = paramsolve(prms, lprms)
+
     prtdict = Dict([p.name => Wirewid(p.width) for p in prts.val])
-    dcldict = Dict([d.name => Wirewid(d.width) for d in dcls.val])
+    dcldict = Dict([d.name => Wirewid(paramcalc(d.width, psolved)) for d in dcls.val])
 
     envdicts = (prmdict, prtdict, lprmdict, dcldict)
 
