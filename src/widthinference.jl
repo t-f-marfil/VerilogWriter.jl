@@ -70,6 +70,11 @@ struct Vmodenv
     dcls::Decls
 end
 
+"""
+    Vmodenv()
+
+Create an empty `Vmodenv` object.
+"""
 Vmodenv() = Vmodenv(Parameters(), Ports(), Localparams(), Decls())
 
 
@@ -120,7 +125,7 @@ end
     eqwidflatten!(x::Wireexpr, envdicts, ansset, eqwids::Vector{Wirewid})
 
 Extract wires that appear inside `x` which are of the same width as `x` itself, 
-find `Wirewid` objects which correspond to `x` and push them into `eqwids`.
+find `Wirewid` objects which correspond to the wire and push them into `eqwids`.
 When slice appears inside `x`, new Wirewid object is created and then added to `eqwids`.
 """
 function eqwidflatten!(x::Wireexpr, envdicts, ansset, eqwids::Vector{Wirewid})
@@ -275,8 +280,11 @@ infer width of wires which appear in the conditions.
 """
 function widunify(declonly::Vector{Wireexpr}, 
     equality::Vector{Tuple{Wireexpr, Wireexpr}}, env::Vmodenv)
-    prms, prts, lprms, dcls = map(x -> getfield(env, x), fieldnames(Vmodenv))
-
+    # prms, prts, lprms, dcls = map(x -> getfield(env, x), fieldnames(Vmodenv))
+    prms = env.prms 
+    prts = env.prts 
+    lprms = env.lprms 
+    dcls = env.dcls
 
     prmdict = Dict([p.name => Wirewid() for p in prms.val])
     lprmdict = Dict([p.name => Wirewid() for p in lprms.val])
