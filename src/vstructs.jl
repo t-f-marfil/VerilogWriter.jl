@@ -31,6 +31,7 @@ in an association exists.
     add
     minus
     mul
+    vdiv
     lshift 
     rshift
     band
@@ -75,6 +76,7 @@ const wbinopdict = Dict([
     add => :+, 
     minus => :-,
     mul => :*,
+    vdiv => :/,
     lshift => :<<,
     rshift => :>>,
     band => :&,

@@ -19,7 +19,7 @@ tpairs = [
         eval(expr)
     end
     
-    DocMeta.setdocmeta!(VerilogWriter, :DocTestSetup, :(using VerilogWriter); recursive=true)
-    doctest(VerilogWriter)
-    println("doctest done.")
+    # DocMeta.setdocmeta!(VerilogWriter, :DocTestSetup, :(using VerilogWriter); recursive=true)
+    # doctest(VerilogWriter)
+    # println("doctest done.")
 end

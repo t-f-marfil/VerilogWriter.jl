@@ -49,6 +49,7 @@ include("vconstructors.jl")
 include("vstring.jl")
 include("rawparser.jl")
 include("alwaysinference.jl")
+include("paramsolve.jl")
 
 include("vopoverloads.jl")
 
