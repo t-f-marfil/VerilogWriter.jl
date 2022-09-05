@@ -143,3 +143,12 @@ Evaluate paramter whose rhs is `w` under `ans` returned from `paramsolve`.
 function paramcalc(w::Wireexpr, ans)
     paramsolvecore_inner!(w, ans, Dict{String, Wireexpr}(), Dict{String, Bool}())
 end
+
+"""
+    paramcalc(w::Wireexpr)
+
+Evaluate `w` under empty environment, for debugging.
+"""
+function paramcalc(w::Wireexpr)
+    paramcalc(w, Dict{String, Int}())
+end

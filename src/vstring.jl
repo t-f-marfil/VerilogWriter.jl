@@ -201,12 +201,22 @@ function Base.string(x::Assign)
 end
 
 function Base.string(x::Onedecl)
-    if x.width == 1
-        widtxt = ""
+    # if x.width == 1
+    #     widtxt = ""
+    # else
+    #     widtxt = "[$(x.width-1):0] "
+    # end
+    wid = x.width
+    if wid.operation == literal 
+        if wid.value == 1
+            widtxt = ""
+        else
+            widtxt = "[$(wid.value-1):0] "
+        end
     else
-        widtxt = "[$(x.width-1):0] "
+        widtxt = "[$(string(wid))-1:0]"
     end
-    return string(string(x.wtype), " ", widtxt, x.name, ";")
+    return string(string(x.wtype), " ", string(widtxt), x.name, ";")
 end
 
 function Base.string(x::Decls)
