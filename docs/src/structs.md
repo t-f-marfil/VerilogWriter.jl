@@ -306,6 +306,7 @@ onelocalparam(expr::Expr)
 ```@docs
 decls(::Expr)
 decls(::Vector{Onedecl})
+decls(expr::Decls...)
 ```
 #### decloneline
 ```@docs

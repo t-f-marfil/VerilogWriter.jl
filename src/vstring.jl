@@ -214,7 +214,7 @@ function Base.string(x::Onedecl)
             widtxt = "[$(wid.value-1):0] "
         end
     else
-        widtxt = "[$(string(wid))-1:0]"
+        widtxt = "[$(string(wid))-1:0] "
     end
     return string(string(x.wtype), " ", string(widtxt), x.name, ";")
 end
