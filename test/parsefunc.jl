@@ -112,6 +112,22 @@ logic a;
 wire [9:0] b;
 wire [9:0] c;"""
 
+# wire width with parameters
+x = @decls (
+    @logic x;
+    @reg A+B m;
+    @wire p, q, r;
+    @reg (C*D) << 2 s,t,u
+)
+@test string(x) == """
+logic x;
+reg [(A + B)-1:0] m;
+wire p;
+wire q;
+wire r;
+reg [((C * D) << 2)-1:0] s;
+reg [((C * D) << 2)-1:0] t;
+reg [((C * D) << 2)-1:0] u;"""
 
 # ralways
 # interpolation

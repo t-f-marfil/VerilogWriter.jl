@@ -1,4 +1,13 @@
 """
+    removelinenumbernode(args::Vector{T}) where {T}
+
+Remove `LineNumberNode` from `args`.
+"""
+function removelinenumbernode(args::Vector{T}) where {T}
+    args[(x -> !(x isa LineNumberNode)).(args)]
+end
+
+"""
     oneparam(expr::Expr)
 
 One parameter. 
@@ -1274,92 +1283,64 @@ logic [7:0] d2;
 type: Onedecl
 logic [7:0] d3;
 type: Onedecl
-```
 
+julia> d = decloneline(:(@wire A >> 2 w1, w2)); vshow(d);
+wire [(A >> 2)-1:0] w1;
+type: Onedecl
+wire [(A >> 2)-1:0] w2;
+type: Onedecl
+```
 """
 function decloneline(expr::Expr)
-    return decloneline(expr, expr.args[3:end]...)
+    @assert expr.head == :macrocall
+    args = expr.args
+    # targs = args[(x -> !(x isa LineNumberNode)).(args)]
+    targs = removelinenumbernode(args)
+    
+    wt = wtypesym(targs[1])
+
+    if length(targs) == 2
+        decloneline_inner(wt, Wireexpr(1), targs[2])
+    else 
+        length(targs) == 3 || error("$(length(targs)) arguments for 'decloneline'.")
+        decloneline_inner(wt, wireexpr(targs[2]), targs[3])
+    end
 end
 
 """
-    decloneline(expr::Expr, ::Symbol)
+    wtypesym(wt::Symbol)
 
-Parse one declaration.
+Given either of symbols `@wire, @reg, @logic`, return 
+`wire, reg, logic (::Wiretype)`, respectively.
 """
-function decloneline(expr::Expr, ::Symbol)
-    dtypesym = expr.args[1]
-    if dtypesym == Symbol("@wire")
-        dtype = wire
-    elseif dtypesym == Symbol("@reg")
-        dtype = reg
+function wtypesym(wt::Symbol)
+    if wt == Symbol("@wire")
+        wire 
+    elseif wt == Symbol("@reg")
+        reg 
     else
-        @assert dtypesym == Symbol("@logic")
-        dtype = logic
+        wt == Symbol("@logic") || error(wt, " is not allowed as a wire type.")
+        logic 
     end
-    name = string(expr.args[3])
-    return [Onedecl(dtype, name)]
 end
 
 """
-    decloneline(expr::Expr, ::Expr)
+    decloneline_inner(wt, wid::Wireexpr, var::Symbol)
 
-Parse multiple wires with the same wiretype (`wire`, `reg`, and `logic`).
+Declaration of a single wire (e.g. `wire [1:0] d1`, `reg clk`).
 """
-function decloneline(expr::Expr, ::Expr)
-    dtypesym = expr.args[1]
-    if dtypesym == Symbol("@wire")
-        dtype = wire
-    elseif dtypesym == Symbol("@reg")
-        dtype = reg
-    else
-        @assert dtypesym == Symbol("@logic")
-        dtype = logic
-    end
-    args = expr.args[3].args 
-
-    return [Onedecl(dtype, string(sym)) for sym in args]
+function decloneline_inner(wt, wid::Wireexpr, var::Symbol)
+    [Onedecl(wt, wid, string(var))]
 end
 
 """
-    decloneline(expr::Expr, ::Int, ::Symbol)
+    decloneline_inner(wt, wid::Wireexpr, vars::Expr)
 
-Parse one declaration whose width is more than one.
+Declaration of multiple wires (e.g. `logic x, y, z`).
 """
-function decloneline(expr::Expr, ::Int, ::Symbol)
-    dtypesym = expr.args[1]
-    if dtypesym == Symbol("@wire")
-        dtype = wire
-    elseif dtypesym == Symbol("@reg")
-        dtype = reg
-    else
-        @assert dtypesym == Symbol("@logic")
-        dtype = logic
-    end
-    width = expr.args[3]
-    name = string(expr.args[4])
-
-    return [Onedecl(dtype, width, name)]
-end
-
-"""
-    decloneline(expr::Expr, ::Int, ::Expr)
-
-Parse multiple declarations whose width is more than one.
-"""
-function decloneline(expr::Expr, ::Int, ::Expr)
-    dtypesym = expr.args[1]
-    if dtypesym == Symbol("@wire")
-        dtype = wire
-    elseif dtypesym == Symbol("@reg")
-        dtype = reg
-    else
-        @assert dtypesym == Symbol("@logic")
-        dtype = logic
-    end
-    width = expr.args[3]
-    args = expr.args[4].args
-
-    return [Onedecl(dtype, width, string(sym)) for sym in args]
+function decloneline_inner(wt, wid::Wireexpr, vars::Expr)
+    vars.head == :tuple || error("vars.head should be tuple, got $(vars.head).")
+    [Onedecl(wt, wid, string(v)) for v in vars.args]
 end
 
 """
@@ -1423,6 +1404,11 @@ function decls(expr::Vector{Onedecl}...)
     Decls(reduce(vcat, expr))
 end
 
+"""
+    decls(expr::Decls...)
+
+For interpolation of `Decls` objects.
+"""
 function decls(expr::Decls...)
     Decls(reduce(vcat, (i.val for i in expr)))
 end
