@@ -26,6 +26,9 @@ export
     oneblock, ifcontent, ralways, always, @oneblock, @ifcontent, @always, @ralways
 
 export 
+    paramsolve, paramcalc
+
+export 
     ifadd!, 
     invport, invports,
     lhsextract, lhsunify, autoreset,
@@ -33,6 +36,9 @@ export
 
 export 
     FSM, fsmconv, transadd!
+
+export 
+    @strerror, dictstr, dictprint
 
 include("vstructs.jl")
 
@@ -57,5 +63,7 @@ include("fsm.jl")
 
 include("autoreset.jl")
 include("widthinference.jl")
+
+include("testutils.jl")
 
 end
