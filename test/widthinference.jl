@@ -22,3 +22,28 @@ d = autodecl(c)
 @test string(d) == """
 reg reg1;
 reg [9:0] reg2;"""
+
+# parameter width
+env = Vmodenv(
+    Parameters(),
+    Ports(),
+    Localparams(),
+    @decls (
+        @reg A+B reg1;
+        @reg A+B reg2
+    )
+)
+d = autodecl(
+    (@ifcontent (
+        reg1 <= reg2;
+        reg3 <= reg2;
+        reg4 <= reg1;
+        if reg1[1]
+            reg4 <= reg3
+        end
+    )), 
+    env
+)
+@test string(d) == """
+reg [(A + B)-1:0] reg3;
+reg [(A + B)-1:0] reg4;"""

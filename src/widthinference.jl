@@ -46,18 +46,22 @@ end
 wirewidid = 0
 
 "Value which indicates that the `Wirewid` object does not have a valid value."
-const wwinvalid = -1
+const wwinvalid = Wireexpr(-1)
+# const wwinvalid = -1
 
 struct Wirewid 
     id::Int 
     "`wwinvalid` for undef val"
-    val::Int
+    val::Wireexpr
+    # val::Int
 end
 
-function Wirewid(v)
+function Wirewid(v::Wireexpr)
     global wirewidid += 1
     Wirewid(wirewidid, v)
 end
+
+Wirewid(v::Int) = Wirewid(Wireexpr(v))
 
 Wirewid() = Wirewid(wwinvalid)
 
@@ -69,6 +73,8 @@ struct Vmodenv
     lprms::Localparams
     dcls::Decls
 end
+
+@eachfieldconstruct Vmodenv
 
 """
     Vmodenv()
@@ -213,23 +219,31 @@ function equality_widunify!(equality, envdicts, ansset, widvars)
         # unify, determine width value
         widhere = wwinvalid
         for ww in eqwids 
-            if ww.val != wwinvalid
-                if widhere == wwinvalid 
+            # if ww.val != wwinvalid
+            if !isequal(ww.val, wwinvalid)
+                # if widhere == wwinvalid 
+                if isequal(widhere, wwinvalid)
                     widhere = ww.val 
                 else
-                    if widhere != ww.val 
-                        throw(error("width inference failure in $(string(lhs)) <=> $(string(rhs))."))
+                    # if widhere != ww.val 
+                    if !isequal(widhere, ww.val)
+                        error(
+                            "width inference failure in evaluating $(string(lhs)) <=> $(string(rhs)).\n",
+                            "width discrepancy between $(string(widhere)) and $(string(ww.val))."
+                        )
                     end
                 end
             end
         end
 
         # finally,
-        if widhere != wwinvalid
+        # if widhere != wwinvalid
+        if !isequal(widhere, wwinvalid)
             # register concrete width value
             newwid = Wirewid(widhere)
             for ww in eqwids
-                if ww.val == wwinvalid
+                # if ww.val == wwinvalid
+                if isequal(ww.val, wwinvalid)
                     # otherwise ww is not contained in `widvars`
 
                     # ww may be of `parameters`, `localparams`
@@ -289,10 +303,10 @@ function widunify(declonly::Vector{Wireexpr},
     prmdict = Dict([p.name => Wirewid() for p in prms.val])
     lprmdict = Dict([p.name => Wirewid() for p in lprms.val])
 
-    psolved = paramsolve(prms, lprms)
+    # psolved = paramsolve(prms, lprms)
 
     prtdict = Dict([p.name => Wirewid(p.width) for p in prts.val])
-    dcldict = Dict([d.name => Wirewid(paramcalc(d.width, psolved)) for d in dcls.val])
+    dcldict = Dict([d.name => Wirewid(d.width) for d in dcls.val])
 
     envdicts = (prmdict, prtdict, lprmdict, dcldict)
 
