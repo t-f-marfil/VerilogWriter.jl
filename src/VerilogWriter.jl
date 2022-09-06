@@ -40,6 +40,7 @@ export
 export 
     @strerror, dictstr, dictprint
 
+include("codegenmacro.jl")
 include("vstructs.jl")
 
 for myenum in [Portdirec, Wiretype, Wireop, Atype, Edge]
