@@ -1,23 +1,3 @@
-"Port direction object."
-@enum Portdirec pin pout
-
-"Wiretype object."
-@enum Wiretype wire reg logic
-
-"Represent a single port declaration."
-struct Oneport
-    direc::Portdirec
-    wtype::Wiretype
-    width::Int
-    name::String
-    # Oneport(d, t, w, n) = w > 0 ? new(d, t, w, n) : error("width should be positive (in Oneport)")
-end
-
-"Gather multiple ports."
-struct Ports
-    val::Vector{Oneport}
-end
-
 """
 Verilog operators.
 
@@ -155,6 +135,27 @@ struct Parameters
     val::Vector{Oneparam}
 end
 
+"Port direction object."
+@enum Portdirec pin pout
+
+"Wiretype object."
+@enum Wiretype wire reg logic
+
+"Represent a single port declaration."
+struct Oneport
+    direc::Portdirec
+    wtype::Wiretype
+    # width::Int
+    width::Wireexpr
+    name::String
+    # Oneport(d, t, w, n) = w > 0 ? new(d, t, w, n) : error("width should be positive (in Oneport)")
+end
+
+"Gather multiple ports."
+struct Ports
+    val::Vector{Oneport}
+end
+
 "One localparam."
 struct Onelocalparam 
     name::String 
@@ -164,6 +165,19 @@ end
 "Multiple localparams."
 struct Localparams
     val::Vector{Onelocalparam} 
+end
+
+"Represent one wire declaration."
+struct Onedecl
+    wtype::Wiretype
+    # width::Int
+    width::Wireexpr
+    name::String 
+end
+
+"Multiple wire declarations."
+struct Decls 
+    val::Vector{Onedecl}
 end
 
 "Type of always blocks."
@@ -276,19 +290,6 @@ end
 struct Assign 
     lhs::Wireexpr
     rhs::Wireexpr
-end
-
-"Represent one wire declaration."
-struct Onedecl
-    wtype::Wiretype
-    # width::Int
-    width::Wireexpr
-    name::String 
-end
-
-"Multiple wire declarations."
-struct Decls 
-    val::Vector{Onedecl}
 end
 
 "Module instantiation."

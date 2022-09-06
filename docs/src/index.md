@@ -16,7 +16,7 @@ julia> vshow(a);
 input x
 type: Oneport
 
-julia> b = @portoneline @out reg 8 d1, d2;
+julia> b = @portoneline @out @reg 8 d1, d2;
 
 julia> vshow(b);
 output reg [7:0] d1
@@ -55,7 +55,7 @@ prs = @parameters splind = 5
 ps = @ports (
     @in clk, sig1, sig2;
     @in 8 din, din2;
-    @out reg 8 dout
+    @out @reg 8 dout
 )
 
 ds = @decls (

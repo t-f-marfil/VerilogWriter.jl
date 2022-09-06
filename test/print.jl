@@ -28,16 +28,16 @@ p = parameters(:(c = 1))
 # 
 # max(2,4,2,2) = 4?
 
-a = @portoneline @in wire clk
+a = @portoneline @in @wire clk
 @test string.(a) == ["input clk"]
 
-b = @portoneline @out reg 8 dout1, dout2
+b = @portoneline @out @reg 8 dout1, dout2
 @test string.(b) == [
     "output reg [7:0] dout1",
     "output reg [7:0] dout2"
 ]
 
-c = @portoneline @in logic din1, din2, din3 
+c = @portoneline @in @logic din1, din2, din3 
 @test string.(c) == [
     "input logic din1",
     "input logic din2",
@@ -52,7 +52,7 @@ d = @portoneline @out 10 dout
 # muliple lines
 e = @ports (
     @in 8 din;
-    @out logic dout1, dout2
+    @out @logic dout1, dout2
 )
 @test string(e) == """(
     input [7:0] din,
@@ -219,7 +219,7 @@ md = Vmodule(
     (@parameters x = 2),
     (@ports (
         @in 4 din, dum1;
-        @out reg 4 dout, dum2
+        @out @reg 4 dout, dum2
     )),
     Localparams(),
     Decls(),

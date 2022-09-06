@@ -29,11 +29,23 @@ function Base.string(x::Oneport)
         swtype = string(" ", string(x.wtype))
     end
 
-    if x.width > 1
-        txt = string(string(x.direc), swtype, " [$(x.width-1):0] ", x.name)
+    wid = x.width
+    if wid.operation == literal 
+        if wid.value == 1
+            widtxt = ""
+        else
+            widtxt = "[$(wid.value-1):0] "
+        end
     else
-        txt = string(string(x.direc), swtype, " ", x.name)
+        widtxt = "[$(string(wid))-1:0] "
     end
+    txt = string(string(x.direc), swtype, " ", widtxt, x.name)
+
+    # if x.width > 1
+    #     txt = string(string(x.direc), swtype, " [$(x.width-1):0] ", x.name)
+    # else
+    #     txt = string(string(x.direc), swtype, " ", x.name)
+    # end
     return txt
 end
 
