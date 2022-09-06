@@ -36,7 +36,7 @@ function oneparam(expr::Ref{T}) where {T}
 end
 
 """
-    oneparam(arg)
+    @oneparam(arg)
 
 Macro call.
 """
@@ -85,7 +85,7 @@ function parameters(expr::Ref{T}) where {T}
 end
 
 """
-    parameters(arg)
+    @parameters(arg)
 
 Macro call.
 """
@@ -120,7 +120,7 @@ function onelocalparam(expr::Ref{T}) where {T}
 end
 
 """
-    onelocalparam(arg)
+    @onelocalparam(arg)
 
 Macro call.
 """
@@ -190,7 +190,7 @@ function localparams(expr::Ref{T}) where {T}
 end
 
 """
-    localparams(arg)
+    @localparams(arg)
 
 Macro version.
 """
@@ -545,7 +545,7 @@ function oneblock(expr, ::Val{:elseif})
 end
 
 """
-    oneblock(arg)
+    @oneblock(arg)
 
 Parse `arg` (which is AST) using macro. Uses reference 
 to prevent `arg` being evaluated.
@@ -843,7 +843,7 @@ function ralways(expr::Expr, ::Val{:block})
 end
 
 """
-    ralways(arg)
+    @ralways(arg)
 
 `ralways` macro version. 
     
@@ -908,7 +908,7 @@ function ifcontent(x::Ref{T}) where {T}
 end
 
 """
-    ifcontent(arg)
+    @ifcontent(arg)
 
 Macro call.
 """
@@ -1023,7 +1023,7 @@ function portoneline(expr::Ref{T}) where {T}
 end
 
 """
-    portoneline(arg)
+    @portoneline(arg)
 
 Macro version of `portoneline`.
 """
@@ -1281,7 +1281,7 @@ function ports(expr::Ref{T}) where {T}
 end
 
 """
-    ports(arg)
+    @ports(arg)
 
 Macro version of `ports`.
 """
@@ -1377,7 +1377,7 @@ function decloneline_inner(wt, wid::Wireexpr, vars::Expr)
 end
 
 """
-    decloneline(arg)
+    @decloneline(arg)
 
 Macro version of `decloneline`.
 """
@@ -1517,7 +1517,7 @@ function decls(expr::Ref{T}) where {T}
 end
 
 """
-    decls(arg)
+    @decls(arg)
 
 Macro version of `decls`.
 """
