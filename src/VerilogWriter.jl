@@ -37,10 +37,10 @@ export
 export 
     FSM, fsmconv, transadd!
 
-export 
-    @strerror, dictstr, dictprint
+# export 
+#     @strerror, dictstr, dictprint
 
-include("codegenmacro.jl")
+include("codegenfunc.jl")
 include("vstructs.jl")
 
 for myenum in [Portdirec, Wiretype, Wireop, Atype, Edge]
@@ -65,6 +65,6 @@ include("fsm.jl")
 include("autoreset.jl")
 include("widthinference.jl")
 
-include("testutils.jl")
+# include("testutils.jl")
 
 end

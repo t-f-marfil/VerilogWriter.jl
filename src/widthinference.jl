@@ -74,7 +74,8 @@ struct Vmodenv
     dcls::Decls
 end
 
-@eachfieldconstruct Vmodenv
+# @eachfieldconstruct Vmodenv
+eachfieldconstruct(Vmodenv)
 
 """
     Vmodenv()

@@ -1,5 +1,7 @@
 using VerilogWriter, Test, Documenter
 
+include("testutils.jl")
+
 tpairs = [
     "Parsefunc" => "parsefunc.jl",
     "Print" => "print.jl",
