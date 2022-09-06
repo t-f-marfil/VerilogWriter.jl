@@ -4,10 +4,15 @@ Oneparam(n, val::Int) = Oneparam(n, Wireexpr(val))
 
 Parameters(args::Oneparam...) = Parameters([args...])
 
-Oneport(d::Portdirec, w::Int, n::String) = Oneport(d, wire, w, n)
+
+Oneport(d::Portdirec, wt::Wiretype, wid::Int, n) = Oneport(d, wt, Wireexpr(wid), n)
+
+# Oneport(d::Portdirec, w::Int, n::String) = Oneport(d, wire, w, n)
+Oneport(d::Portdirec, w, n::String) = Oneport(d, wire, w, n)
 Oneport(d::Portdirec, n::String) = Oneport(d, 1, n)
 Oneport(d::Portdirec, n::Ref{Symbol}) = Oneport(d, string(n[]))
-Oneport(d::Portdirec, w::Int, n::Ref{Symbol}) = Oneport(d, w, string(n[]))
+# Oneport(d::Portdirec, w::Int, n::Ref{Symbol}) = Oneport(d, w, string(n[]))
+Oneport(d::Portdirec, w, n::Ref{Symbol}) = Oneport(d, w, string(n[]))
 
 Ports(args::Oneport...) = Ports([args...])
 

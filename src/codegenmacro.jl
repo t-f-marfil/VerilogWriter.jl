@@ -1,6 +1,5 @@
-
 """
-eachfieldconstruct(strc)
+    eachfieldconstruct(strc)
 
 Make contructors for `struct strc`.
 
@@ -22,15 +21,15 @@ will be generated. Note that `A(), B()` should
 return appropriate objects.
 """
 macro eachfieldconstruct(strc)
-quote
-    for (ind, t) in enumerate($(strc).types)
-        args = Any[:($(t)()) for t in $(strc).types]
-        targ = :x
-        args[ind] = targ
-        q = quote 
-            $(Symbol(string($(strc))))($(targ)::$(t)) = $($(strc))($(args...))
+    quote
+        for (ind, t) in enumerate($(strc).types)
+            args = Any[:($(t)()) for t in $(strc).types]
+            targ = :x
+            args[ind] = targ
+            q = quote 
+                $(Symbol(string($(strc))))($(targ)::$(t)) = $($(strc))($(args...))
+            end
+            eval(q)
         end
-        eval(q)
     end
-end
 end

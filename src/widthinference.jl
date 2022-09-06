@@ -429,6 +429,7 @@ function autodecl(x::Ifcontent, env::Vmodenv)
             strwidunknown(widvars)
         )
     )
+    # length(widvars) == 0 || error("Wirewidth unresolved, ", strwidunknown(widvars))
 
     newdecls = [Onedecl(reg, ww.val, n) for (n, ww) in ansset]
     sort!(newdecls, by=(x -> x.name))

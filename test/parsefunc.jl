@@ -57,6 +57,34 @@ x = ports(:(
 );
 """
 
+## width with parameters
+x = @ports (
+    @in z;
+    @out @reg z;
+    @in 5C z;
+    @out @reg (A+B)<<2 z;
+
+    @out x,y;
+    @in @wire x, y;
+    @in 5C x, y;
+    @out @logic (A+B)<<2 x, y
+)
+@test string(x) == """
+(
+    input z,
+    output reg z,
+    input [(5 * C)-1:0] z,
+    output reg [((A + B) << 2)-1:0] z,
+    output x,
+    output y,
+    input x,
+    input y,
+    input [(5 * C)-1:0] x,
+    input [(5 * C)-1:0] y,
+    output logic [((A + B) << 2)-1:0] x,
+    output logic [((A + B) << 2)-1:0] y
+);
+"""
 
 # localparams 
 a = @localparams (x = 10; z = 2)
@@ -112,7 +140,7 @@ logic a;
 wire [9:0] b;
 wire [9:0] c;"""
 
-# wire width with parameters
+## wire width with parameters
 x = @decls (
     @logic x;
     @reg A+B m;

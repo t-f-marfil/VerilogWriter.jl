@@ -127,7 +127,7 @@ from `ps`.
 ```jldoctest
 pts = @ports (
     @in 8 bus1, bus2;
-    @out reg bus3
+    @out @reg bus3
 )
 ipts = invports(pts)
 vshow(pts)

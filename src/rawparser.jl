@@ -929,10 +929,10 @@ One port declaration of width 1.
 ## `@in/@out <wirename1, wirename2, ...> `
 Multiple port declaration of width 1 in one line.
 
-## `@in/@out <width::Int> <wirename1[, wirename2, ...]>`
+## `@in/@out <width> <wirename1[, wirename2, ...]>`
 Port declarations of width `<width>`.
 
-## `@in/@out <wiretype> [<width::Int>] <wirename1[, wirename2, ...]>`
+## `@in/@out @<wiretype> [<width>] <wirename1[, wirename2, ...]>`
 Port declaration with wiretypes [of width `<width>`].
 
 # Examples
@@ -955,30 +955,63 @@ julia> p3 = portoneline(:(@in 8 din)); vshow(p3);
 input [7:0] din
 type: Oneport
 
-julia> p4 = portoneline(:(@out reg 8 dout)); vshow(p4);
+julia> p4 = portoneline(:(@out @reg 8 dout)); vshow(p4);
 output reg [7:0] dout
+type: Oneport
+
+julia> p5 = portoneline(:(@out (A+B)<<2 x, y)); vshow(p5); # width with parameter
+output [((A + B) << 2)-1:0] x
+type: Oneport
+output [((A + B) << 2)-1:0] y
 type: Oneport
 ```
 """
 function portoneline(expr::Expr)
-    @assert expr.head == :macrocall
-    args = expr.args
+    expr.head == :macrocall || error("invalid input.")
+    targs = removelinenumbernode(expr.args)
 
-    direc = args[1] 
-    if direc == Symbol("@in")
-        d = pin 
+    pdirec = pdirecsym(targs[1])
+    if targs[2] isa Expr && targs[2].head == :macrocall 
+        pdecls = decloneline(targs[2])
     else
-        @assert direc == Symbol("@out")
-        d = pout 
+        pdecls = decloneline(:(@wire $(targs[2:end]...)))
     end
-    # ignore LineNumberNode
-    try
-        portonelinecore(d, args[3:end]...)
-    catch e
-        println("Port parsing error at $(string(args[2])).")
-        rethrow(e)
+
+    [Oneport(pdirec, d.wtype, d.width, d.name) for d in pdecls]
+end
+
+"""
+    pdirecsym(sym)
+
+Convert  symbols `@in, @out` to `pin, pout (::Portdirec)`.
+"""
+function pdirecsym(sym)
+    if sym == Symbol("@in")
+        pin 
+    else
+        sym == Symbol("@out") || error("$(sym) is not portdirec.")
+        pout 
     end
 end
+# function portoneline(expr::Expr)
+#     @assert expr.head == :macrocall
+#     args = expr.args
+
+#     direc = args[1] 
+#     if direc == Symbol("@in")
+#         d = pin 
+#     else
+#         @assert direc == Symbol("@out")
+#         d = pout 
+#     end
+#     # ignore LineNumberNode
+#     try
+#         portonelinecore(d, args[3:end]...)
+#     catch e
+#         println("Port parsing error at $(string(args[2])).")
+#         rethrow(e)
+#     end
+# end
 
 """
     portoneline(expr::Ref{T}) where {T}
@@ -998,127 +1031,127 @@ macro portoneline(arg)
     Expr(:call, :portoneline, Ref(arg))
 end
 
-"""
-    portonelinecore(d::Portdirec, arg1::Symbol, args...)
+# """
+#     portonelinecore(d::Portdirec, arg1::Symbol, args...)
 
-Helper function to determine behavior according to
-`args` types and length.
-"""
-function portonelinecore(d::Portdirec, arg1::Symbol, args...)
+# Helper function to determine behavior according to
+# `args` types and length.
+# """
+# function portonelinecore(d::Portdirec, arg1::Symbol, args...)
 
-    if length(args) == 0
-        portnotype(d, arg1)
-    else
-        if arg1 in Symbol.(instances(Wiretype))
-            if arg1 == :wire 
-                wtype = wire 
-            elseif arg1 == :reg 
-                wtype = reg 
-            else
-                @assert arg1 == :logic
-                wtype = logic 
-            end
-            porttyped(d, wtype, args...)
-        else
-            portnotype(d, arg1, args...)
-        end
-    end
-end
+#     if length(args) == 0
+#         portnotype(d, arg1)
+#     else
+#         if arg1 in Symbol.(instances(Wiretype))
+#             if arg1 == :wire 
+#                 wtype = wire 
+#             elseif arg1 == :reg 
+#                 wtype = reg 
+#             else
+#                 @assert arg1 == :logic
+#                 wtype = logic 
+#             end
+#             porttyped(d, wtype, args...)
+#         else
+#             portnotype(d, arg1, args...)
+#         end
+#     end
+# end
 
-"""
-    portonelinecore(d::Portdirec, arg1::Int, arg2)
+# """
+#     portonelinecore(d::Portdirec, arg1::Int, arg2)
 
-Wrapper for `portnotype`.
-"""
-function portonelinecore(d::Portdirec, arg1::Int, arg2)
-    portnotype(d, arg1, arg2)
-end
+# Wrapper for `portnotype`.
+# """
+# function portonelinecore(d::Portdirec, arg1::Int, arg2)
+#     portnotype(d, arg1, arg2)
+# end
 
-"""
-    portonelinecore(d::Portdirec, arg1::Expr)
+# """
+#     portonelinecore(d::Portdirec, arg1::Expr)
 
-Wrapper for `portnotype`.
-"""
-function portonelinecore(d::Portdirec, arg1::Expr)
-    @assert arg1.head == :tuple 
-    portnotype(d, arg1)
-end
+# Wrapper for `portnotype`.
+# """
+# function portonelinecore(d::Portdirec, arg1::Expr)
+#     @assert arg1.head == :tuple 
+#     portnotype(d, arg1)
+# end
 
-"""
-    portnotype(d::Portdirec, arg::Symbol)
+# """
+#     portnotype(d::Portdirec, arg::Symbol)
 
-Port declaration with no wire type, no wire width.
-"""
-function portnotype(d::Portdirec, arg::Symbol)
-    [Oneport(d, string(arg))]
-end
+# Port declaration with no wire type, no wire width.
+# """
+# function portnotype(d::Portdirec, arg::Symbol)
+#     [Oneport(d, string(arg))]
+# end
 
-"""
-    portnotype(d::Portdirec, arg::Expr)
+# """
+#     portnotype(d::Portdirec, arg::Expr)
 
-Multiple port declarations with no wire type, no wire width.
-"""
-function portnotype(d::Portdirec, arg::Expr)
-    @assert arg.head == :tuple 
-    [Oneport(d, string(nm)) for nm in arg.args]
-end
+# Multiple port declarations with no wire type, no wire width.
+# """
+# function portnotype(d::Portdirec, arg::Expr)
+#     @assert arg.head == :tuple 
+#     [Oneport(d, string(nm)) for nm in arg.args]
+# end
 
-"""
-    portnotype(d::Portdirec, arg1::Int, arg2::Symbol)
+# """
+#     portnotype(d::Portdirec, arg1::Int, arg2::Symbol)
 
-Wire width specified, no wire type given.
-"""
-function portnotype(d::Portdirec, arg1::Int, arg2::Symbol)
-    [Oneport(d, arg1, string(arg2))]
-end
+# Wire width specified, no wire type given.
+# """
+# function portnotype(d::Portdirec, arg1::Int, arg2::Symbol)
+#     [Oneport(d, arg1, string(arg2))]
+# end
 
-"""
-    portnotype(d::Portdirec, arg1::Int, arg2::Expr)
+# """
+#     portnotype(d::Portdirec, arg1::Int, arg2::Expr)
 
-Wire width specified, no wire type given for multiple declarations.
-"""
-function portnotype(d::Portdirec, arg1::Int, arg2::Expr)
-    @assert arg2.head == :tuple
-    [Oneport(d, arg1, string(nm)) for nm in arg2.args]
-end
+# Wire width specified, no wire type given for multiple declarations.
+# """
+# function portnotype(d::Portdirec, arg1::Int, arg2::Expr)
+#     @assert arg2.head == :tuple
+#     [Oneport(d, arg1, string(nm)) for nm in arg2.args]
+# end
 
-"""
-    porttyped(d::Portdirec, arg1::Wiretype, arg2::Symbol)
+# """
+#     porttyped(d::Portdirec, arg1::Wiretype, arg2::Symbol)
 
-Wire type given, no wire width given.
-"""
-function porttyped(d::Portdirec, arg1::Wiretype, arg2::Symbol)
-    [Oneport(d, arg1, 1, string(arg2))]
-end
+# Wire type given, no wire width given.
+# """
+# function porttyped(d::Portdirec, arg1::Wiretype, arg2::Symbol)
+#     [Oneport(d, arg1, 1, string(arg2))]
+# end
 
-"""
-    porttyped(d::Portdirec, arg1::Wiretype, arg2::Expr)
+# """
+#     porttyped(d::Portdirec, arg1::Wiretype, arg2::Expr)
 
-Wire type given, no wire width given for multiple declaration.
-"""
-function porttyped(d::Portdirec, arg1::Wiretype, arg2::Expr)
-    @assert arg2.head == :tuple 
-    [Oneport(d, arg1, 1, string(nm)) for nm in arg2.args]
-end
+# Wire type given, no wire width given for multiple declaration.
+# """
+# function porttyped(d::Portdirec, arg1::Wiretype, arg2::Expr)
+#     @assert arg2.head == :tuple 
+#     [Oneport(d, arg1, 1, string(nm)) for nm in arg2.args]
+# end
 
-"""
-    porttyped(d::Portdirec, arg1::Wiretype, arg2::Int, arg3::Symbol)
+# """
+#     porttyped(d::Portdirec, arg1::Wiretype, arg2::Int, arg3::Symbol)
 
-Both wire type and width given.
-"""
-function porttyped(d::Portdirec, arg1::Wiretype, arg2::Int, arg3::Symbol)
-    [Oneport(d, arg1, arg2, arg3)]
-end
+# Both wire type and width given.
+# """
+# function porttyped(d::Portdirec, arg1::Wiretype, arg2::Int, arg3::Symbol)
+#     [Oneport(d, arg1, arg2, arg3)]
+# end
 
-"""
-    porttyped(d::Portdirec, arg1::Wiretype, arg2::Int, arg3::Expr)
+# """
+#     porttyped(d::Portdirec, arg1::Wiretype, arg2::Int, arg3::Expr)
 
-Both wire type and width given for multiple declarations in one line.
-"""
-function porttyped(d::Portdirec, arg1::Wiretype, arg2::Int, arg3::Expr)
-    @assert arg3.head == :tuple 
-    [Oneport(d, arg1, arg2, string(nm)) for nm in arg3.args]
-end
+# Both wire type and width given for multiple declarations in one line.
+# """
+# function porttyped(d::Portdirec, arg1::Wiretype, arg2::Int, arg3::Expr)
+#     @assert arg3.head == :tuple 
+#     [Oneport(d, arg1, arg2, string(nm)) for nm in arg3.args]
+# end
 
 """
     ports(expr::Expr)
@@ -1134,8 +1167,8 @@ separated by `;` can be accepted.
 ```jldoctest
 pp = ports(:(
     @in p1;
-    @in wire 8 p2, p3, p4;
-    @out reg 2 p5, p6
+    @in @wire 8 p2, p3, p4;
+    @out @reg 2 p5, p6
 ))
 
 vshow(pp)
@@ -1168,7 +1201,7 @@ a = @portoneline @in 8 d1, d2, d3
 b = ports(:(
     @in d0;
     \$(a);
-    @out reg 8 dout
+    @out @reg 8 dout
 ))
 vshow(b)
 
