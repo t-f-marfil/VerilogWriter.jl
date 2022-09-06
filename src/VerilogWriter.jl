@@ -35,7 +35,7 @@ export
     Vmodenv, autodecl
 
 export 
-    FSM, fsmconv, transadd!
+    FSM, @FSM, fsmconv, transadd!, @tstate
 
 # export 
 #     @strerror, dictstr, dictprint

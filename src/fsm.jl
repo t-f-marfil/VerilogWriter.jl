@@ -19,6 +19,13 @@ struct FSM
     states::Vector{String}
     transcond::Array{Wireexpr}
     transvalid::Array{Bool}
+    function FSM(n, s, tc, tv)
+        length(unique(s)) == length(s) || error(
+            "the same state name is registered more than once.\n",
+            "list of states: $(string(s))"
+        )
+        new(n, s, tc, tv)
+    end
 end
 
 """
@@ -45,6 +52,82 @@ function Base.string(x::FSM)
     txt *= "\n\n"
     txt *= string(fsmconv(Case, x))
     txt 
+end
+
+"""
+    @FSM(mname, states)
+
+Create `FSM` with variables of (machine itself / states) names.
+
+With the macro there is no need to explicitly make a string object for 
+machine/state names.
+
+# Example 
+```jldoctest
+julia> m = @FSM m1 (s1, s2); # same as "@FSM(m1, (s1, s2))"
+
+julia> vshow(m)
+reg m1;
+
+localparam s1 = 0;
+localparam s2 = 1;
+
+case (m1)
+    s1: begin
+        
+    end
+    s2: begin
+        
+    end
+endcase
+type: FSM
+```
+"""
+macro FSM(mname, states)
+    quote 
+        FSM($(string(mname)), $(string.(states.args)))
+    end
+end
+
+"""
+    @tstate(arg)
+
+Helper macro for argument in `transadd!`. 
+
+Convert a pair of variables to a pair of strings.
+```jldoctest
+julia> @tstate a => b
+"a" => "b"
+
+julia> m = @FSM machine s1, s2;
+
+julia> transadd!(m, (@wireexpr b), @tstate s1 => s2);
+
+julia> vshow(m)
+reg machine;
+
+localparam s1 = 0;
+localparam s2 = 1;
+
+case (machine)
+    s1: begin
+        if (b) begin
+            machine <= s2;
+        end
+    end
+    s2: begin
+        
+    end
+endcase
+type: FSM
+```
+"""
+macro tstate(arg)
+    args = arg.args 
+    args[1] == :(=>) || error("$(args[1]) is not a pair constructor.")
+    quote
+        $(string(args[2])) => $(string(args[3]))
+    end
 end
 
 
@@ -81,6 +164,18 @@ function fsmconv(::Type{Case}, x::FSM, atype::Atype)
 
     Case(Wireexpr(x.name), conds)
 end
+
+"""
+    fsmconv(::Type{Ifcontent}, x::FSM)
+
+Convert `FSM` logic to `Ifcontent` object.
+
+When `vshow(fsmconv(Ifcontent, x))` is evaluated one 
+case block will be the only output.
+"""
+function fsmconv(::Type{Ifcontent}, x::FSM)
+    Ifcontent(fsmconv(Case, x))
+end 
 
 """
     fsmconv(::Type{Onedecl}, x::FSM)
@@ -120,9 +215,9 @@ The new rule here is:
 
 # Examples
 ```jldoctest
-julia> fsm = FSM("nstate", "uno", "dos", "tres"); # create a FSM
+julia> fsm = @FSM nstate (uno, dos, tres); # create a FSM
 
-julia> transadd!(fsm, (@wireexpr b1 == b2), "uno" => "dos"); # transition from "uno" to "dos" when "b1 == b2"
+julia> transadd!(fsm, (@wireexpr b1 == b2), @tstate uno => dos); # transition from "uno" to "dos" when "b1 == b2"
 
 julia> vshow(fsmconv(Case, fsm));
 case (nstate)
@@ -143,7 +238,14 @@ type: Case
 """
 function transadd!(x::FSM, cond::Wireexpr, newtrans::Pair{String, String})
     sfrom, sto = newtrans
-    sfromind, stoind = (findall(x -> x == i, x.states)[] for i in (sfrom, sto))
+    # sfromind, stoind = (findall(x -> x == i, x.states)[] for i in (sfrom, sto))
+    sfromindv, stoindv = (findall(x -> x == i, x.states) for i in (sfrom, sto))
+    (length(sfromindv) == 1 && length(stoindv) == 1) || error(
+        "$(length(sfromindv)) source states and ",
+        "$(length(stoindv)) dest states found.\n",
+        "(src => dest) = ($(string(newtrans)))"
+    )
+    sfromind, stoind = sfromindv[1], stoindv[1]
 
     x.transvalid[stoind, sfromind] = true
     x.transcond[stoind, sfromind] = cond

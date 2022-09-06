@@ -27,6 +27,7 @@ end
     end
     
     DocMeta.setdocmeta!(VerilogWriter, :DocTestSetup, :(using VerilogWriter); recursive=true)
+    println("start doctest.")
     doctest(VerilogWriter)
     println("doctest done.")
 end

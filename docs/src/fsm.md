@@ -11,6 +11,7 @@ Finite State Machine is a common structure used in a hardware design. Offering a
 First construct a FSM defining name of states and the machine itself.
 
 ```@docs
+@FSM
 FSM(name, state::String...)
 FSM(name, states::Vector{String})
 ```
@@ -35,12 +36,10 @@ They are
 + `localparams` each of which represents one state in the FSM.
 
 ```@docs
-fsmconv(::Type{Onedecl}, x::FSM)
-fsmconv(::Type{Localparams}, x::FSM)
-fsmconv(::Type{Case}, x::FSM)
+fsmconv
 ```
 
-You may also prewiew all of these with `vshow(fsm)`.
+You may also prewiew all of these with `vshow(x::FSM)`.
 
 ## Struct FSM Description
 

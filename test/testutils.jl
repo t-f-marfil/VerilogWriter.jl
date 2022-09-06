@@ -1,5 +1,5 @@
 """
-    strerror(arg)
+    @strerror(arg)
 
 Get exception message as `String`.
 """
