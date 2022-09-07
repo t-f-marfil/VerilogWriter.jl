@@ -21,10 +21,22 @@ FSM(name, states::Vector{String})
 Add a new rule with `transadd!`.
 
 ```@docs 
-transadd!(x::FSM, cond::Wireexpr, newtrans::Pair{String, String})
+transadd!
 ```
 
-As shown above `cond` is the condition to be true when the transition occurs, and as `newtrans` argument you assign a `Pair` object of strings, `"src. state" => "dest. state"`.
+As shown above `cond` is the condition to be true when the transition occurs, and as `newtrans` argument you assign a `Pair` object of strings, `"srcstate" => "deststate"`. You may instead call macro `@tstate srcstate => deststate`.
+
+```@docs
+@tstate
+```
+
+### Generate Condition to be True when Transition Occurs
+
+After adding transition rules you may generate `wireexpr` which would be true only when the transition occurs.
+
+```@docs
+transcond
+```
 
 ### Convert from FSM to Verilog Codes
 

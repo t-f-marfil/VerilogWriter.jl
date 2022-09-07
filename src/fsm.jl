@@ -17,8 +17,8 @@ the 2nd state is provided.
 struct FSM 
     name::String
     states::Vector{String}
-    transcond::Array{Wireexpr}
-    transvalid::Array{Bool}
+    transcond::Matrix{Wireexpr}
+    transvalid::Matrix{Bool}
     function FSM(n, s, tc, tv)
         length(unique(s)) == length(s) || error(
             "the same state name is registered more than once.\n",
@@ -130,6 +130,101 @@ macro tstate(arg)
     end
 end
 
+"""
+    transadd!(x::FSM, cond::Wireexpr, newtrans::Pair{String, String})
+
+Add a new transition rule for the state machine `x`.
+
+The new rule here is:
++ The transition from state `newtrans[1]` to state `newtrans[2]`
++ This transition occures when `cond` is true and the current state is `newtrans[1]`
+
+# Examples
+```jldoctest
+julia> fsm = @FSM nstate (uno, dos, tres); # create a FSM
+
+julia> transadd!(fsm, (@wireexpr b1 == b2), @tstate uno => dos); # transition from "uno" to "dos" when "b1 == b2"
+
+julia> vshow(fsmconv(Case, fsm));
+case (nstate)
+    uno: begin
+        if ((b1 == b2)) begin
+            nstate <= dos;
+        end
+    end
+    dos: begin
+        
+    end
+    tres: begin
+        
+    end
+endcase
+type: Case
+```
+"""
+function transadd!(x::FSM, cond::Wireexpr, newtrans::Pair{String, String})
+    sfrom, sto = newtrans
+    # sfromind, stoind = (findall(x -> x == i, x.states)[] for i in (sfrom, sto))
+    sfromindv, stoindv = (findall(x -> x == i, x.states) for i in (sfrom, sto))
+    (length(sfromindv) == 1 && length(stoindv) == 1) || error(
+        "$(length(sfromindv)) source state$(length(sfromindv) > 1 ? "s" : "") and ",
+        "$(length(stoindv)) dest state$(length(stoindv) > 1 ? "s" : "") found.\n",
+        "(src => dest) = ($(string(newtrans)))"
+    )
+    sfromind, stoind = sfromindv[1], stoindv[1]
+
+    x.transvalid[stoind, sfromind] = true
+    x.transcond[stoind, sfromind] = cond
+end
+
+"""
+    transcond(m::FSM, states::Pair{String, String})
+
+Get the `wireexpr` whose value should be `true` iff the state of 
+the FSM changes from `states[1]` to `states[2]`.
+
+# Examples
+```jldoctest
+julia> m = @FSM fsm s1, s2, s3; transadd!(m, (@wireexpr b1 == TCOND), @tstate s1=>s2); vshow(fsmconv(Case, m));
+case (fsm)
+    s1: begin
+        if ((b1 == TCOND)) begin
+            fsm <= s2;
+        end
+    end
+    s2: begin
+        
+    end
+    s3: begin
+        
+    end
+endcase
+type: Case
+
+julia> t = transcond(m, @tstate s1 => s2); vshow(t);
+((fsm == s1) && (b1 == TCOND))
+type: Wireexpr
+
+julia> t = transcond(m, @tstate s2 => s1);
+ERROR: transition rule not registered for "s2" => "s1".
+```
+"""
+function transcond(m, states::Pair{String, String})
+    sfromind, stoind = (findfirst(x -> x == st, m.states) for st in states)
+    (sfromind != nothing && stoind != nothing) || error(
+        "either of states $(string(states)) not found, \n",
+        "index (from, to) = ($(string(sfromind)), $(string(stoind)))."
+    )
+
+    m.transvalid[stoind, sfromind] || error(
+        "transition rule not registered for $(string(states))."
+    )
+    
+    sfrom = states[1]
+    statecond = Wireexpr(logieq, Wireexpr(m.name), Wireexpr(sfrom))
+    edge = m.transcond[stoind, sfromind]
+    Wireexpr(land, statecond, edge)
+end
 
 """
     fsmconv(::Type{Case}, x::FSM)
@@ -191,7 +286,7 @@ end
 """
     fsmconv(::Type{Localparams}, x::FSM)
 
-Generate localparams that declares the value which corresponds to each state.
+Generate localparams that declare the value which corresponds to each state.
 """
 function fsmconv(::Type{Localparams}, x::FSM)
     ans = Onelocalparam[]
@@ -201,52 +296,4 @@ function fsmconv(::Type{Localparams}, x::FSM)
     end
 
     Localparams(ans)
-end
-
-
-"""
-    transadd!(x::FSM, cond::Wireexpr, newtrans::Pair{String, String})
-
-Add a new transition rule for the state machine `x`.
-
-The new rule here is:
-+ The transition from state `newtrans[1]` to state `newtrans[2]`
-+ This transition occures when `cond` is true and the current state is `newtrans[1]`
-
-# Examples
-```jldoctest
-julia> fsm = @FSM nstate (uno, dos, tres); # create a FSM
-
-julia> transadd!(fsm, (@wireexpr b1 == b2), @tstate uno => dos); # transition from "uno" to "dos" when "b1 == b2"
-
-julia> vshow(fsmconv(Case, fsm));
-case (nstate)
-    uno: begin
-        if ((b1 == b2)) begin
-            nstate <= dos;
-        end
-    end
-    dos: begin
-        
-    end
-    tres: begin
-        
-    end
-endcase
-type: Case
-```
-"""
-function transadd!(x::FSM, cond::Wireexpr, newtrans::Pair{String, String})
-    sfrom, sto = newtrans
-    # sfromind, stoind = (findall(x -> x == i, x.states)[] for i in (sfrom, sto))
-    sfromindv, stoindv = (findall(x -> x == i, x.states) for i in (sfrom, sto))
-    (length(sfromindv) == 1 && length(stoindv) == 1) || error(
-        "$(length(sfromindv)) source states and ",
-        "$(length(stoindv)) dest states found.\n",
-        "(src => dest) = ($(string(newtrans)))"
-    )
-    sfromind, stoind = sfromindv[1], stoindv[1]
-
-    x.transvalid[stoind, sfromind] = true
-    x.transcond[stoind, sfromind] = cond
 end
