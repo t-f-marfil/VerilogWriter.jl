@@ -73,6 +73,10 @@ function lhsunify(wvec::Vector{Wireexpr})
     vans
 end
 
+"Default value of clocking signal."
+const defclk = Wireexpr("CLK")
+"Default value of resetting signal."
+const defrst = Wireexpr("RST")
 
 # Detection of Lhs depends on [`lhsextract`](@ref) and [`lhsunify`](@ref).
 """
@@ -115,7 +119,7 @@ end
 type: Alwayscontent
 ```
 """
-function autoreset(x::Ifcontent; clk=Wireexpr("CLK"), rst=Wireexpr("RST"), edge=posedge)
+function autoreset(x::Ifcontent; clk=defclk, rst=defrst, edge=posedge)
     ext = lhsextract(x)
     uniext = lhsunify(ext)
 
@@ -125,4 +129,15 @@ function autoreset(x::Ifcontent; clk=Wireexpr("CLK"), rst=Wireexpr("RST"), edge=
     ans = Alwayscontent(ff, edge, clk, Ifcontent(ifb))
     @assert atypealways(ans) == ff
     ans 
+end
+
+"""
+    autoreset(x::Alwayscontent; clk=defclk, rst=defrst, edge=posedge)
+
+Automatically reset wires which appear in `x::Alwayscontent`.
+
+Sensitivity list in the original `Alwayscontent` will be ignored.
+"""
+function autoreset(x::Alwayscontent; clk=defclk, rst=defrst, edge=posedge)
+    autoreset(x.content, clk=clk, rst=rst, edge=edge)
 end

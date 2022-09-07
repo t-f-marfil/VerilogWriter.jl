@@ -239,7 +239,7 @@ function Base.string(x::Decls)
     end
 end
 
-function Base.string(x::Vmodinst; wildconn=false)
+function Base.string(x::Vmodinst)
     txt = x.vmodname
     if length(x.params) > 0 
         txt *= " #(\n"
@@ -254,7 +254,7 @@ function Base.string(x::Vmodinst; wildconn=false)
     for (uno, dos) in x.ports 
         txt1 *= ".$(string(uno))($(string(dos))),\n"
     end
-    if wildconn 
+    if x.wildconn 
         txt1 *= ".*\n"
     end
     ans = string(txt, " ", x.instname, " (\n", 

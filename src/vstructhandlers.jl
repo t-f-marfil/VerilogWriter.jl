@@ -158,3 +158,25 @@ function invports(ps::Ports)
     end
     Ports(ans)
 end
+
+"""
+    declmergegen()
+
+Declare `declmerge` for multiple types.
+"""
+function declmergegen()
+    for T in (Parameters, Decls, Localparams, Ports)
+        q = quote
+            """
+                declmerge(d::$($(T))...)
+
+            Merge multiple `$($(T))` objects into one `$($(T))`.
+            """
+            function declmerge(d::$(T)...)
+                $(T)(reduce(vcat, (i.val for i in d)))
+            end
+        end
+        eval(q)
+    end
+end
+declmergegen()
