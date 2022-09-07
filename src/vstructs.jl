@@ -302,6 +302,7 @@ struct Vmodinst
     ports::Vector{
         Pair{String, Wireexpr}
     }
+    wildconn::Bool
 end
 
 "Represents one verilog module."

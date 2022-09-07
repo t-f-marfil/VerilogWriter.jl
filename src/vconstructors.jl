@@ -139,6 +139,8 @@ Alwayscontent(case::Case...) = Alwayscontent(Alassign[], Ifelseblock[], [case...
 
 Alwayscontent() = Alwayscontent(aunknown)
 
+Vmodinst(vname, iname, ps, pts) = Vmodinst(vname, iname, ps, pts, false)
+
 Vmodule(n::String, pas::Parameters, ps::Ports, lpas::Localparams,
 decls::Decls, ass::Vector{Assign}, als::Vector{Alwayscontent}
 ) = Vmodule(n, pas, ps, lpas, decls, Vmodinst[], ass, als)

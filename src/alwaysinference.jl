@@ -44,7 +44,7 @@ function atypealways(x::Ifcontent)
     for tnow in (tassigns, tifblocks, tcases)
         if tnow != aunknown
             if ans != aunknown && tnow != ans 
-                throw(error("discrepancy in atypes inside ifcontent."))
+                error("discrepancy in atypes inside ifcontent.")
             end
             ans = tnow 
         end
@@ -80,8 +80,10 @@ function atypealways(x::Vector{T}) where {T}
             ansnow = atypealways(i)
             if ansnow != aunknown
                 if ans != aunknown && ans != ansnow 
-                    e = error("atype discrepancy occured in \n$(string(i)).")
-                    throw(e)
+                    error(
+                        "atype discrepancy occured in \n\n$(indent(string(i)))\n\n",
+                        "full items:\n\n$(indent(reduce(newlineconcat, string.(x))))"
+                    )
                 end
                 ans = ansnow
             end

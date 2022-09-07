@@ -30,7 +30,9 @@ export
 
 export 
     ifadd!, 
-    invport, invports,
+    invport, invports, declmerge
+
+export
     lhsextract, lhsunify, autoreset,
     Vmodenv, autodecl
 

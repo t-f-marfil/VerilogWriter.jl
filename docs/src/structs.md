@@ -381,7 +381,7 @@ vshow(::Any)
 invports
 ```
 
-#### invport 
+### declmerge
 ```@docs
-invport
+declmerge
 ```

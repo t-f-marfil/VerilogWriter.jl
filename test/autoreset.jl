@@ -59,3 +59,19 @@ always_ff @( posedge CLK ) begin
     end
 end"""
 
+c1 = @always (
+    if (mrstate == MREADING) 
+        debsig <= 1 
+    end
+)
+@test string(autoreset(c1)) == """
+always_ff @( posedge CLK ) begin
+    if (RST) begin
+        debsig <= 0;
+    end else begin
+        if ((mrstate == MREADING)) begin
+            debsig <= 1;
+        end
+    end
+end"""
+
