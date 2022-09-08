@@ -1044,128 +1044,6 @@ macro portoneline(arg)
     Expr(:call, :portoneline, Ref(arg))
 end
 
-# """
-#     portonelinecore(d::Portdirec, arg1::Symbol, args...)
-
-# Helper function to determine behavior according to
-# `args` types and length.
-# """
-# function portonelinecore(d::Portdirec, arg1::Symbol, args...)
-
-#     if length(args) == 0
-#         portnotype(d, arg1)
-#     else
-#         if arg1 in Symbol.(instances(Wiretype))
-#             if arg1 == :wire 
-#                 wtype = wire 
-#             elseif arg1 == :reg 
-#                 wtype = reg 
-#             else
-#                 @assert arg1 == :logic
-#                 wtype = logic 
-#             end
-#             porttyped(d, wtype, args...)
-#         else
-#             portnotype(d, arg1, args...)
-#         end
-#     end
-# end
-
-# """
-#     portonelinecore(d::Portdirec, arg1::Int, arg2)
-
-# Wrapper for `portnotype`.
-# """
-# function portonelinecore(d::Portdirec, arg1::Int, arg2)
-#     portnotype(d, arg1, arg2)
-# end
-
-# """
-#     portonelinecore(d::Portdirec, arg1::Expr)
-
-# Wrapper for `portnotype`.
-# """
-# function portonelinecore(d::Portdirec, arg1::Expr)
-#     @assert arg1.head == :tuple 
-#     portnotype(d, arg1)
-# end
-
-# """
-#     portnotype(d::Portdirec, arg::Symbol)
-
-# Port declaration with no wire type, no wire width.
-# """
-# function portnotype(d::Portdirec, arg::Symbol)
-#     [Oneport(d, string(arg))]
-# end
-
-# """
-#     portnotype(d::Portdirec, arg::Expr)
-
-# Multiple port declarations with no wire type, no wire width.
-# """
-# function portnotype(d::Portdirec, arg::Expr)
-#     @assert arg.head == :tuple 
-#     [Oneport(d, string(nm)) for nm in arg.args]
-# end
-
-# """
-#     portnotype(d::Portdirec, arg1::Int, arg2::Symbol)
-
-# Wire width specified, no wire type given.
-# """
-# function portnotype(d::Portdirec, arg1::Int, arg2::Symbol)
-#     [Oneport(d, arg1, string(arg2))]
-# end
-
-# """
-#     portnotype(d::Portdirec, arg1::Int, arg2::Expr)
-
-# Wire width specified, no wire type given for multiple declarations.
-# """
-# function portnotype(d::Portdirec, arg1::Int, arg2::Expr)
-#     @assert arg2.head == :tuple
-#     [Oneport(d, arg1, string(nm)) for nm in arg2.args]
-# end
-
-# """
-#     porttyped(d::Portdirec, arg1::Wiretype, arg2::Symbol)
-
-# Wire type given, no wire width given.
-# """
-# function porttyped(d::Portdirec, arg1::Wiretype, arg2::Symbol)
-#     [Oneport(d, arg1, 1, string(arg2))]
-# end
-
-# """
-#     porttyped(d::Portdirec, arg1::Wiretype, arg2::Expr)
-
-# Wire type given, no wire width given for multiple declaration.
-# """
-# function porttyped(d::Portdirec, arg1::Wiretype, arg2::Expr)
-#     @assert arg2.head == :tuple 
-#     [Oneport(d, arg1, 1, string(nm)) for nm in arg2.args]
-# end
-
-# """
-#     porttyped(d::Portdirec, arg1::Wiretype, arg2::Int, arg3::Symbol)
-
-# Both wire type and width given.
-# """
-# function porttyped(d::Portdirec, arg1::Wiretype, arg2::Int, arg3::Symbol)
-#     [Oneport(d, arg1, arg2, arg3)]
-# end
-
-# """
-#     porttyped(d::Portdirec, arg1::Wiretype, arg2::Int, arg3::Expr)
-
-# Both wire type and width given for multiple declarations in one line.
-# """
-# function porttyped(d::Portdirec, arg1::Wiretype, arg2::Int, arg3::Expr)
-#     @assert arg3.head == :tuple 
-#     [Oneport(d, arg1, arg2, string(nm)) for nm in arg3.args]
-# end
-
 """
     ports(expr::Expr)
 
@@ -1196,7 +1074,6 @@ vshow(pp)
     output reg [1:0] p5,
     output reg [1:0] p6
 );
-
 type: Ports
 ```
 """
@@ -1227,7 +1104,6 @@ vshow(b)
     input [7:0] d3,
     output reg [7:0] dout
 );
-
 type: Ports
 ```
 """

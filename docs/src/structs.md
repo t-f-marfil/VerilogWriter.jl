@@ -346,7 +346,6 @@ julia> b = ports(:($(a); @out 8 dout)); vshow(b);
     input clk,
     output [7:0] dout
 );
-
 type: Ports
 
 julia> a = @ports (@in clk; @out 8 dout);
@@ -357,7 +356,6 @@ julia> b = ports(:(@in resetn; $(a))); vshow(b);
     input clk,
     output [7:0] dout
 );
-
 type: Ports
 
 julia> a = @wireexpr (x + y) & z;

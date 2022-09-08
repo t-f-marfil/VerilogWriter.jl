@@ -58,8 +58,7 @@ e = @ports (
     input [7:0] din,
     output logic dout1,
     output logic dout2
-);
-"""
+);"""
 
 # one line
 f = @ports (
@@ -67,8 +66,7 @@ f = @ports (
 )
 @test string(f) == """(
     input clk
-);
-"""
+);"""
 
 
 # Onelocalparam
@@ -244,9 +242,6 @@ module test #(
     output reg [3:0] dout,
     output reg [3:0] dum2
 );
-    
-    
-
     test1 #(
         .x(10)
     ) u0 (

@@ -54,10 +54,10 @@ end
 
 function Base.string(x::Ports)
     if length(x.val) == 0
-        txt = "();\n"
+        txt = "();"
     else
         txt = reduce((x,y)->string(x, ",\n", y), string.(x.val))
-        txt = string("(\n", indent(txt), "\n);\n")
+        txt = string("(\n", indent(txt), "\n);")
     end
 
     return txt
@@ -255,11 +255,33 @@ end
 
 function Base.string(x::Vmodule, systemverilog)
     txt1 = string("module ", x.name, " ", string(x.params),
-                 string(x.ports))
+                 string(x.ports), "\n")
 
-    txt1 *= string(indent(string(x.locparams)), "\n")
+    txt1 *= string(
+        (
+            s = string(x.locparams);
+            s == "" ? "" : string(
+                indent(string(x.locparams)),
+                "\n\n"
+            )
+        ),
+        # indent(
+        #     string(x.locparams)
+        # ), 
+        # "\n"
+    )
 
-    txt1 *= string(indent(string(x.decls)), "\n\n")
+    txt1 *= string(
+        (
+            s = string(x.decls);
+            s == "" ? "" : string(
+                indent(string(x.decls)),
+                "\n\n",
+            )
+        ),
+        # indent(string(x.decls)), 
+        # "\n\n"
+    )
 
     if length(x.insts) > 0
         txt1 *= string(indent(reduce(newlineconcat, string.(x.insts))), "\n")

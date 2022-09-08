@@ -34,8 +34,9 @@ function wireextract!(x::Ifcontent, declonly, equality)
 
     for i in x.cases 
         push!(declonly, i.condwire)
-        for (uno, dos) in i.conds 
-            push!(declonly, uno)
+        for (cnd, dos) in i.conds 
+            # push!(declonly, uno)
+            push!(equality, (i.condwire, cnd))
             wireextract!(dos, declonly, equality)
         end
     end
@@ -426,10 +427,18 @@ function strwidunknown(widvars)
     rstrip(txt)
 end
 
+"""
+    portdeclupdated!(env::Vmodenv, ansset::Dict{String, Wirewid})
+
+When env contains ports/wire declarations of unknown width, 
+return new `Vmodenv` object whose bitwidth are all filled in.
+
+`ansset` is supposed to contain enough information.
+"""
 function portdeclupdated!(env::Vmodenv, ansset::Dict{String, Wirewid})
 
     prenewprts = Vector{Oneport}(undef, length(env.prts.val))
-    prenewdcls = Vector{Oneport}(undef, length(env.dcls.val))
+    prenewdcls = Vector{Onedecl}(undef, length(env.dcls.val))
 
     for (ind, p) in enumerate(env.prts.val)
         if isequal(p.decl.width, wwinvalid)
@@ -473,7 +482,7 @@ pts = @ports (
         @in 16 din;
         @in b1
 )
-env = Vmodenv(Parameters(), pts, Localparams(), Decls())
+env = Vmodenv(pts)
 
 c = @ifcontent (
     reg1 = 0;
@@ -483,7 +492,7 @@ c = @ifcontent (
     end
 ) 
 
-newds = autodecl(c, env)
+newds, _ = autodecl(c, env)
 vshow(newds)
 
 # output
@@ -515,14 +524,6 @@ ERROR: Wire width cannot be inferred for the following wires.
 
 """
 function autodecl(x::Ifcontent, env::Vmodenv)
-    # kprts, ukprts = separate_widunknown(env.prts)
-    # kdcls, ukdcls = separate_widunknown(env.dcls)
-    # coreenv = Vmodenv(env.prms, kprts, env.lprms, kdcls)
-
-    # ansset = Dict{String, Wirewid}()
-    # widvars = Dict{Wirewid, Vector{String}}()
-    # unknowndeclpush!(ansset, widvars, ukprts, ukdcls)
-
     don, equ = wireextract(x)
     ansset, widvars = widunify(don, equ, env)
 
@@ -541,10 +542,19 @@ function autodecl(x::Ifcontent, env::Vmodenv)
 end
 
 """
-    autodecl(x::Ifcontent)
+    autodecl(x::Alwayscontent, env::Vmodenv)
+
+`autodecl` on `Alwayscontent`.
+"""
+function autodecl(x::Alwayscontent, env::Vmodenv)
+    autodecl(x.content, env)
+end
+
+"""
+    autodecl(x::T) where {T <: Union{Ifcontent, Alwayscontent}}
 
 Call `autodecl` under an empty environment.
 """
-function autodecl(x::Ifcontent)
+function autodecl(x::T) where {T <: Union{Ifcontent, Alwayscontent}}
     autodecl(x, Vmodenv())
 end

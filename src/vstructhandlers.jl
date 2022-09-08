@@ -141,14 +141,12 @@ vshow(ipts)
     input [7:0] bus2,
     output reg bus3
 );
-
 type: Ports
 (
     output [7:0] bus1,
     output [7:0] bus2,
     input bus3
 );
-
 type: Ports
 ```
 """
