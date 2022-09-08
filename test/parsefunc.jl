@@ -39,8 +39,7 @@ x = ports(:(
     input [5:0] x,
     input [5:0] z,
     input y
-);
-"""
+);"""
 
 # vector of portoneline return vals
 x = ports(:(
@@ -54,8 +53,7 @@ x = ports(:(
     input [5:0] x,
     input [5:0] z,
     input y
-);
-"""
+);"""
 
 ## width with parameters
 x = @ports (
@@ -83,8 +81,7 @@ x = @ports (
     input [(5 * C)-1:0] y,
     output logic [((A + B) << 2)-1:0] x,
     output logic [((A + B) << 2)-1:0] y
-);
-"""
+);"""
 
 # localparams 
 a = @localparams (x = 10; z = 2)

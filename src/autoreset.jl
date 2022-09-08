@@ -127,7 +127,8 @@ function autoreset(x::Ifcontent; clk=defclk, rst=defrst, edge=posedge)
 
     ifb = Ifelseblock([rst], [rstcont, x])
     ans = Alwayscontent(ff, edge, clk, Ifcontent(ifb))
-    @assert atypealways(ans) == ff
+    (atp = atypealways(ans); atp == ff) || error("atype == $(atp).")
+    
     ans 
 end
 

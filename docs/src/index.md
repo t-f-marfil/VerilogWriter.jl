@@ -98,7 +98,6 @@ module mymodule #(
     input [7:0] din2,
     output reg [7:0] dout
 );
-
     reg [7:0] dbuf;
 
     always @( posedge clk ) begin
@@ -196,9 +195,6 @@ module send (
     input [7:0] bus2,
     output [7:0] bus3
 );
-    
-
-
 
 endmodule
 type: Vmodule
@@ -209,9 +205,6 @@ module recv (
     output [7:0] bus2,
     input [7:0] bus3
 );
-    
-
-
 
 endmodule
 type: Vmodule
@@ -254,7 +247,7 @@ ERROR: Wire width cannot be inferred for the following wires.
 1. dwire1
 2. reg2 = dwire2
 
-julia> d = autodecl(c, env); vshow(d); # using information in `env`
+julia> d, _ = autodecl(c, env); vshow(d); # using information in `env`
 reg reg1;
 reg [9:0] reg2;
 type: Decls

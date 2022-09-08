@@ -5,7 +5,7 @@ c = ifcontent(:(
     reg2 = $(Wireexpr(10, 5))
 ))
 
-d = autodecl(c)
+d, _ = autodecl(c)
 
 @test string(d) == """
 reg [31:0] reg1;
@@ -17,7 +17,7 @@ c = ifcontent(:(
     reg2 = ~($(Wireexpr(10, 6)))
 ))
 
-d = autodecl(c)
+d, _ = autodecl(c)
 
 @test string(d) == """
 reg reg1;
@@ -25,15 +25,12 @@ reg [9:0] reg2;"""
 
 # parameter width
 env = Vmodenv(
-    Parameters(),
-    Ports(),
-    Localparams(),
     @decls (
         @reg A+B reg1;
         @reg A+B reg2
     )
 )
-d = autodecl(
+d, _ = autodecl(
     (@ifcontent (
         reg1 <= reg2;
         reg3 <= reg2;
