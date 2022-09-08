@@ -685,9 +685,22 @@ end
 Parse binary operators.
 """
 function wireexpr(expr, ::T, ::Val{:call}) where {T <: binopvals}
-    uno = wireexpr(expr.args[2])
-    dos = wireexpr(expr.args[3])
-    return Wireexpr(wbinsym2op[T], uno, dos)
+    # uno = wireexpr(expr.args[2])
+    # dos = wireexpr(expr.args[3])
+    # return Wireexpr(wbinsym2op[T], uno, dos)
+    
+    # length may be > 3, for (+, *) may parsed in adifferent manner
+    args = expr.args
+    op = wbinsym2op[T]
+    ansnow = Wireexpr(op, wireexpr(args[2]), wireexpr(args[3]))
+    
+    if length(args) > 3
+        for w in wireexpr.(args[4:end])
+            ansnow = Wireexpr(op, ansnow, w)
+        end
+    end
+
+    return ansnow
 end
 
 """
@@ -697,11 +710,11 @@ Disambiguate symbols in `arityambigVals` between
 unary and binary operators.
 """
 function wireexpr(expr, ::T, ::Val{:call}) where {T <: arityambigVals}
-    if length(expr.args) == 2
-        return Wireexpr(wunasym2op[T], wireexpr(expr.args[2]))
-    else
-        @assert length(expr.args) == 3 || (@show length(expr.args); false)
-        uno, dos = wireexpr(expr.args[2]), wireexpr(expr.args[3])
+    args = expr.args
+    if length(args) == 2
+        return Wireexpr(wunasym2op[T], wireexpr(args[2]))
+    elseif length(args) == 3
+        uno, dos = wireexpr(args[2]), wireexpr(args[3])
         return Wireexpr(wbinsym2op[T], uno, dos)
     end
 end

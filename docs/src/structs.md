@@ -225,7 +225,7 @@ is equivalent to
 )
 ```
 
-(be care full not to foreget `(one space)` between macros and `(`, i.e. `@macro(a;b)` and `@macro (a;b)` are different.)
+(be care full not to foreget `(one space)` between macros and `(`, i.e. `@macro(a,b)` and `@macro (a,b)` are different.)
 
 But sometimes there are things what macros cannot do (for now), an example is having `for` loop inside expressions.
 ```Julia

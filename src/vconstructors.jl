@@ -5,6 +5,7 @@ Oneparam(n, val::Int) = Oneparam(n, Wireexpr(val))
 Parameters(args::Oneparam...) = Parameters([args...])
 
 
+Oneport(d::Portdirec, wt::Wiretype, wid::Wireexpr, n) = Oneport(d, Onedecl(wt, wid, n))
 Oneport(d::Portdirec, wt::Wiretype, wid::Int, n) = Oneport(d, wt, Wireexpr(wid), n)
 
 # Oneport(d::Portdirec, w::Int, n::String) = Oneport(d, wire, w, n)
