@@ -141,21 +141,6 @@ end
 "Wiretype object."
 @enum Wiretype wire reg logic
 
-"Represent a single port declaration."
-struct Oneport
-    direc::Portdirec
-    wtype::Wiretype
-    # width::Int
-    width::Wireexpr
-    name::String
-    # Oneport(d, t, w, n) = w > 0 ? new(d, t, w, n) : error("width should be positive (in Oneport)")
-end
-
-"Gather multiple ports."
-struct Ports
-    val::Vector{Oneport}
-end
-
 "One localparam."
 struct Onelocalparam 
     name::String 
@@ -170,7 +155,6 @@ end
 "Represent one wire declaration."
 struct Onedecl
     wtype::Wiretype
-    # width::Int
     width::Wireexpr
     name::String 
 end
@@ -178,6 +162,20 @@ end
 "Multiple wire declarations."
 struct Decls 
     val::Vector{Onedecl}
+end
+
+"Represent a single port declaration."
+struct Oneport
+    direc::Portdirec
+    # wtype::Wiretype
+    # width::Wireexpr
+    # name::String
+    decl::Onedecl
+end
+
+"Gather multiple ports."
+struct Ports
+    val::Vector{Oneport}
 end
 
 "Type of always blocks."

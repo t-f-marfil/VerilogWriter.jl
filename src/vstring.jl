@@ -22,15 +22,11 @@ function Base.string(x::Portdirec)
     return x == pin ? "input" : "output"
 end
 
-function Base.string(x::Oneport)
-    if x.wtype == wire 
-        swtype = ""
-    else
-        swtype = string(" ", string(x.wtype))
-    end
-
-    wid = x.width
-    if wid.operation == literal 
+function widtxtgen(wid::Wireexpr)
+    # space at the tail
+    if isequal(wid, wwinvalid)
+        widtxt = "[unknown] "
+    elseif wid.operation == literal 
         if wid.value == 1
             widtxt = ""
         else
@@ -39,13 +35,20 @@ function Base.string(x::Oneport)
     else
         widtxt = "[$(string(wid))-1:0] "
     end
-    txt = string(string(x.direc), swtype, " ", widtxt, x.name)
+    widtxt
+end
 
-    # if x.width > 1
-    #     txt = string(string(x.direc), swtype, " [$(x.width-1):0] ", x.name)
-    # else
-    #     txt = string(string(x.direc), swtype, " ", x.name)
-    # end
+function Base.string(p::Oneport)
+    x = p.decl
+    if x.wtype == wire 
+        swtype = ""
+    else
+        swtype = string(" ", string(x.wtype))
+    end
+
+    widtxt = widtxtgen(x.width)
+    txt = string(string(p.direc), swtype, " ", widtxt, x.name)
+
     return txt
 end
 
@@ -213,21 +216,7 @@ function Base.string(x::Assign)
 end
 
 function Base.string(x::Onedecl)
-    # if x.width == 1
-    #     widtxt = ""
-    # else
-    #     widtxt = "[$(x.width-1):0] "
-    # end
-    wid = x.width
-    if wid.operation == literal 
-        if wid.value == 1
-            widtxt = ""
-        else
-            widtxt = "[$(wid.value-1):0] "
-        end
-    else
-        widtxt = "[$(string(wid))-1:0] "
-    end
+    widtxt = widtxtgen(x.width)
     return string(string(x.wtype), " ", string(widtxt), x.name, ";")
 end
 

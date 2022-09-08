@@ -21,16 +21,31 @@ will be generated. Note that `A(), B()` should
 return appropriate objects.
 """
 function eachfieldconstruct(strc)
+    purename = Symbol(
+        split(string(strc), ['.'])[end]
+    )
     for (ind, t) in enumerate(strc.types)
         args = Any[:($(t)()) for t in strc.types]
         targ = :x
         args[ind] = targ
         q = quote 
-            $(Symbol(string(strc)))($(targ)::$(t)) = $(strc)($(args...))
+            $(purename)($(targ)::$(t)) = $(strc)($(args...))
         end
+        # @show q
         eval(q)
     end
 end
+# function eachfieldconstruct(strc)
+#     for (ind, t) in enumerate(strc.types)
+#         args = Any[:($(t)()) for t in strc.types]
+#         targ = :x
+#         args[ind] = targ
+#         q = quote 
+#             $(Symbol(string(strc)))($(targ)::$(t)) = $(strc)($(args...))
+#         end
+#         eval(q)
+#     end
+# end
 # macro eachfieldconstruct(strc)
 #     quote
 #         for (ind, t) in enumerate($(strc).types)

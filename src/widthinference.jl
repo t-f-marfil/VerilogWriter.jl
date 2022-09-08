@@ -86,6 +86,56 @@ Vmodenv() = Vmodenv(Parameters(), Ports(), Localparams(), Decls())
 
 
 """
+    separate_widunknown(v::Vector{Onedecl})
+
+Separate `Onedecls` into the group of wires whose width
+is already determined and the group of wires with unknown width.
+"""
+function separate_widunknown(v::Vector{Onedecl})
+    wknown = v[(d->!isequal(d.width, wwinvalid)).(v)]
+    wunknown = v[(d->isequal(d.width, wwinvalid)).(v)]
+    wknown, wunknown
+end
+
+function separate_widunknown(x::Decls)
+    Decls.(separate_widunknown(x.val))
+end
+
+function separate_widunknown(v::Vector{Oneport})
+    pknown = v[(p->!isequal(p.decl.width, wwinvalid)).(v)]
+    punknown = v[(p->isequal(p.decl.width, wwinvalid)).(v)]
+    pknown, punknown
+end
+
+function separate_widunknown(x::Ports)
+    Ports.(separate_widunknown(x.val))
+end
+
+"""
+    unknowndeclpush!(ansset::Dict{String, Wirewid}, widvars::Dict{Wirewid, Vector{String}}, ukports::Ports, ukdecls::Decls)
+
+Register ports/wire declarations of unknown width 
+to `ansset` and `widvars`.
+"""
+function unknowndeclpush!(ansset::Dict{String, Wirewid}, widvars::Dict{Wirewid, Vector{String}},
+    ukports::Ports, ukdecls::Decls)
+
+    for p in ukports.val
+        n = p.decl.name 
+        widvar = Wirewid()
+        ansset[n] = widvar
+        widvars[widvar] = [n]
+    end
+    for d in ukdecls.val
+        n = d.name
+        widvar = Wirewid()
+        ansset[n] = widvar
+        widvars[widvar] = [n]
+    end
+end
+
+
+"""
     findandpush_widunify!(newval::String, envdicts, ansset, widvars)
 
 Looking inside envdicts, add `newval` to `ansset` and `widvars`
@@ -201,7 +251,7 @@ end
     equality_widunify!(equality, envdicts, ansset, widvars)
 
 Called in [`widunify`](@ref), infer wire width from `equality` constraints.
-Supposed be called after [`declonly_widunify!`](@ref).
+Supposed to be called after [`declonly_widunify!`](@ref).
 """
 function equality_widunify!(equality, envdicts, ansset, widvars)
     for (lhs, rhs) in equality
@@ -295,30 +345,40 @@ infer width of wires which appear in the conditions.
 """
 function widunify(declonly::Vector{Wireexpr}, 
     equality::Vector{Tuple{Wireexpr, Wireexpr}}, env::Vmodenv)
-    # prms, prts, lprms, dcls = map(x -> getfield(env, x), fieldnames(Vmodenv))
+    
     prms = env.prms 
     prts = env.prts 
     lprms = env.lprms 
     dcls = env.dcls
 
-    prmdict = Dict([p.name => Wirewid() for p in prms.val])
-    lprmdict = Dict([p.name => Wirewid() for p in lprms.val])
-
-    # psolved = paramsolve(prms, lprms)
-
-    prtdict = Dict([p.name => Wirewid(p.width) for p in prts.val])
-    dcldict = Dict([d.name => Wirewid(d.width) for d in dcls.val])
-
-    envdicts = (prmdict, prtdict, lprmdict, dcldict)
+    # separate ports/decls of unknown width
+    kprts, ukprts = separate_widunknown(prts)
+    kdcls, ukdcls = separate_widunknown(dcls)
 
     # may contain Wirewid with both wwinvalid and a valid value
     ansset = Dict{String, Wirewid}()
     # only contain Wireval whose val field == wwinvalid
     widvars = Dict{Wirewid, Vector{String}}()
 
+    unknowndeclpush!(ansset, widvars, ukprts, ukdcls)
+
+    prmdict = Dict([p.name => Wirewid() for p in prms.val])
+    lprmdict = Dict([p.name => Wirewid() for p in lprms.val])
+
+    prtdict = Dict([(d = p.decl; d.name => Wirewid(d.width)) for p in kprts.val])
+    dcldict = Dict([d.name => Wirewid(d.width) for d in kdcls.val])
+
+    # vshow(kprts)
+    # @show ansset, widvars
+    envdicts = (prmdict, prtdict, lprmdict, dcldict)
+
+
     # helper functions
     declonly_widunify!(declonly, envdicts, ansset, widvars)
+    # @show ansset, widvars
+    # @show equality
     equality_widunify!(equality, envdicts, ansset, widvars)
+    # @show ansset, widvars
 
     ansset, widvars 
 end
