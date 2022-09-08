@@ -345,6 +345,8 @@ infer width of wires which appear in the conditions.
 """
 function widunify(declonly::Vector{Wireexpr}, 
     equality::Vector{Tuple{Wireexpr, Wireexpr}}, env::Vmodenv)
+    # ansset::Dict{String, Wirewid}=Dict{String, Wirewid}(),
+    # widvars::Dict{Wirewid, Vector{String}}=Dict{Wirewid, Vector{String}}())
     
     prms = env.prms 
     prts = env.prts 
@@ -365,6 +367,7 @@ function widunify(declonly::Vector{Wireexpr},
     prmdict = Dict([p.name => Wirewid() for p in prms.val])
     lprmdict = Dict([p.name => Wirewid() for p in lprms.val])
 
+    # only data of delc/ports of known width
     prtdict = Dict([(d = p.decl; d.name => Wirewid(d.width)) for p in kprts.val])
     dcldict = Dict([d.name => Wirewid(d.width) for d in kdcls.val])
 
@@ -376,7 +379,6 @@ function widunify(declonly::Vector{Wireexpr},
     # helper functions
     declonly_widunify!(declonly, envdicts, ansset, widvars)
     # @show ansset, widvars
-    # @show equality
     equality_widunify!(equality, envdicts, ansset, widvars)
     # @show ansset, widvars
 
@@ -422,6 +424,37 @@ function strwidunknown(widvars)
     end
 
     rstrip(txt)
+end
+
+function portdeclupdated!(env::Vmodenv, ansset::Dict{String, Wirewid})
+
+    prenewprts = Vector{Oneport}(undef, length(env.prts.val))
+    prenewdcls = Vector{Oneport}(undef, length(env.dcls.val))
+
+    for (ind, p) in enumerate(env.prts.val)
+        if isequal(p.decl.width, wwinvalid)
+            oldd = p.decl
+            widhere = pop!(ansset, oldd.name)
+            prenewprts[ind] = Oneport(p.direc, Onedecl(oldd.wtype, widhere.val, oldd.name))
+        else
+            prenewprts[ind] = p 
+        end
+    end
+
+    for (ind, d) in enumerate(env.dcls.val)
+        if isequal(d.width, wwinvalid)
+            prenewdcls[ind] = Onedecl(d.wtype, pop!(ansset, d.name).val, d.name)
+        else
+            prenewdcls[ind] = d 
+        end
+    end
+
+    Vmodenv(
+        env.prms, 
+        Ports(prenewprts),
+        env.lprms,
+        Decls(prenewdcls)
+    )
 end
 
 
@@ -482,6 +515,14 @@ ERROR: Wire width cannot be inferred for the following wires.
 
 """
 function autodecl(x::Ifcontent, env::Vmodenv)
+    # kprts, ukprts = separate_widunknown(env.prts)
+    # kdcls, ukdcls = separate_widunknown(env.dcls)
+    # coreenv = Vmodenv(env.prms, kprts, env.lprms, kdcls)
+
+    # ansset = Dict{String, Wirewid}()
+    # widvars = Dict{Wirewid, Vector{String}}()
+    # unknowndeclpush!(ansset, widvars, ukprts, ukdcls)
+
     don, equ = wireextract(x)
     ansset, widvars = widunify(don, equ, env)
 
@@ -492,9 +533,11 @@ function autodecl(x::Ifcontent, env::Vmodenv)
     )
     # length(widvars) == 0 || error("Wirewidth unresolved, ", strwidunknown(widvars))
 
+    newenv = portdeclupdated!(env, ansset)
+
     newdecls = [Onedecl(reg, ww.val, n) for (n, ww) in ansset]
     sort!(newdecls, by=(x -> x.name))
-    Decls(newdecls)
+    Decls(newdecls), newenv
 end
 
 """
