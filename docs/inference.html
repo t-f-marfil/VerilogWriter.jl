@@ -28,11 +28,11 @@ always_ff @( posedge clk ) begin
         end
     end
 end
-type: Alwayscontent</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/t-f-marfil/VerilogWriter.jl/blob/03ddc0b8851c6dd548c36ac3e5372368cf7886b1/src/autoreset.jl#L78-L117">source</a></section></article><h2 id="Automatic-Wire-Declaration"><a class="docs-heading-anchor" href="#Automatic-Wire-Declaration">Automatic Wire Declaration</a><a id="Automatic-Wire-Declaration-1"></a><a class="docs-heading-anchor-permalink" href="#Automatic-Wire-Declaration" title="Permalink"></a></h2><article class="docstring"><header><a class="docstring-binding" id="VerilogWriter.autodecl" href="#VerilogWriter.autodecl"><code>VerilogWriter.autodecl</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia hljs">autodecl(x::Ifcontent, env::Vmodenv)</code></pre><p>Declare wires in <code>x::Ifcontent</code> which are not yet declared in <code>env</code>. Raise error when not enough information to determine width of all wires is given.</p><p><strong>Examples</strong></p><p><strong>Inference Success</strong></p><pre><code class="language-julia hljs">pts = @ports (
+type: Alwayscontent</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/t-f-marfil/VerilogWriter.jl/blob/513bf2f400784fa51e1a4bd7a3bc38a06b82bca6/src/autoreset.jl#L82-L121">source</a></section><section><div><pre><code class="nohighlight hljs">autoreset(x::Alwayscontent; clk=defclk, rst=defrst, edge=posedge)</code></pre><p>Automatically reset wires which appear in <code>x::Alwayscontent</code>.</p><p>Sensitivity list in the original <code>Alwayscontent</code> will be ignored.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/t-f-marfil/VerilogWriter.jl/blob/513bf2f400784fa51e1a4bd7a3bc38a06b82bca6/src/autoreset.jl#L135-L141">source</a></section></article><h2 id="Automatic-Wire-Declaration"><a class="docs-heading-anchor" href="#Automatic-Wire-Declaration">Automatic Wire Declaration</a><a id="Automatic-Wire-Declaration-1"></a><a class="docs-heading-anchor-permalink" href="#Automatic-Wire-Declaration" title="Permalink"></a></h2><article class="docstring"><header><a class="docstring-binding" id="VerilogWriter.autodecl" href="#VerilogWriter.autodecl"><code>VerilogWriter.autodecl</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia hljs">autodecl(x::Ifcontent, env::Vmodenv)</code></pre><p>Declare wires in <code>x::Ifcontent</code> which are not yet declared in <code>env</code>. Raise error when not enough information to determine width of all wires is given.</p><p><strong>Examples</strong></p><p><strong>Inference Success</strong></p><pre><code class="language-julia hljs">pts = @ports (
         @in 16 din;
         @in b1
 )
-env = Vmodenv(Parameters(), pts, Localparams(), Decls())
+env = Vmodenv(pts)
 
 c = @ifcontent (
     reg1 = 0;
@@ -42,13 +42,50 @@ c = @ifcontent (
     end
 ) 
 
-newds = autodecl(c, env)
+newds, _ = autodecl(c, env)
 vshow(newds)
 
 # output
 
 reg [3:0] reg1;
 reg [15:0] reg2;
+type: Decls</code></pre><p>You may also declare ports/wires beforehand whose width is unknown.</p><p>When declaring ports/wires without specifying its bit width, assign <code>-1</code> as its width.</p><pre><code class="language-julia hljs">ps = @ports (
+    @in 2 x;
+    @in -1 y;
+    @out @reg A z
+) 
+ds = @decls (
+    @wire -1 w1;
+    @wire B w2
+)
+
+ab = @always (
+    z &lt;= r1 + r2 + r3;
+    r4 &lt;= (y &amp; w1) &lt;&lt; r1[1:0];
+    r5 &lt;= y + w2
+)
+env = Vmodenv(Parameters(), ps, Localparams(), ds)
+d, newenv = autodecl(ab.content, env)
+
+vshow(newenv)
+println()
+vshow(d)
+
+# output
+
+input [1:0] x
+input [B-1:0] y
+output reg [A-1:0] z
+
+wire [B-1:0] w1;
+wire [B-1:0] w2;
+type: Vmodenv
+
+reg [A-1:0] r1;
+reg [A-1:0] r2;
+reg [A-1:0] r3;
+reg [B-1:0] r4;
+reg [B-1:0] r5;
 type: Decls</code></pre><p><strong>Fail in Inference</strong></p><pre><code class="language-julia hljs">c = @ifcontent (
     reg1 = 0;
     reg2 = din;
@@ -63,4 +100,4 @@ autodecl(c)
 
 ERROR: Wire width cannot be inferred for the following wires.
 1. b1
-2. reg2 = din</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/t-f-marfil/VerilogWriter.jl/blob/03ddc0b8851c6dd548c36ac3e5372368cf7886b1/src/widthinference.jl#L337-L392">source</a></section><section><div><pre><code class="nohighlight hljs">autodecl(x::Ifcontent)</code></pre><p>Call <code>autodecl</code> under an empty environment.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/t-f-marfil/VerilogWriter.jl/blob/03ddc0b8851c6dd548c36ac3e5372368cf7886b1/src/widthinference.jl#L408-L412">source</a></section></article><p><code>env</code> in an argument for <code>autodecl</code> is of type <code>Vmodenv</code>.</p><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Vmodenv(prms::Parameters, prts::Ports, lprms::Localparams, dcls::Decls)</code></pre><article class="docstring"><header><a class="docstring-binding" id="VerilogWriter.Vmodenv" href="#VerilogWriter.Vmodenv"><code>VerilogWriter.Vmodenv</code></a> — <span class="docstring-category">Type</span></header><section><div><p>Environment in which wire width inference is done.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/t-f-marfil/VerilogWriter.jl/blob/03ddc0b8851c6dd548c36ac3e5372368cf7886b1/src/widthinference.jl#L65">source</a></section></article></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="structs.html">« Basic Structs</a><a class="docs-footer-nextpage" href="fsm.html">Finite State Machines »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Thursday 1 September 2022 00:08">Thursday 1 September 2022</span>. Using Julia version 1.7.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+2. reg2 = din</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/t-f-marfil/VerilogWriter.jl/blob/513bf2f400784fa51e1a4bd7a3bc38a06b82bca6/src/widthinference.jl#L473-L576">source</a></section><section><div><pre><code class="nohighlight hljs">autodecl(x::Alwayscontent, env::Vmodenv)</code></pre><p><code>autodecl</code> on <code>Alwayscontent</code>.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/t-f-marfil/VerilogWriter.jl/blob/513bf2f400784fa51e1a4bd7a3bc38a06b82bca6/src/widthinference.jl#L595-L599">source</a></section><section><div><pre><code class="nohighlight hljs">autodecl(x::T) where {T &lt;: Union{Ifcontent, Alwayscontent}}</code></pre><p>Call <code>autodecl</code> under an empty environment.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/t-f-marfil/VerilogWriter.jl/blob/513bf2f400784fa51e1a4bd7a3bc38a06b82bca6/src/widthinference.jl#L604-L608">source</a></section></article><p><code>env</code> in an argument for <code>autodecl</code> is of type <code>Vmodenv</code>.</p><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Vmodenv(prms::Parameters, prts::Ports, lprms::Localparams, dcls::Decls)</code></pre><article class="docstring"><header><a class="docstring-binding" id="VerilogWriter.Vmodenv" href="#VerilogWriter.Vmodenv"><code>VerilogWriter.Vmodenv</code></a> — <span class="docstring-category">Type</span></header><section><div><p>Environment in which wire width inference is done.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/t-f-marfil/VerilogWriter.jl/blob/513bf2f400784fa51e1a4bd7a3bc38a06b82bca6/src/widthinference.jl#L70">source</a></section></article></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="structs.html">« Basic Structs</a><a class="docs-footer-nextpage" href="fsm.html">Finite State Machines »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Friday 9 September 2022 13:46">Friday 9 September 2022</span>. Using Julia version 1.7.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

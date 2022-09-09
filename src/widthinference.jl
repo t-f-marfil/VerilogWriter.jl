@@ -169,7 +169,7 @@ function wirepush_widunify!(w::Wireexpr, envdicts, ansset, widvars)
     op = w.operation
     if op == id 
         f!(w.name)
-    elseif op == slice 
+    elseif op == slice || op == ipselm
         map((x -> g!(x)), w.subnodes)
 
     elseif op in wunaop || op in wbinop 
@@ -220,10 +220,30 @@ function eqwidflatten!(x::Wireexpr, envdicts, ansset, eqwids::Vector{Wirewid})
             # x[m:2], y[3:0]
             indexes = view(x.subnodes, 2:3)
             if all(w -> w.operation == literal, indexes)
+                # y[3:0] -> width(y) == 4
                 widval = abs(indexes[1].value - indexes[2].value) + 1
                 push!(eqwids, Wirewid(widval))
+            else 
+                # x[m:2] -> width(x) == (m-2) + 1
+                # suppose indexes[1] > indexes[2] ? is this always true?
+                widnow = Wirewid(
+                    Wireexpr(
+                        add, 
+                        Wireexpr(
+                            minus,
+                            indexes[1],
+                            indexes[2]
+                        ),
+                        Wireexpr(1)
+                    )
+                )
+                push!(eqwids, widnow)
             end
+
         end
+
+    elseif op == ipselm
+        push!(eqwids, Wirewid(x.subnodes[3]))
 
     elseif op == literal
         bw = x.bitwidth
