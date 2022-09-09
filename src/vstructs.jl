@@ -34,6 +34,7 @@ in an association exists.
     id 
     slice
     literal
+    ipselm
     # hex 
     # dec
 end
@@ -118,9 +119,15 @@ struct Wireexpr
     operation::Wireop 
     name::String
     subnodes::Vector{Wireexpr}
+    # use only for `literal`
     bitwidth::Int
     value::Int 
 end
+
+"name == \"\" for no name (intermediate node)"
+const wirenoname = ""
+"-1 for Int field of Wireexpr which should not contain any data."
+const wirevalinvalid = -1
 
 """
 Parameter in verilog.

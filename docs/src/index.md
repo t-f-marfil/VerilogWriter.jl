@@ -256,11 +256,11 @@ type: Decls
 ## Easy construction of Finite State Machines
 
 ```jldoctest
-julia> fsm = FSM("nstate", "uno", "dos", "tres"); # create a new Finite State Machine
+julia> fsm = @FSM nstate (uno, dos, tres); # create a new Finite State Machine
 
-julia> transadd!(fsm, (@wireexpr b1 == b2), "uno" => "dos"); # transition from "uno" to "dos"
+julia> transadd!(fsm, (@wireexpr b1 == b2), @tstate uno => dos); # transition from "uno" to "dos"
 
-julia> transadd!(fsm, (@wireexpr b3), "uno" => "tres"); # "uno" to "tres"
+julia> transadd!(fsm, (@wireexpr b3), @tstate uno => tres); # "uno" to "tres"
 
 julia> transadd!(fsm, (@wireexpr b4), "dos" => "uno"); # "dos" to "uno"
 

@@ -372,7 +372,7 @@ function widunify(declonly::Vector{Wireexpr},
     prtdict = Dict([(d = p.decl; d.name => Wirewid(d.width)) for p in kprts.val])
     dcldict = Dict([d.name => Wirewid(d.width) for d in kdcls.val])
 
-    # vshow(kprts)
+    # vshow(kdcls)
     # @show ansset, widvars
     envdicts = (prmdict, prtdict, lprmdict, dcldict)
 
@@ -501,6 +501,54 @@ reg [3:0] reg1;
 reg [15:0] reg2;
 type: Decls
 ```
+
+You may also declare ports/wires beforehand
+whose width is unknown.
+
+When declaring ports/wires without specifying
+its bit width, assign `-1` as its width.
+
+```jldoctest
+ps = @ports (
+    @in 2 x;
+    @in -1 y;
+    @out @reg A z
+) 
+ds = @decls (
+    @wire -1 w1;
+    @wire B w2
+)
+
+ab = @always (
+    z <= r1 + r2 + r3;
+    r4 <= (y & w1) << r1[1:0];
+    r5 <= y + w2
+)
+env = Vmodenv(Parameters(), ps, Localparams(), ds)
+d, newenv = autodecl(ab.content, env)
+
+vshow(newenv)
+println()
+vshow(d)
+
+# output
+
+input [1:0] x
+input [B-1:0] y
+output reg [A-1:0] z
+
+wire [B-1:0] w1;
+wire [B-1:0] w2;
+type: Vmodenv
+
+reg [A-1:0] r1;
+reg [A-1:0] r2;
+reg [A-1:0] r3;
+reg [B-1:0] r4;
+reg [B-1:0] r5;
+type: Decls
+```
+
 
 ## Fail in Inference
 

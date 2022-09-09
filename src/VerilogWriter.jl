@@ -39,8 +39,7 @@ export
 export 
     FSM, @FSM, fsmconv, transadd!, @tstate, transcond
 
-# export 
-#     @strerror, dictstr, dictprint
+# priority for files declaring `struct`s
 
 include("codegenfunc.jl")
 include("vstructs.jl")
@@ -55,7 +54,6 @@ include("baseutils.jl")
 include("textutils.jl")
 include("vstructhandlers.jl")
 include("vconstructors.jl")
-include("vstring.jl")
 include("rawparser.jl")
 include("alwaysinference.jl")
 include("paramsolve.jl")
@@ -67,6 +65,7 @@ include("fsm.jl")
 include("autoreset.jl")
 include("widthinference.jl")
 
-# include("testutils.jl")
+include("vstring.jl")
+
 
 end

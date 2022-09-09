@@ -89,9 +89,14 @@ w = @wireexpr a+b+c+d+e
 w = @wireexpr (0x12 <= 0b100) && (10 < x[10:1]) || y[z:1]
 @test string(w) == "(((18 <= 4) && (10 < x[10:1])) || y[z:1])"
 
-w = w = Wireexpr(32, 5)
+w = Wireexpr(32, 5)
 @test string(w) == "32'd5"
 
+w = @wireexpr a[(P<<Q)-:(A+B)]
+@test string(w) == "a[(P << Q) -: (A + B)]"
+
+w = @wireexpr b[P-:4]
+@test string(w) == "b[P -: 4]"
 
 # Alassign 
 a = @oneblock x <= y 
