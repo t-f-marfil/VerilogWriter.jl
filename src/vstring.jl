@@ -94,6 +94,15 @@ function Base.string(x::Wireexpr)
             txt = string(string(x.subnodes[1]), x.name, "[", 
                 string(x.subnodes[2]), ":", string(x.subnodes[3]), "]",)
         end
+    elseif x.operation == ipselm 
+        txt = string(
+            string(x.subnodes[1]),
+            "[",
+            string(x.subnodes[2]),
+            " -: ",
+            string(x.subnodes[3]),
+            "]"
+        )
     elseif x.operation in keys(wunaopdict)
         if x.operation in explicitCallop
             txt = string(wunaopdict[x.operation], "(", string(x.subnodes[begin]), ")")
@@ -300,4 +309,36 @@ end
 
 function Base.string(x::Vmodule)
     string(x, true)
+end
+
+macro streachline(v)
+    quote 
+        if length($(esc(v))) > 0
+            reduce(
+                newlineconcat, 
+                (string(i) for i in $(esc(v)))
+            )
+        else 
+            ""
+        end
+    end
+end
+
+macro streachline_blocksplit(v)
+    quote
+        if length($(esc(v))) > 0
+            string((@streachline $(esc(v))), "\n\n")
+        else
+            ""
+        end
+    end
+end
+
+function Base.string(x::Vmodenv)
+    string(
+        (@streachline_blocksplit x.prms.val),
+        (@streachline_blocksplit x.prts.val),
+        (@streachline_blocksplit x.lprms.val),
+        (@streachline x.dcls.val)
+    )
 end

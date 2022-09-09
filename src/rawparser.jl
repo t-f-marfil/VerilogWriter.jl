@@ -568,15 +568,68 @@ end
 
 
 """
+    wireexpr(expr::QuoteNode)
+
+For indexed part select.
+"""
+function wireexpr(expr::QuoteNode)
+    wireexpr(expr.value)
+end
+
+"""
+    wireexpr(expr, ::Val{:quote})
+
+For indexed part select.
+"""
+function wireexpr(expr, ::Val{:quote})
+    wireexpr(expr.args[1])
+end
+
+"""
     wireexpr(expr, ::Val{:ref})
 
 Bit select or slice of wires, e.g. `x[1]` and `x[p:1]`.
 """
 function wireexpr(expr, ::Val{:ref})
     body = wireexpr(expr.args[1])
-    sl = wireexpr(expr.args[2])
-    # length(sl) may be 1 or 2
-    Wireexpr(slice, body, sl...)
+
+    # sl = wireexpr(expr.args[2])
+    # # length(sl) may be 1 or 2
+    # Wireexpr(slice, body, sl...)
+
+    rngexpr = expr.args[2]
+    if (
+        rngexpr isa Expr
+        && rngexpr.head == :call 
+        && rngexpr.args[1] == :(:)
+    )
+        Wireexpr(slice, body, wireexpr(rngexpr)...)
+    elseif (
+        rngexpr isa Expr 
+        && rngexpr.head == :call 
+        && (
+            rngexpr.args[3] isa QuoteNode
+            || rngexpr.args[3].head == :quote
+        )
+    )
+        rngexpr.args[1] == :- || error(
+            "$(rngexpr.args[1]) not supported for indexed part select."
+        )
+
+        Wireexpr(
+            ipselm, 
+            wirenoname,
+            [
+                body,
+                wireexpr(rngexpr.args[2]), 
+                wireexpr(rngexpr.args[3])
+            ],
+            wirevalinvalid, 
+            wirevalinvalid
+        )
+    else
+        Wireexpr(slice, body, wireexpr(rngexpr))
+    end
 end
 function wireexpr(expr::T) where {T <: Union{Symbol, Int}}
     return Wireexpr(expr)
@@ -609,6 +662,16 @@ a xor operator in Julia.
 
 ## `<wire>[<wire>:<wire>]`, `<wire>[<wire>]`
 Bit select and slicing as in Verilog/SystemVerilog.
+Does not reject even if both wires in `[<wire>:<wire>]` are
+not of constant value.
+
+## `wire[<wire>-:<wire>]`
+Indexed part select. Does not reject even if `<wire>`
+after `-:` is not of constant value.
+As using `-` operator and `:` (quote) in Julia syntax, 
+no spaces between `<wire>(here)-:(and here)<wire>` are allowed, 
+and `<wire>` after `-:` should in most cases be put inside
+parentheses.
 
 # Examples 
 ```jldoctest
@@ -623,6 +686,11 @@ type: Wireexpr
 julia> w = wireexpr(:(w[i:0])); vshow(w);
 w[i:0]
 type: Wireexpr
+
+julia> w = @wireexpr w[(P*Q)-:(R+10)]; vshow(w);
+w[(P * Q) -: (R + 10)]
+type: Wireexpr
+
 ```
 """
 function wireexpr(expr::Expr)
@@ -685,10 +753,6 @@ end
 Parse binary operators.
 """
 function wireexpr(expr, ::T, ::Val{:call}) where {T <: binopvals}
-    # uno = wireexpr(expr.args[2])
-    # dos = wireexpr(expr.args[3])
-    # return Wireexpr(wbinsym2op[T], uno, dos)
-    
     # length may be > 3, for (+, *) may parsed in adifferent manner
     args = expr.args
     op = wbinsym2op[T]
