@@ -335,10 +335,16 @@ macro streachline_blocksplit(v)
 end
 
 function Base.string(x::Vmodenv)
-    string(
+    txt = string(
         (@streachline_blocksplit x.prms.val),
         (@streachline_blocksplit x.prts.val),
         (@streachline_blocksplit x.lprms.val),
-        (@streachline x.dcls.val)
+        # (@streachline x.dcls.val)
     )
+    tend = @streachline x.dcls.val
+    if tend == ""
+        return txt[begin:end-1]
+    else
+        return string(txt, tend)
+    end
 end

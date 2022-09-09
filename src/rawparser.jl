@@ -585,6 +585,12 @@ function wireexpr(expr, ::Val{:quote})
     wireexpr(expr.args[1])
 end
 
+function wireexpr(expr, ::Val{:$})
+    arg = expr.args[1]
+    q = Meta.parse("\$(esc($(arg)))")
+    eval(q)
+end
+
 """
     wireexpr(expr, ::Val{:ref})
 
@@ -672,6 +678,22 @@ As using `-` operator and `:` (quote) in Julia syntax,
 no spaces between `<wire>(here)-:(and here)<wire>` are allowed, 
 and `<wire>` after `-:` should in most cases be put inside
 parentheses.
+
+Note that because `:` (quote) is used inside quote, 
+you (for now) cannot embed objects here through Metaprogramming.
+
+e.g. `w = (@wireexpr w); oneblock(:(x[A-:(\$w)] <= y))` is not 
+allowed. 
+
+In such cases use constructors instead.
+
+```jldoctest
+julia> e = Wireexpr(ipselm, @wireexpr(x), @wireexpr(A), @wireexpr(w));
+
+julia> vshow(oneblock(:(\$(e) <= y)));
+x[A -: w] <= y;
+type: Alassign
+```
 
 # Examples 
 ```jldoctest

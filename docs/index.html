@@ -5,7 +5,7 @@ julia&gt; vshow(a);
 input x
 type: Oneport
 
-julia&gt; b = @portoneline @out reg 8 d1, d2;
+julia&gt; b = @portoneline @out @reg 8 d1, d2;
 
 julia&gt; vshow(b);
 output reg [7:0] d1
@@ -38,7 +38,7 @@ type: Alwayscontent</code></pre><pre><code class="language-julia hljs">prs = @pa
 ps = @ports (
     @in clk, sig1, sig2;
     @in 8 din, din2;
-    @out reg 8 dout
+    @out @reg 8 dout
 )
 
 ds = @decls (
@@ -81,7 +81,6 @@ module mymodule #(
     input [7:0] din2,
     output reg [7:0] dout
 );
-
     reg [7:0] dbuf;
 
     always @( posedge clk ) begin
@@ -158,9 +157,6 @@ module send (
     input [7:0] bus2,
     output [7:0] bus3
 );
-    
-
-
 
 endmodule
 type: Vmodule
@@ -171,9 +167,6 @@ module recv (
     output [7:0] bus2,
     input [7:0] bus3
 );
-    
-
-
 
 endmodule
 type: Vmodule</code></pre><p>where you can construct <code>Ports</code> objects first and embed them in multiple modules.</p><h2 id="Wire-Width-Inference"><a class="docs-heading-anchor" href="#Wire-Width-Inference">Wire Width Inference</a><a id="Wire-Width-Inference-1"></a><a class="docs-heading-anchor-permalink" href="#Wire-Width-Inference" title="Permalink"></a></h2><pre><code class="language-julia hljs">ds = @decls (
@@ -200,14 +193,14 @@ ERROR: Wire width cannot be inferred for the following wires.
 1. dwire1
 2. reg2 = dwire2
 
-julia&gt; d = autodecl(c, env); vshow(d); # using information in `env`
+julia&gt; d, _ = autodecl(c, env); vshow(d); # using information in `env`
 reg reg1;
 reg [9:0] reg2;
-type: Decls</code></pre><h2 id="Easy-construction-of-Finite-State-Machines"><a class="docs-heading-anchor" href="#Easy-construction-of-Finite-State-Machines">Easy construction of Finite State Machines</a><a id="Easy-construction-of-Finite-State-Machines-1"></a><a class="docs-heading-anchor-permalink" href="#Easy-construction-of-Finite-State-Machines" title="Permalink"></a></h2><pre><code class="language-julia-repl hljs">julia&gt; fsm = FSM(&quot;nstate&quot;, &quot;uno&quot;, &quot;dos&quot;, &quot;tres&quot;); # create a new Finite State Machine
+type: Decls</code></pre><h2 id="Easy-construction-of-Finite-State-Machines"><a class="docs-heading-anchor" href="#Easy-construction-of-Finite-State-Machines">Easy construction of Finite State Machines</a><a id="Easy-construction-of-Finite-State-Machines-1"></a><a class="docs-heading-anchor-permalink" href="#Easy-construction-of-Finite-State-Machines" title="Permalink"></a></h2><pre><code class="language-julia-repl hljs">julia&gt; fsm = @FSM nstate (uno, dos, tres); # create a new Finite State Machine
 
-julia&gt; transadd!(fsm, (@wireexpr b1 == b2), &quot;uno&quot; =&gt; &quot;dos&quot;); # transition from &quot;uno&quot; to &quot;dos&quot;
+julia&gt; transadd!(fsm, (@wireexpr b1 == b2), @tstate uno =&gt; dos); # transition from &quot;uno&quot; to &quot;dos&quot;
 
-julia&gt; transadd!(fsm, (@wireexpr b3), &quot;uno&quot; =&gt; &quot;tres&quot;); # &quot;uno&quot; to &quot;tres&quot;
+julia&gt; transadd!(fsm, (@wireexpr b3), @tstate uno =&gt; tres); # &quot;uno&quot; to &quot;tres&quot;
 
 julia&gt; transadd!(fsm, (@wireexpr b4), &quot;dos&quot; =&gt; &quot;uno&quot;); # &quot;dos&quot; to &quot;uno&quot;
 
@@ -235,4 +228,4 @@ case (nstate)
         
     end
 endcase
-type: FSM</code></pre><p>You may need to include the case statement inside an always block.</p></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="intro.html">Introduction »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Thursday 1 September 2022 00:08">Thursday 1 September 2022</span>. Using Julia version 1.7.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+type: FSM</code></pre><p>You may need to include the case statement inside an always block.</p></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="intro.html">Introduction »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Friday 9 September 2022 13:46">Friday 9 September 2022</span>. Using Julia version 1.7.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

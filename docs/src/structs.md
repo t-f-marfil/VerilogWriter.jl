@@ -30,6 +30,7 @@ This module offers several structs that contain a structure of Verilog component
     + [Ifcontent](@ref)
   + [Atype](@ref)
   + [Edge](@ref)
++ [Vmodinst](@ref)
 + [Vmodule](@ref)
   
 ```@setup 1
@@ -186,6 +187,13 @@ println(string("Enum ", reduce((x, y)->string(x, " ", y), instances(Edge)))) # h
 ```
 ```@docs
 Edge
+```
+### Vmodinst
+```@example 1
+println(showfield(Vmodinst)) # hide
+```
+```@docs
+Vmodinst
 ```
 ### Vmodule
 ```@example 1

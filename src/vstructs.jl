@@ -297,7 +297,36 @@ struct Assign
     rhs::Wireexpr
 end
 
-"Module instantiation."
+"""
+    Vmodinst
+
+Represents module instantiation.
+
+```jldoctest
+i = Vmodinst(
+    "mod1",
+    "u1",
+    [
+        "A" => Wireexpr(15)
+    ],
+    [
+        "p1" => (@wireexpr x << 1),
+        "p2" => (@wireexpr y)
+    ]
+)
+vshow(i)
+
+# output
+
+mod1 #(
+    .A(15)
+) u1 (
+    .p1((x << 1)),
+    .p2(y)
+);
+type: Vmodinst
+```
+"""
 struct Vmodinst
     vmodname::String 
     instname::String
