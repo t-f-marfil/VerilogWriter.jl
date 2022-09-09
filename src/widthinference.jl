@@ -1,5 +1,5 @@
 """
-    wireextract(x::Ifcontent)
+    wireextract(x)
 
 Extract `Wireexpr`s from `x::Ifcontent`, along with
 equality constraints of wire width.
@@ -7,8 +7,10 @@ equality constraints of wire width.
 Return `declonly::Vector{Wireexpr}`, which contains wires appear in 
 `x::Ifcontent`, and `equality::Vector{Tuple{Wireexpr, Wireexpr}}`, 
 which contains tuples of two `Wireexpr`s which are supposed to be of the same width.
+
+Type of `x` is restricted in `wireextract!`.
 """
-function wireextract(x::Ifcontent)
+function wireextract(x)
     declonly = Wireexpr[]
     equality = Tuple{Wireexpr, Wireexpr}[]
 
@@ -40,6 +42,26 @@ function wireextract!(x::Ifcontent, declonly, equality)
             wireextract!(dos, declonly, equality)
         end
     end
+end
+
+"""
+    wireextract!(x::Vector{T}, declonly, equality) where {T <: Union{Ifcontent, Alwayscontent}}
+
+For Vector{Ifcontent/Alwayscontent}.
+"""
+function wireextract!(x::Vector{T}, declonly, equality) where {T <: Union{Ifcontent, Alwayscontent}}
+    for c in x 
+        wireextract!(c, declonly, equality)
+    end
+end
+
+"""
+    wireextract!(x::Alwayscontent, declonly, equality)
+
+For always content. Sensitivity in `x` will be ignored.
+"""
+function wireextract!(x::Alwayscontent, declonly, equality)
+    wireextract!(x.content, declonly, equality)
 end
 
 
@@ -488,10 +510,12 @@ end
 
 
 """
-    autodecl(x::Ifcontent, env::Vmodenv)
+    autodecl(x, env::Vmodenv)
 
-Declare wires in `x::Ifcontent` which are not yet declared in `env`.
+Declare wires in `x` which are not yet declared in `env`.
 Raise error when not enough information to determine width of all wires is given.
+
+Type of `x` is restricted to the type `wireextract!` accepts.
 
 # Examples 
 
@@ -589,9 +613,8 @@ ERROR: Wire width cannot be inferred for the following wires.
 1. b1
 2. reg2 = din
 ```
-
 """
-function autodecl(x::Ifcontent, env::Vmodenv)
+function autodecl(x, env::Vmodenv)
     don, equ = wireextract(x)
     ansset, widvars = widunify(don, equ, env)
 
@@ -605,24 +628,24 @@ function autodecl(x::Ifcontent, env::Vmodenv)
     newenv = portdeclupdated!(env, ansset)
 
     newdecls = [Onedecl(reg, ww.val, n) for (n, ww) in ansset]
-    sort!(newdecls, by=(x -> x.name))
+    sort!(newdecls, by=(d -> d.name))
     Decls(newdecls), newenv
 end
 
-"""
-    autodecl(x::Alwayscontent, env::Vmodenv)
+# """
+#     autodecl(x::Alwayscontent, env::Vmodenv)
 
-`autodecl` on `Alwayscontent`.
-"""
-function autodecl(x::Alwayscontent, env::Vmodenv)
-    autodecl(x.content, env)
-end
+# `autodecl` on `Alwayscontent`.
+# """
+# function autodecl(x::Alwayscontent, env::Vmodenv)
+#     autodecl(x.content, env)
+# end
 
 """
-    autodecl(x::T) where {T <: Union{Ifcontent, Alwayscontent}}
+    autodecl(x)
 
 Call `autodecl` under an empty environment.
 """
-function autodecl(x::T) where {T <: Union{Ifcontent, Alwayscontent}}
+function autodecl(x)
     autodecl(x, Vmodenv())
 end
