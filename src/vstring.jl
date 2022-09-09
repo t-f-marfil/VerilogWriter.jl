@@ -172,15 +172,38 @@ function Base.string(x::Ifelseblock)
 end
 
 function Base.string(x::Case)
-    txt = string("case ($(string(x.condwire)))\n")
-    subtxt = ""
-    for item in x.conds 
-        subtxt *= "$(string(item[1])): begin\n"
-        subtxt *= indent(string(item[2]))
-        subtxt *= "\nend\n"
+    txt = string("case (", string(x.condwire), ")\n")
+
+    # subtxt = ""
+    # for item in x.conds 
+    #     subtxt *= "$(string(item[1])): begin\n"
+    #     subtxt *= indent(string(item[2]))
+    #     subtxt *= "\nend\n"
+    # end
+
+    subtxts = Vector{String}(undef, length(x.conds))
+    for (i, item) in enumerate(x.conds) 
+        subtxts[i] = string(
+            string(item[1]),
+            ": begin\n",
+            indent(string(item[2])),
+            "\nend\n"
+        )
+    end
+    if length(x.conds) > 0
+        subtxts[end] = rstrip(subtxts[end])
     end
 
-    txt *= indent(rstrip(subtxt)) * "\nendcase"
+    # txt *= indent(rstrip(subtxt)) * "\nendcase"
+    string(
+        txt, 
+        indent(
+            rstrip(
+                string(subtxts...)
+            )
+        ),
+        "\nendcase"
+    )
 end
 
 # alwaysdict = Dict(ff => "always_ff", comb => "always_comb")

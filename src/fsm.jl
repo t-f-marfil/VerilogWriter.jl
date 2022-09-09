@@ -175,6 +175,14 @@ function transadd!(x::FSM, cond::Wireexpr, newtrans::Pair{String, String})
 
     x.transvalid[stoind, sfromind] = true
     x.transcond[stoind, sfromind] = cond
+    nothing
+end
+
+function transadd!(x::FSM, rules::Vector{Tuple{Wireexpr, Pair{String, String}}})
+    for (c, nt) in rules 
+        transadd!(x, c, nt)
+    end
+    nothing
 end
 
 """
