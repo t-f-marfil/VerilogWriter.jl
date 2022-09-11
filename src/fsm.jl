@@ -280,6 +280,10 @@ function fsmconv(::Type{Ifcontent}, x::FSM)
     Ifcontent(fsmconv(Case, x))
 end 
 
+function fsmconv(::Type{Alwayscontent}, x::FSM)
+    Alwayscontent(fsmconv(Ifcontent, x))
+end
+
 """
     fsmconv(::Type{Onedecl}, x::FSM)
 
