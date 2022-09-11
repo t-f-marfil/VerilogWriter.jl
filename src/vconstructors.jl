@@ -67,11 +67,11 @@ Literal of Integer.
 Wireexpr(n::Int) = Wireexpr(-1, n)
 # Wireexpr(n::Int) = Wireexpr(literal, "", [], -1, n)
 """
-    Wireexpr(w::Int, n::Int)
+    Wireexpr(w::Integer, n::Integer)
 
 Literal with width specification, printed in the decimal format.
 """
-Wireexpr(w::Int, n::Int) = Wireexpr(literal, "", [], w, n)
+Wireexpr(w::Integer, n::Integer) = Wireexpr(literal, "", [], Int(w), Int(n))
 """
     Wireexpr(expr::Wireexpr)
 

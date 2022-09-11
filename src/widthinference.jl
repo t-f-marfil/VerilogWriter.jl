@@ -220,6 +220,8 @@ function eqwidflatten!(x::Wireexpr, envdicts, ansset, eqwids::Vector{Wirewid})
         push!(eqwids, Wirewid(1))
     elseif op == lshift || op == rshift 
         f!(x.subnodes[1])
+    elseif op == logieq 
+        push!(eqwids, Wirewid(1))
     elseif op in wbinop
         f!.(x.subnodes[1:2])
     elseif op == id 

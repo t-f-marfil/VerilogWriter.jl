@@ -1,6 +1,7 @@
 *Manifest.toml
 
 /src/test*
+/src/myaxim.v
 
 /docs/make.jl
 /docs/build
