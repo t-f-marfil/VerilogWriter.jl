@@ -30,7 +30,9 @@ export
 
 export 
     ifadd!, 
-    invport, invports, declmerge
+    invport, invports, 
+    declmerge,
+    @sym2wire
 
 export
     lhsextract, lhsunify, autoreset,

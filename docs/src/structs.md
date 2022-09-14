@@ -391,3 +391,8 @@ invports
 ```@docs
 declmerge
 ```
+
+### sym2wire
+```@docs
+@sym2wire
+```

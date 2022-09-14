@@ -66,7 +66,7 @@ c = ifcontent(:(
 ))
 ac = autoreset(c)
 env = Vmodenv(Parameters(), ps, Localparams(), ds)
-ad = autodecl(ac.content, env)
+ad, _ = autodecl(ac.content, env)
 
 vshow(ad)
 vshow(ac)

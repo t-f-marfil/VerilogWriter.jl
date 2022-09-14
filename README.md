@@ -6,7 +6,6 @@ A package to generate Verilog/SystemVerilog codes and offer an introductory HLS 
 
 You may:
 + Convert Verilog-like Julia code into objects
-+ Embed generated objects back into Verilog-like codes
 + Automatically infer wire width in always-blocks
 + Construct Finite State Machines in a simple method
 
