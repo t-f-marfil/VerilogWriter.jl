@@ -179,3 +179,36 @@ function declmergegen()
     end
 end
 declmergegen()
+
+"""
+    @sym2wire(arg::Symbol)
+
+Declare new `Wireexpr` of name `arg`.
+"""
+macro sym2wire(arg::Symbol)
+    quote 
+        $(esc(arg)) = $(Wireexpr(string(arg)))
+    end
+end
+
+"""
+    @sym2wire(arg::Expr)
+
+Declare new `Wireexpr`s of name `arg...`, respectively.
+
+# Example
+```jldoctest
+julia> @sym2wire x, y, z;
+
+julia> vshow(y);
+y
+type: Wireexpr
+```
+"""
+macro sym2wire(arg::Expr)
+    arg.head == :tuple || error("$(arg.head) is not allowed for @sym2wire.")
+    qlst = [:($(esc(i)) = $(Wireexpr(string(i)))) for i in arg.args]
+    quote
+        $(qlst...)
+    end
+end
