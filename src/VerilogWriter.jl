@@ -35,7 +35,9 @@ export
     @sym2wire
 
 export
+    wireextract, wireextract!,
     lhsextract, lhsunify, autoreset,
+    defclk, defrst,
     Vmodenv, autodecl
 
 export 
