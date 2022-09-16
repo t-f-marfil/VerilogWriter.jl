@@ -201,6 +201,12 @@ function wirepush_widunify!(w::Wireexpr, envdicts, ansset, widvars)
     return nothing
 end
 
+function wirepush_widunify!(t::Tuple{Wireexpr, Wireexpr}, envdicts, ansset, widvars)
+    for w in t 
+        wirepush_widunify!(w, envdicts, ansset, widvars)
+    end
+end
+
 """
     eqwidflatten!(x::Wireexpr, envdicts, ansset, eqwids::Vector{Wirewid})
 
@@ -279,6 +285,11 @@ function eqwidflatten!(x::Wireexpr, envdicts, ansset, eqwids::Vector{Wirewid})
     return nothing
 end
 
+function eqwidflatten!(t::Tuple{Wireexpr, Wireexpr}, envdicts, ansset, eqwids::Vector{Wirewid})
+    for w in t 
+        eqwidflatten!(w, envdicts, ansset, eqwids)
+    end
+end
 
 """
     declonly_widunify!(declonly, envdicts, ansset, widvars)
@@ -292,24 +303,39 @@ function declonly_widunify!(declonly, envdicts, ansset, widvars)
     return nothing 
 end
 
+function unifycore_errorstr(t::Tuple{Wireexpr, Wireexpr})
+    lhs, rhs = t
+    string(string(lhs), " <=> ", string(rhs))
+end
+
+function unifycore_errorstr(w::Wireexpr)
+    string(w)
+end
+
 """
-    equality_widunify!(equality, envdicts, ansset, widvars)
+    unifycore_widunify!(items::Vector{T}, envdicts, ansset, widvars) where {T <: Union{Wireexpr, Tuple{Wireexpr, Wireexpr}}}
 
 Called in [`widunify`](@ref), infer wire width from `equality` constraints.
-Supposed to be called after [`declonly_widunify!`](@ref).
+Originally intended to be called after [`declonly_widunify!`](@ref).
 """
-function equality_widunify!(equality, envdicts, ansset, widvars)
-    for (lhs, rhs) in equality
+function unifycore_widunify!(items::Vector{T}, envdicts, ansset, widvars) where {T <: Union{Wireexpr, Tuple{Wireexpr, Wireexpr}}}
+    for item in items
+        # lhs, rhs = item
+
         # push every wires in lhs/rhs first
         # if wire isn't declared, add new Wirewid to `ansset` and `widvars`
-        wirepush_widunify!(lhs, envdicts, ansset, widvars)
-        wirepush_widunify!(rhs, envdicts, ansset, widvars)
+        # m dispatch!
+        # wirepush_widunify!(lhs, envdicts, ansset, widvars)
+        # wirepush_widunify!(rhs, envdicts, ansset, widvars)
+        wirepush_widunify!(item, envdicts, ansset, widvars)
         
         # no consideration on wire concats?
         # from lhs/rhs pick all `Wirewid`s whose value should be the same
         eqwids = Wirewid[]
-        eqwidflatten!(lhs, envdicts, ansset, eqwids)
-        eqwidflatten!(rhs, envdicts, ansset, eqwids)
+        # m dispatch!
+        # eqwidflatten!(lhs, envdicts, ansset, eqwids)
+        # eqwidflatten!(rhs, envdicts, ansset, eqwids)
+        eqwidflatten!(item, envdicts, ansset, eqwids)
         unique!(eqwids)
 
         # unify, determine width value
@@ -323,8 +349,10 @@ function equality_widunify!(equality, envdicts, ansset, widvars)
                 else
                     # if widhere != ww.val 
                     if !isequal(widhere, ww.val)
+                        # m dispatch!
                         error(
-                            "width inference failure in evaluating $(string(lhs)) <=> $(string(rhs)).\n",
+                            # "width inference failure in evaluating $(string(lhs)) <=> $(string(rhs)).\n",
+                            "width inference failure in evaluating $(unifycore_errorstr(item)).\n",
                             "width discrepancy between $(string(widhere)) and $(string(ww.val))."
                         )
                     end
@@ -422,9 +450,10 @@ function widunify(declonly::Vector{Wireexpr},
 
 
     # helper functions
-    declonly_widunify!(declonly, envdicts, ansset, widvars)
+    # declonly_widunify!(declonly, envdicts, ansset, widvars)
+    unifycore_widunify!(declonly, envdicts, ansset, widvars)
     # @show ansset, widvars
-    equality_widunify!(equality, envdicts, ansset, widvars)
+    unifycore_widunify!(equality, envdicts, ansset, widvars)
     # @show ansset, widvars
 
     ansset, widvars 

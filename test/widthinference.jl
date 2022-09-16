@@ -44,3 +44,23 @@ d, _ = autodecl(
 @test string(d) == """
 reg [(A + B)-1:0] reg3;
 reg [(A + B)-1:0] reg4;"""
+
+# inference for declonly
+c = always(:(
+    if &(a & c) 
+        a <= c[1:0]
+    end
+))
+# d, nenv = autodecl(c)
+# @test string(d) == """
+# """
+
+# error message 
+c = always(:(
+    a <= $(Wireexpr(32, 10));
+    a <= $(Wireexpr(1, 0))
+))
+
+@test (@strerror autodecl(c)) == """
+width inference failure in evaluating a <=> 1'd0.
+width discrepancy between 32 and 1."""
