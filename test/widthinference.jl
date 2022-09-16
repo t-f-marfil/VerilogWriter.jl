@@ -45,15 +45,17 @@ d, _ = autodecl(
 reg [(A + B)-1:0] reg3;
 reg [(A + B)-1:0] reg4;"""
 
-# inference for declonly
+# recursive check for '==' and reductions
 c = always(:(
-    if &(a & c) 
-        a <= c[1:0]
+    if |(a & b) 
+        a <= &(b == c)
     end
 ))
-# d, nenv = autodecl(c)
-# @test string(d) == """
-# """
+d, nenv = autodecl(c)
+@test string(d) == """
+reg a;
+reg b;
+reg c;"""
 
 # error message 
 c = always(:(
