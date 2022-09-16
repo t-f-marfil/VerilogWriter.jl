@@ -208,14 +208,14 @@ function wirepush_widunify!(t::Tuple{Wireexpr, Wireexpr}, envdicts, ansset, widv
 end
 
 """
-    eqwidflatten!(x::Wireexpr, envdicts, ansset, eqwids::Vector{Wirewid})
+    eqwidflatten!(x::Wireexpr, envdicts, ansset, eqwids::Vector{Wirewid}, declonly, equality)
 
 Extract wires that appear inside `x` which are of the same width as `x` itself, 
 find `Wirewid` objects which correspond to the wire and push them into `eqwids`.
 When slice appears inside `x`, new Wirewid object is created and then added to `eqwids`.
 """
-function eqwidflatten!(x::Wireexpr, envdicts, ansset, eqwids::Vector{Wirewid})
-    f!(xx) = eqwidflatten!(xx, envdicts, ansset, eqwids)
+function eqwidflatten!(x::Wireexpr, envdicts, ansset, eqwids::Vector{Wirewid}, declonly, equality)
+    f!(xx) = eqwidflatten!(xx, envdicts, ansset, eqwids, declonly, equality)
 
     op = x.operation 
     if op == neg
@@ -224,10 +224,12 @@ function eqwidflatten!(x::Wireexpr, envdicts, ansset, eqwids::Vector{Wirewid})
     elseif op in wunaop 
         # reduction
         push!(eqwids, Wirewid(1))
+        push!(declonly, x.subnodes[])
     elseif op == lshift || op == rshift 
         f!(x.subnodes[1])
     elseif op == logieq 
         push!(eqwids, Wirewid(1))
+        push!(equality, tuple(x.subnodes...))
     elseif op in wbinop
         f!.(x.subnodes[1:2])
     elseif op == id 
@@ -285,23 +287,23 @@ function eqwidflatten!(x::Wireexpr, envdicts, ansset, eqwids::Vector{Wirewid})
     return nothing
 end
 
-function eqwidflatten!(t::Tuple{Wireexpr, Wireexpr}, envdicts, ansset, eqwids::Vector{Wirewid})
+function eqwidflatten!(t::Tuple{Wireexpr, Wireexpr}, envdicts, ansset, eqwids::Vector{Wirewid}, declonly, equality)
     for w in t 
-        eqwidflatten!(w, envdicts, ansset, eqwids)
+        eqwidflatten!(w, envdicts, ansset, eqwids, declonly, equality)
     end
 end
 
-"""
-    declonly_widunify!(declonly, envdicts, ansset, widvars)
+# """
+#     declonly_widunify!(declonly, envdicts, ansset, widvars)
 
-Called in [`widunify`](@ref), push wires that appear in `declonly`.
-"""
-function declonly_widunify!(declonly, envdicts, ansset, widvars)
-    for w in declonly
-        wirepush_widunify!(w, envdicts, ansset, widvars)
-    end
-    return nothing 
-end
+# Called in [`widunify`](@ref), push wires that appear in `declonly`.
+# """
+# function declonly_widunify!(declonly, envdicts, ansset, widvars)
+#     for w in declonly
+#         wirepush_widunify!(w, envdicts, ansset, widvars)
+#     end
+#     return nothing 
+# end
 
 function unifycore_errorstr(t::Tuple{Wireexpr, Wireexpr})
     lhs, rhs = t
@@ -313,29 +315,25 @@ function unifycore_errorstr(w::Wireexpr)
 end
 
 """
-    unifycore_widunify!(items::Vector{T}, envdicts, ansset, widvars) where {T <: Union{Wireexpr, Tuple{Wireexpr, Wireexpr}}}
+    unifycore_widunify!(items::Vector{T}, envdicts, ansset, widvars, declonly, equality) where {T <: Union{Wireexpr, Tuple{Wireexpr, Wireexpr}}}
 
 Called in [`widunify`](@ref), infer wire width from `equality` constraints.
-Originally intended to be called after [`declonly_widunify!`](@ref).
+
+To recursively look into `Wireexpr`s in `items`, push new equality 
+and declaration into `declonly` and `equality` given as arguments.
 """
-function unifycore_widunify!(items::Vector{T}, envdicts, ansset, widvars) where {T <: Union{Wireexpr, Tuple{Wireexpr, Wireexpr}}}
+function unifycore_widunify!(items::Vector{T}, envdicts, ansset, widvars, declonly, equality) where {T <: Union{Wireexpr, Tuple{Wireexpr, Wireexpr}}}
     for item in items
         # lhs, rhs = item
 
         # push every wires in lhs/rhs first
         # if wire isn't declared, add new Wirewid to `ansset` and `widvars`
-        # m dispatch!
-        # wirepush_widunify!(lhs, envdicts, ansset, widvars)
-        # wirepush_widunify!(rhs, envdicts, ansset, widvars)
         wirepush_widunify!(item, envdicts, ansset, widvars)
         
         # no consideration on wire concats?
         # from lhs/rhs pick all `Wirewid`s whose value should be the same
         eqwids = Wirewid[]
-        # m dispatch!
-        # eqwidflatten!(lhs, envdicts, ansset, eqwids)
-        # eqwidflatten!(rhs, envdicts, ansset, eqwids)
-        eqwidflatten!(item, envdicts, ansset, eqwids)
+        eqwidflatten!(item, envdicts, ansset, eqwids, declonly, equality)
         unique!(eqwids)
 
         # unify, determine width value
@@ -349,9 +347,7 @@ function unifycore_widunify!(items::Vector{T}, envdicts, ansset, widvars) where 
                 else
                     # if widhere != ww.val 
                     if !isequal(widhere, ww.val)
-                        # m dispatch!
                         error(
-                            # "width inference failure in evaluating $(string(lhs)) <=> $(string(rhs)).\n",
                             "width inference failure in evaluating $(unifycore_errorstr(item)).\n",
                             "width discrepancy between $(string(widhere)) and $(string(ww.val))."
                         )
@@ -450,11 +446,19 @@ function widunify(declonly::Vector{Wireexpr},
 
 
     # helper functions
-    # declonly_widunify!(declonly, envdicts, ansset, widvars)
-    unifycore_widunify!(declonly, envdicts, ansset, widvars)
-    # @show ansset, widvars
-    unifycore_widunify!(equality, envdicts, ansset, widvars)
-    # @show ansset, widvars
+    # f(x::Wireexpr) = vshow(x)
+    # f(x::Tuple{T, T}) where {T} = map(vshow, x)
+    # map(x -> (println("go1"); f.(x)), ((declonly), (equality)))
+    while length(declonly) > 0 || length(equality) > 0
+        newdonly = Wireexpr[]
+        newequal = Tuple{Wireexpr, Wireexpr}[]
+
+        unifycore_widunify!(declonly, envdicts, ansset, widvars, newdonly, newequal)
+        # map(x -> (println("go2"); f.(x)), ((declonly), (equality)))
+        unifycore_widunify!(equality, envdicts, ansset, widvars, newdonly, newequal)
+        # map(x -> (println("go3"); f.(x)), ((declonly), (equality)))
+        declonly, equality = newdonly, newequal
+    end 
 
     ansset, widvars 
 end
