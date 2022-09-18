@@ -74,6 +74,11 @@ p = @onelocalparam p1 = 111
 @test string(p) == "localparam p1 = 111;"
 
 
+# Onedecl
+d = decloneline(:(@wire 2 << 1 xy SEN+HYAKU))
+@test string(d[]) == """
+wire [(2 << 1)-1:0] xy [(SEN + HYAKU)-1:0];"""
+
 # Wireexpr
 
 w = @wireexpr (a + b) << (c - d) >> e & f

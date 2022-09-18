@@ -1,4 +1,5 @@
-# overwrite `string` directly, for 
+# overwrite `string` directly for the following reasons
+# 
 # 1. Base.string(x::Alwayscontent, systemverilog) 
 # uses 2nd argument, which is difficult to handle with `show`, `print`.
 # 2. Enums behaves differently from other structs when overwriting `Base.show`.
@@ -249,7 +250,19 @@ end
 
 function Base.string(x::Onedecl)
     widtxt = widtxtgen(x.width)
-    return string(string(x.wtype), " ", string(widtxt), x.name, ";")
+    if !x.is2d
+        return string(string(x.wtype), " ", string(widtxt), x.name, ";")
+    else
+        return string(
+            string(x.wtype), 
+            " ", 
+            widtxt, 
+            x.name, 
+            " ",
+            rstrip(widtxtgen(x.wid2d), [' ']), 
+            ";"
+        )
+    end
 end
 
 function Base.string(x::Decls)

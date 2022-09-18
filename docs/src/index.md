@@ -238,7 +238,7 @@ env = Vmodenv(
 
 # output
 
-Vmodenv(Parameters(Oneparam[]), Ports(Oneport[]), Localparams(Onelocalparam[]), Decls(Onedecl[Onedecl(wire, Wireexpr(literal, "", Wireexpr[], -1, 1), "dwire1"), Onedecl(wire, Wireexpr(literal, "", Wireexpr[], -1, 10), "dwire2")]))
+Vmodenv(Parameters(Oneparam[]), Ports(Oneport[]), Localparams(Onelocalparam[]), Decls(Onedecl[Onedecl(wire, Wireexpr(literal, "", Wireexpr[], -1, 1), "dwire1", false, Wireexpr(id, "", Wireexpr[], -1, -1)), Onedecl(wire, Wireexpr(literal, "", Wireexpr[], -1, 10), "dwire2", false, Wireexpr(id, "", Wireexpr[], -1, -1))]))
 ```
 
 ```jldoctest wwi

@@ -414,8 +414,6 @@ infer width of wires which appear in the conditions.
 """
 function widunify(declonly::Vector{Wireexpr}, 
     equality::Vector{Tuple{Wireexpr, Wireexpr}}, env::Vmodenv)
-    # ansset::Dict{String, Wirewid}=Dict{String, Wirewid}(),
-    # widvars::Dict{Wirewid, Vector{String}}=Dict{Wirewid, Vector{String}}())
     
     prms = env.prms 
     prts = env.prts 
@@ -440,23 +438,17 @@ function widunify(declonly::Vector{Wireexpr},
     prtdict = Dict([(d = p.decl; d.name => Wirewid(d.width)) for p in kprts.val])
     dcldict = Dict([d.name => Wirewid(d.width) for d in kdcls.val])
 
-    # vshow(kdcls)
-    # @show ansset, widvars
     envdicts = (prmdict, prtdict, lprmdict, dcldict)
 
 
     # helper functions
-    # f(x::Wireexpr) = vshow(x)
-    # f(x::Tuple{T, T}) where {T} = map(vshow, x)
-    # map(x -> (println("go1"); f.(x)), ((declonly), (equality)))
     while length(declonly) > 0 || length(equality) > 0
         newdonly = Wireexpr[]
         newequal = Tuple{Wireexpr, Wireexpr}[]
 
         unifycore_widunify!(declonly, envdicts, ansset, widvars, newdonly, newequal)
-        # map(x -> (println("go2"); f.(x)), ((declonly), (equality)))
         unifycore_widunify!(equality, envdicts, ansset, widvars, newdonly, newequal)
-        # map(x -> (println("go3"); f.(x)), ((declonly), (equality)))
+        
         declonly, equality = newdonly, newequal
     end 
 
@@ -660,6 +652,7 @@ function autodecl(x, env::Vmodenv)
     )
     # length(widvars) == 0 || error("Wirewidth unresolved, ", strwidunknown(widvars))
 
+    # extract from ansset ports/declarations specified in `env`
     newenv = portdeclupdated!(env, ansset)
 
     newdecls = [Onedecl(reg, ww.val, n) for (n, ww) in ansset]
