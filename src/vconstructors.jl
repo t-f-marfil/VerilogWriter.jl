@@ -1,6 +1,5 @@
-# Parameters() = Parameters([])
-
 Oneparam(n, val::Int) = Oneparam(n, Wireexpr(val))
+
 
 Parameters(args::Oneparam...) = Parameters([args...])
 
@@ -15,11 +14,17 @@ Oneport(d::Portdirec, n::Ref{Symbol}) = Oneport(d, string(n[]))
 # Oneport(d::Portdirec, w::Int, n::Ref{Symbol}) = Oneport(d, w, string(n[]))
 Oneport(d::Portdirec, w, n::Ref{Symbol}) = Oneport(d, w, string(n[]))
 
+
 Ports(args::Oneport...) = Ports([args...])
+
 
 Onelocalparam(n, val::Int) = Onelocalparam(n, Wireexpr(val))
 
+
 Localparams(args::Onelocalparam...) = Localparams([i for i in args])
+
+
+Onedecl(t::Wiretype, wid::Wireexpr, n) = Onedecl(t, wid, n, false, Wireexpr())
 
 Onedecl(t::Wiretype, wid::Int, n::String) = Onedecl(t, Wireexpr(wid), n)
 
@@ -27,8 +32,9 @@ Onedecl(t::Wiretype, n::String) = Onedecl(t, 1, n)
 Onedecl(t::Wiretype, n::Ref{Symbol}) = Onedecl(t, string(n[]))
 Onedecl(t::Wiretype, w::Int, n::Ref{Symbol}) = Onedecl(t, w, string(n[]))
 
-# Decls() = Decls(Onedecl[])
+
 Decls(args::Onedecl...) = Decls([args...])
+
 
 """
     Wireexpr(n::String, msb::T1, lsb::T2) where {T1 <: Union{Int, Wireexpr}, T2 <: Union{Int, Wireexpr}}
@@ -115,7 +121,9 @@ type: Wireexpr
 """
 Wireexpr(op::Wireop, w::Wireexpr...) = Wireexpr(op, [w...])
 
+
 Alassign(lhs, rhs) = Alassign(lhs, rhs, aunknown)
+
 
 Ifcontent(x::Vector{Alassign}, y::Vector{Ifelseblock}) = Ifcontent(x, y, Case[])
 Ifcontent() = Ifcontent([], [])
@@ -127,6 +135,7 @@ Ifcontent(x::Case...) = Ifcontent([], [], [x...])
 Ifelseblock() = Ifelseblock([], [])
 Ifelseblock(cond::Wireexpr, ifcont::Ifcontent) = Ifelseblock([cond], [ifcont])
 Ifelseblock(cond::Wireexpr, ifcont::Ifcontent, elsecont::Ifcontent) = Ifelseblock([cond], [ifcont, elsecont])
+
 
 Alwayscontent(atype::Atype, edge::Edge, sens::Wireexpr, cont::Ifcontent) = Alwayscontent(atype, Sensitivity(edge, sens), cont)
 
@@ -140,7 +149,9 @@ Alwayscontent(case::Case...) = Alwayscontent(Alassign[], Ifelseblock[], [case...
 
 Alwayscontent() = Alwayscontent(aunknown)
 
+
 Vmodinst(vname, iname, ps, pts) = Vmodinst(vname, iname, ps, pts, false)
+
 
 Vmodule(n::String, pas::Parameters, ps::Ports, lpas::Localparams,
 decls::Decls, ass::Vector{Assign}, als::Vector{Alwayscontent}

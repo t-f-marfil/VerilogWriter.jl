@@ -1309,6 +1309,9 @@ function decloneline(expr::Expr)
 
     if length(targs) == 2
         decloneline_inner(wt, Wireexpr(1), targs[2])
+    elseif length(targs) == 4 
+        targs[3] isa Symbol || error("only a symbol is allowed for 2d array declaration, given $(targs[3]).")
+        [Onedecl(wt, wireexpr(targs[2]), targs[3], true, wireexpr(targs[4]))]
     else 
         length(targs) == 3 || error("$(length(targs)) arguments for 'decloneline'.")
         decloneline_inner(wt, wireexpr(targs[2]), targs[3])

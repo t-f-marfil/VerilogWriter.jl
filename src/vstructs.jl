@@ -164,6 +164,9 @@ struct Onedecl
     wtype::Wiretype
     width::Wireexpr
     name::String 
+    # for 2d
+    is2d::Bool 
+    wid2d::Wireexpr
 end
 
 "Multiple wire declarations."
