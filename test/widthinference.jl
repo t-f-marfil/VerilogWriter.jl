@@ -66,3 +66,21 @@ c = always(:(
 @test (@strerror autodecl(c)) == """
 width inference failure in evaluating a <=> 1'd0.
 width discrepancy between 32 and 1."""
+
+# 2d reg 
+d = @decls (
+    @wire 10 a;
+    @reg 10 b 1024
+)
+
+c = @always (
+    if &(b[1])
+        c <= a;
+        a <= b[1]
+    end
+)
+
+dc, _ = autodecl(c, Vmodenv(d))
+
+@test string(dc) == """
+reg [9:0] c;"""
