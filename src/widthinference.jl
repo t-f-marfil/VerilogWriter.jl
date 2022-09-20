@@ -159,6 +159,27 @@ end
 
 
 """
+    extract2dreg(x::Vector{Onedecl})
+
+Extract 2d regs as dict object from `x`.
+"""
+function extract2dreg(x::Vector{Onedecl})
+    ans = Dict{String, Wireexpr}()
+    for d in x
+        if d.is2d 
+            ans[d.name] = d.width
+        end
+    end
+
+    ans 
+end
+
+function extract2dreg(x::Decls)
+    extract2dreg(x.val)
+end
+
+
+"""
     findandpush_widunify!(newval::String, envdicts, ansset, widvars)
 
 Looking inside envdicts, add `newval` to `ansset` and `widvars`
@@ -214,8 +235,8 @@ Extract wires that appear inside `x` which are of the same width as `x` itself,
 find `Wirewid` objects which correspond to the wire and push them into `eqwids`.
 When slice appears inside `x`, new Wirewid object is created and then added to `eqwids`.
 """
-function eqwidflatten!(x::Wireexpr, envdicts, ansset, eqwids::Vector{Wirewid}, declonly, equality)
-    f!(xx) = eqwidflatten!(xx, envdicts, ansset, eqwids, declonly, equality)
+function eqwidflatten!(x::Wireexpr, envdicts, reg2d, ansset, eqwids::Vector{Wirewid}, declonly, equality)
+    f!(xx) = eqwidflatten!(xx, envdicts, reg2d, ansset, eqwids, declonly, equality)
 
     op = x.operation 
     if op == neg
@@ -227,7 +248,7 @@ function eqwidflatten!(x::Wireexpr, envdicts, ansset, eqwids::Vector{Wirewid}, d
         push!(declonly, x.subnodes[])
     elseif op == lshift || op == rshift 
         f!(x.subnodes[1])
-    elseif op == logieq 
+    elseif op in (logieq, lt, leq)
         push!(eqwids, Wirewid(1))
         push!(equality, tuple(x.subnodes...))
     elseif op in wbinop
@@ -247,7 +268,12 @@ function eqwidflatten!(x::Wireexpr, envdicts, ansset, eqwids::Vector{Wirewid}, d
     elseif op == slice 
         if length(x.subnodes) == 2
             # e.g. x[1] --> bit select
-            push!(eqwids, Wirewid(1))
+            # push!(eqwids, Wirewid(1))
+            subname = x.subnodes[1].name
+            push!(eqwids, Wirewid(
+                    get(reg2d, subname, Wireexpr(1))
+                )
+            )
         elseif length(x.subnodes) == 3
             # x[m:2], y[3:0]
             indexes = view(x.subnodes, 2:3)
@@ -287,9 +313,9 @@ function eqwidflatten!(x::Wireexpr, envdicts, ansset, eqwids::Vector{Wirewid}, d
     return nothing
 end
 
-function eqwidflatten!(t::Tuple{Wireexpr, Wireexpr}, envdicts, ansset, eqwids::Vector{Wirewid}, declonly, equality)
+function eqwidflatten!(t::Tuple{Wireexpr, Wireexpr}, envdicts, reg2d, ansset, eqwids::Vector{Wirewid}, declonly, equality)
     for w in t 
-        eqwidflatten!(w, envdicts, ansset, eqwids, declonly, equality)
+        eqwidflatten!(w, envdicts, reg2d, ansset, eqwids, declonly, equality)
     end
 end
 
@@ -322,7 +348,7 @@ Called in [`widunify`](@ref), infer wire width from `equality` constraints.
 To recursively look into `Wireexpr`s in `items`, push new equality 
 and declaration into `declonly` and `equality` given as arguments.
 """
-function unifycore_widunify!(items::Vector{T}, envdicts, ansset, widvars, declonly, equality) where {T <: Union{Wireexpr, Tuple{Wireexpr, Wireexpr}}}
+function unifycore_widunify!(items::Vector{T}, envdicts, reg2d, ansset, widvars, declonly, equality) where {T <: Union{Wireexpr, Tuple{Wireexpr, Wireexpr}}}
     for item in items
         # lhs, rhs = item
 
@@ -333,7 +359,7 @@ function unifycore_widunify!(items::Vector{T}, envdicts, ansset, widvars, declon
         # no consideration on wire concats?
         # from lhs/rhs pick all `Wirewid`s whose value should be the same
         eqwids = Wirewid[]
-        eqwidflatten!(item, envdicts, ansset, eqwids, declonly, equality)
+        eqwidflatten!(item, envdicts, reg2d, ansset, eqwids, declonly, equality)
         unique!(eqwids)
 
         # unify, determine width value
@@ -440,14 +466,16 @@ function widunify(declonly::Vector{Wireexpr},
 
     envdicts = (prmdict, prtdict, lprmdict, dcldict)
 
+    # set of 2d regs
+    reg2d = extract2dreg(env.dcls)
 
     # helper functions
     while length(declonly) > 0 || length(equality) > 0
         newdonly = Wireexpr[]
         newequal = Tuple{Wireexpr, Wireexpr}[]
 
-        unifycore_widunify!(declonly, envdicts, ansset, widvars, newdonly, newequal)
-        unifycore_widunify!(equality, envdicts, ansset, widvars, newdonly, newequal)
+        unifycore_widunify!(declonly, envdicts, reg2d, ansset, widvars, newdonly, newequal)
+        unifycore_widunify!(equality, envdicts, reg2d, ansset, widvars, newdonly, newequal)
         
         declonly, equality = newdonly, newequal
     end 
