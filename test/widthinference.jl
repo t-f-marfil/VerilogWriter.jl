@@ -84,3 +84,19 @@ dc, _ = autodecl(c, Vmodenv(d))
 
 @test string(dc) == """
 reg [9:0] c;"""
+
+# 2d reg error message
+d = @decls (
+    @wire 10 a;
+    @reg 10 b 1024
+)
+
+c = @always (
+    if &(b[1])
+        c <= a;
+        a <= b[W<<2:0]
+    end
+)
+
+@test (@strerror autodecl(c, Vmodenv(d))) == """
+2d reg b is sliced at [(W << 2):0]."""

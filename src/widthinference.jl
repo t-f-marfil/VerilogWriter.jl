@@ -266,16 +266,22 @@ function eqwidflatten!(x::Wireexpr, envdicts, reg2d, ansset, eqwids::Vector{Wire
         push!(eqwids, widnow)
 
     elseif op == slice 
+        subname = x.subnodes[1].name
+
         if length(x.subnodes) == 2
             # e.g. x[1] --> bit select
-            # push!(eqwids, Wirewid(1))
-            subname = x.subnodes[1].name
+            # subname = x.subnodes[1].name
             push!(eqwids, Wirewid(
                     get(reg2d, subname, Wireexpr(1))
                 )
             )
         elseif length(x.subnodes) == 3
             # x[m:2], y[3:0]
+            # error if 2d reg
+            !(subname in keys(reg2d)) || error(
+                "2d reg $(subname) is sliced at [$(string(x.subnodes[2])):$(string(x.subnodes[3]))]."
+            )
+
             indexes = view(x.subnodes, 2:3)
             if all(w -> w.operation == literal, indexes)
                 # y[3:0] -> width(y) == 4
