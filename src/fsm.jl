@@ -296,6 +296,15 @@ function fsmconv(::Type{Onedecl}, x::FSM)
 end
 
 """
+    fsmconv(::Type{Decls}, x::FSM)
+
+Generate `Decls` object from `x`.
+"""
+function fsmconv(::Type{Decls}, x::FSM)
+    Decls(fsmconv(Onedecl, x))
+end
+
+"""
     fsmconv(::Type{Localparams}, x::FSM)
 
 Generate localparams that declare the value which corresponds to each state.

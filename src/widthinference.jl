@@ -125,8 +125,8 @@ function separate_widunknown(x::Decls)
 end
 
 function separate_widunknown(v::Vector{Oneport})
-    pknown = v[(p->!isequal(p.decl.width, wwinvalid)).(v)]
-    punknown = v[(p->isequal(p.decl.width, wwinvalid)).(v)]
+    pknown = v[(p->!isequal(p.width, wwinvalid)).(v)]
+    punknown = v[(p->isequal(p.width, wwinvalid)).(v)]
     pknown, punknown
 end
 
@@ -144,7 +144,7 @@ function unknowndeclpush!(ansset::Dict{String, Wirewid}, widvars::Dict{Wirewid, 
     ukports::Ports, ukdecls::Decls)
 
     for p in ukports.val
-        n = p.decl.name 
+        n = p.name 
         widvar = Wirewid()
         ansset[n] = widvar
         widvars[widvar] = [n]
@@ -438,15 +438,7 @@ function unifycore_widunify!(items::Vector{T}, envdicts, reg2d, ansset, widvars,
     return nothing
 end
 
-"""
-    widunify(declonly::Vector{Wireexpr}, equality::Vector{Tuple{Wireexpr, Wireexpr}}, env::Vmodenv)
-
-Given `declonly` and `equality` from [`wireextract`](@ref), 
-infer width of wires which appear in the conditions.
-"""
-function widunify(declonly::Vector{Wireexpr}, 
-    equality::Vector{Tuple{Wireexpr, Wireexpr}}, env::Vmodenv)
-    
+function envdictsgen_widunify(env::Vmodenv)
     prms = env.prms 
     prts = env.prts 
     lprms = env.lprms 
@@ -456,6 +448,16 @@ function widunify(declonly::Vector{Wireexpr},
     kprts, ukprts = separate_widunknown(prts)
     kdcls, ukdcls = separate_widunknown(dcls)
 
+    prmdict = Dict([p.name => Wirewid() for p in prms.val])
+    lprmdict = Dict([p.name => Wirewid() for p in lprms.val])
+
+    # only data of delc/ports of known width
+    prtdict = Dict([(p.name => Wirewid(p.width)) for p in kprts.val])
+    dcldict = Dict([d.name => Wirewid(d.width) for d in kdcls.val])
+
+    envdicts = (prmdict, prtdict, lprmdict, dcldict)
+
+
     # may contain Wirewid with both wwinvalid and a valid value
     ansset = Dict{String, Wirewid}()
     # only contain Wireval whose val field == wwinvalid
@@ -463,14 +465,21 @@ function widunify(declonly::Vector{Wireexpr},
 
     unknowndeclpush!(ansset, widvars, ukprts, ukdcls)
 
-    prmdict = Dict([p.name => Wirewid() for p in prms.val])
-    lprmdict = Dict([p.name => Wirewid() for p in lprms.val])
 
-    # only data of delc/ports of known width
-    prtdict = Dict([(d = p.decl; d.name => Wirewid(d.width)) for p in kprts.val])
-    dcldict = Dict([d.name => Wirewid(d.width) for d in kdcls.val])
+    ansset, widvars, envdicts
+end
 
-    envdicts = (prmdict, prtdict, lprmdict, dcldict)
+"""
+    widunify(declonly::Vector{Wireexpr}, equality::Vector{Tuple{Wireexpr, Wireexpr}}, env::Vmodenv)
+
+Given `declonly` and `equality` from [`wireextract`](@ref), 
+infer width of wires which appear in the conditions.
+"""
+function widunify(declonly::Vector{Wireexpr}, 
+    equality::Vector{Tuple{Wireexpr, Wireexpr}}, env::Vmodenv)
+
+    # generate a dict object from env
+    ansset, widvars, envdicts = envdictsgen_widunify(env)
 
     # set of 2d regs
     reg2d = extract2dreg(env.dcls)
@@ -544,10 +553,10 @@ function portdeclupdated!(env::Vmodenv, ansset::Dict{String, Wirewid})
     prenewdcls = Vector{Onedecl}(undef, length(env.dcls.val))
 
     for (ind, p) in enumerate(env.prts.val)
-        if isequal(p.decl.width, wwinvalid)
-            oldd = p.decl
-            widhere = pop!(ansset, oldd.name)
-            prenewprts[ind] = Oneport(p.direc, Onedecl(oldd.wtype, widhere.val, oldd.name))
+        if isequal(p.width, wwinvalid)
+            # oldd = p.decl
+            widhere = pop!(ansset, p.name)
+            prenewprts[ind] = Oneport(p.direc, p.wtype, widhere.val, p.name)
         else
             prenewprts[ind] = p 
         end
