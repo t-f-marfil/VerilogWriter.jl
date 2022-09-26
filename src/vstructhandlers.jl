@@ -110,11 +110,11 @@ from `onep`. Wiretype information (`reg`, `wire`, `logic`) is
 lost when inverted for `reg` cannot be at input port.
 """
 function invport(onep::Oneport)
-    d = onep.decl
+    # d = onep.decl
     Oneport(
         (onep.direc == pin ? pout : pin),
-        d.width,
-        d.name
+        onep.width,
+        onep.name
     )
 end
 

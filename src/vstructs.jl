@@ -177,10 +177,10 @@ end
 "Represent a single port declaration."
 struct Oneport
     direc::Portdirec
-    # wtype::Wiretype
-    # width::Wireexpr
-    # name::String
-    decl::Onedecl
+    wtype::Wiretype
+    width::Wireexpr
+    name::String
+    # decl::Onedecl
 end
 
 "Gather multiple ports."

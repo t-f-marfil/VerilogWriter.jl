@@ -1,31 +1,9 @@
 # Reference
 
-All docstrings are listed below.
-
 ```@meta 
 CurrentModule = VerilogWriter
 ```
 
-```@autodocs
-Modules = [VerilogWriter]
-Pages = [
-    "codegenfunc.jl",
-    "vstructs.jl",
-    "baseutils.jl",
-    "textutils.jl",
-    "vstructhandlers.jl",
-    "vconstructors.jl",
-    "rawparser.jl",
-    "alwaysinference.jl",
-    "paramsolve.jl",
+No detailed descriptions available yet.
 
-    "vopoverloads.jl",
-
-    "fsm.jl",
-
-    "autoreset.jl",
-    "widthinference.jl",
-
-    "vstring.jl"
-]
-```
+Still `?<function-name>` on IJulia, Julia REPL will return docstrings for most of the functions, structs, and constant values in this module.

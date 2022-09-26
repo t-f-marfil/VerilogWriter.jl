@@ -40,16 +40,27 @@ function widtxtgen(wid::Wireexpr)
 end
 
 function Base.string(p::Oneport)
-    x = p.decl
-    if x.wtype == wire 
+    # x = p.decl
+    # if x.wtype == wire 
+    #     swtype = ""
+    # else
+    #     swtype = string(" ", string(x.wtype))
+    # end
+
+    # widtxt = widtxtgen(x.width)
+    # txt = string(string(p.direc), swtype, " ", widtxt, x.name)
+
+    # return txt
+    
+    if p.wtype == wire 
         swtype = ""
     else
-        swtype = string(" ", string(x.wtype))
+        swtype = string(" ", string(p.wtype))
     end
-
-    widtxt = widtxtgen(x.width)
-    txt = string(string(p.direc), swtype, " ", widtxt, x.name)
-
+    
+    widtxt = widtxtgen(p.width)
+    txt = string(string(p.direc), swtype, " ", widtxt, p.name)
+    
     return txt
 end
 

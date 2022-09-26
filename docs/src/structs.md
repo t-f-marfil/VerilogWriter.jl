@@ -337,7 +337,7 @@ oneblock(expr::T) where {T <: Union{Alassign, Ifelseblock}}
 ifcontent(x::Expr)
 ```
 
-## Embedding Objects
+## Embed Objects
 
 You can embed generated objects back into Verilog-like codes. Note that because we ask you to make use of metaprogramming ([`interpolation`](https://docs.julialang.org/en/v1/manual/metaprogramming/#man-expression-interpolation) in particular), macros cannot be used for the purpose. 
 
@@ -379,7 +379,7 @@ type: Alwayscontent
 
 ### vshow 
 ```@docs
-vshow(::Any)
+vshow
 ```
 
 ### invports 
