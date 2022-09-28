@@ -89,8 +89,8 @@ function always(expr::Expr)
     return addatype!(alcont)
 end
 
-function always(expr)
-    alcont = ralways(expr)
+function always(expr...)
+    alcont = ralways(expr...)
     return addatype!(alcont)
 end
 
@@ -207,8 +207,24 @@ type: Wireexpr
 """
 macro sym2wire(arg::Expr)
     arg.head == :tuple || error("$(arg.head) is not allowed for @sym2wire.")
-    qlst = [:($(esc(i)) = $(Wireexpr(string(i)))) for i in arg.args]
-    quote
-        $(qlst...)
+    
+    lhss = [:($(esc(i))) for i in arg.args]
+    rhss = [:($(Wireexpr(string(i)))) for i in arg.args]
+    
+    quote 
+        $(reduce(qmerge, lhss)) = $(reduce(qmerge, rhss))
     end
+end
+
+
+function qmerge(q1::Expr, q2)
+    if q1.head == :tuple
+        Expr(:tuple, q1.args..., q2)
+    else 
+        Expr(:tuple, q1, q2)
+    end
+end
+
+function qmerge(q1, q2) 
+    Expr(:tuple, q1, q2)
 end
