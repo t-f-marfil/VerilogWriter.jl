@@ -305,7 +305,7 @@ end
 """
     oneblock(expr::T) where {T <: Union{Alassign, Ifelseblock}}
 
-For insertion through metaprogramming.
+For interpolation through metaprogramming.
 # Example 
 ```jldoctest
 a = @oneblock r = s & t
@@ -1233,7 +1233,7 @@ function ports(expr::Expr, ::Val{:block})
     for item in expr.args 
         if item isa LineNumberNode 
             lineinfo = item
-        # for insertion through metaprogramming
+        # for interpolation through metaprogramming
         elseif item isa Vector{Oneport}
             push!(anslist, item...)
         elseif item isa Ports 
@@ -1427,7 +1427,7 @@ end
 """
     decls(expr::Vector{Onedecl})
 
-For insertion with metaprogramming.
+For interpolation with metaprogramming.
 # Example
 ```jldoctest
 a = @decloneline @reg 8 x1, x2
@@ -1472,7 +1472,7 @@ function decls(expr::Expr, ::Val{:block})
     for item in expr.args 
         if item isa LineNumberNode 
             lineinfo = item
-        # for insertion with metaprogramming
+        # for interpolation with metaprogramming
         elseif item isa Vector{Onedecl}
             push!(anslist, item...)
         elseif item isa Decls 

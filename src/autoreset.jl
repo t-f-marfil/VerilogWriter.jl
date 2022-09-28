@@ -140,5 +140,9 @@ Automatically reset wires which appear in `x::Alwayscontent`.
 Sensitivity list in the original `Alwayscontent` will be ignored.
 """
 function autoreset(x::Alwayscontent; clk=defclk, rst=defrst, edge=posedge)
-    autoreset(x.content, clk=clk, rst=rst, edge=edge)
+    if x.atype == comb 
+        x 
+    else
+        autoreset(x.content, clk=clk, rst=rst, edge=edge)
+    end
 end
