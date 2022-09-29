@@ -1,3 +1,5 @@
+# miscellaneous functions
+
 """
 ifadd!(ifblock::Ifelseblock, cond, ifcont)
 
@@ -227,4 +229,20 @@ end
 
 function qmerge(q1, q2) 
     Expr(:tuple, q1, q2)
+end
+
+
+"""
+    alloutreg(p::Ports)
+
+Return a new `Ports` object all of whose output ports are of `reg`.
+"""
+function alloutreg(p::Ports)
+    Ports([
+        (
+            x.direc == pout ? 
+            Oneport(pout, reg, x.width, x.name) : 
+            x
+        ) for x in p.val
+    ])
 end

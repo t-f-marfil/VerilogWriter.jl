@@ -89,14 +89,6 @@ Wirewid(v::Int) = Wirewid(Wireexpr(v))
 Wirewid() = Wirewid(wwinvalid)
 
 
-"Environment in which wire width inference is done."
-struct Vmodenv
-    prms::Parameters
-    prts::Ports
-    lprms::Localparams
-    dcls::Decls
-end
-
 # @eachfieldconstruct Vmodenv
 eachfieldconstruct(Vmodenv)
 
@@ -703,15 +695,6 @@ function autodecl(x, env::Vmodenv)
     Decls(newdecls), newenv
 end
 
-# """
-#     autodecl(x::Alwayscontent, env::Vmodenv)
-
-# `autodecl` on `Alwayscontent`.
-# """
-# function autodecl(x::Alwayscontent, env::Vmodenv)
-#     autodecl(x.content, env)
-# end
-
 """
     autodecl(x)
 
@@ -719,4 +702,18 @@ Call `autodecl` under an empty environment.
 """
 function autodecl(x)
     autodecl(x, Vmodenv())
+end
+
+"""
+    mergedeclenv(d::Decls, env::Vmodenv)
+
+Merge return value from autodecl into a new `Vmodev` object.
+"""
+function mergedeclenv(d::Decls, env::Vmodenv)
+    Vmodenv(
+        env.prms, 
+        env.prts,
+        env.lprms,
+        declmerge(env.dcls, d)
+    )
 end

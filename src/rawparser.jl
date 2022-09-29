@@ -209,12 +209,12 @@ function oneblock(expr::T) where {T <: Union{Symbol, Int}}
 end
 
 """
-    oneblock(expr::UInt8)
+    oneblock(expr::Unsigned)
 
-UInt8 may be given when user writes e.g. 0b10, 0x1f.
+Unsigned may be given when user writes e.g. 0b10, 0x1f.
 Used when parsing `block`
 """
-function oneblock(expr::UInt8)
+function oneblock(expr::Unsigned)
     return Wireexpr(Int(expr))
 end
 
@@ -640,7 +640,8 @@ end
 function wireexpr(expr::T) where {T <: Union{Symbol, Int}}
     return Wireexpr(expr)
 end
-function wireexpr(expr::UInt8)
+
+function wireexpr(expr::Unsigned)
     return Wireexpr(Int(expr))
 end
 """

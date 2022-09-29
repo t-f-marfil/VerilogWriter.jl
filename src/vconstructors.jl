@@ -153,6 +153,10 @@ Alwayscontent() = Alwayscontent(aunknown)
 Vmodinst(vname, iname, ps, pts) = Vmodinst(vname, iname, ps, pts, false)
 
 
+Vmodule(n, env::Vmodenv, als) = Vmodule(n, env, Assign[], als)
+Vmodule(n, env::Vmodenv, ass, als) = Vmodule(n, env, Vmodinst[], ass, als)
+Vmodule(n, env::Vmodenv, insts, ass, als) = Vmodule(n, env.prms, env.prts, env.lprms, env.dcls, insts, ass, als)
+
 Vmodule(n::String, pas::Parameters, ps::Ports, lpas::Localparams,
 decls::Decls, ass::Vector{Assign}, als::Vector{Alwayscontent}
 ) = Vmodule(n, pas, ps, lpas, decls, Vmodinst[], ass, als)
