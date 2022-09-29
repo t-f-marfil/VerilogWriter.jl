@@ -32,13 +32,14 @@ export
     ifadd!, 
     invport, invports, 
     declmerge,
-    @sym2wire
+    @sym2wire,
+    alloutreg
 
 export
     wireextract, wireextract!,
     lhsextract, lhsunify, autoreset,
     defclk, defrst,
-    Vmodenv, autodecl
+    Vmodenv, autodecl, mergedeclenv
 
 export 
     FSM, @FSM, fsmconv, transadd!, @tstate, transcond

@@ -356,3 +356,12 @@ struct Vmodule
     assigns::Vector{Assign}
     always::Vector{Alwayscontent}
 end
+
+
+"Environment in which wire width inference is done."
+struct Vmodenv
+    prms::Parameters
+    prts::Ports
+    lprms::Localparams
+    dcls::Decls
+end

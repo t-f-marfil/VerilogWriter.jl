@@ -66,6 +66,9 @@ function lhsunify(wvec::Vector{Wireexpr})
         elseif wexpr.operation == slice 
             @assert wexpr.subnodes[1].operation == id
             push!(ans, wexpr.subnodes[1])
+        elseif wexpr.operation == ipselm
+            wexpr.subnodes[1].operation == id || error("$(string(wexpr.subnodes[1].operation)) for indexed part select.")
+            push!(ans, wexpr.subnodes[1])
         end
     end
     vans = collect(ans)
