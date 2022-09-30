@@ -9,8 +9,8 @@ Intended to add if-clause to `Ifelseblock` constructed
 from elseif-clause (because elseif-clause often parses first).
 """
 function ifadd!(ifblock::Ifelseblock, cond, ifcont)
-pushfirst!(ifblock.conds, cond)
-pushfirst!(ifblock.contents, ifcont)
+    pushfirst!(ifblock.conds, cond)
+    pushfirst!(ifblock.contents, ifcont)
 end
 
 """
@@ -218,7 +218,11 @@ macro sym2wire(arg::Expr)
     end
 end
 
+"""
+    qmerge(q1::Expr, q2)
 
+Helper function for `@sym2wire`.
+"""
 function qmerge(q1::Expr, q2)
     if q1.head == :tuple
         Expr(:tuple, q1.args..., q2)
@@ -227,6 +231,11 @@ function qmerge(q1::Expr, q2)
     end
 end
 
+"""
+    qmerge(q1, q2)
+
+Helper function for `@sym2wire`.
+"""
 function qmerge(q1, q2) 
     Expr(:tuple, q1, q2)
 end
@@ -245,4 +254,25 @@ function alloutreg(p::Ports)
             x
         ) for x in p.val
     ])
+end
+
+
+"""
+    naiveinst(vmod::Vmodule, iname::String=nothing)
+
+Generate from `vmod` an `Vmodinst` object all ports of which are assigned a wire
+whose name is the same as each port.
+"""
+function naiveinst(vmod::Vmodule, iname::String)
+    Vmodinst(
+        vmod.name,
+        iname,
+        [(s = prm.name; s => Wireexpr(s)) for prm in vmod.params.val],
+        [(s = prt.name; s => Wireexpr(s)) for prt in vmod.ports.val]
+    )
+end
+
+function naiveinst(vmod::Vmodule)
+    iname = string("u", vmod.name)
+    naiveinst(vmod, iname)
 end

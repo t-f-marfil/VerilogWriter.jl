@@ -33,7 +33,11 @@ export
     invport, invports, 
     declmerge,
     @sym2wire,
-    alloutreg
+    alloutreg,
+    naiveinst
+
+export 
+    vpush!
 
 export
     wireextract, wireextract!,
@@ -71,6 +75,7 @@ include("autoreset.jl")
 include("widthinference.jl")
 
 include("vstring.jl")
+include("vpush.jl")
 
 
 end

@@ -150,11 +150,15 @@ Alwayscontent(case::Case...) = Alwayscontent(Alassign[], Ifelseblock[], [case...
 Alwayscontent() = Alwayscontent(aunknown)
 
 
+Vmodinst(vname, iname, pts, wild::Bool) = Vmodinst(vname, iname, Pair{String, Wireexpr}[], pts, wild)
 Vmodinst(vname, iname, ps, pts) = Vmodinst(vname, iname, ps, pts, false)
 
 
+Vmodule(n) = Vmodule(n, Vmodenv())
+Vmodule(n, env::Vmodenv) = Vmodule(n, env, Alwayscontent[])
 Vmodule(n, env::Vmodenv, als) = Vmodule(n, env, Assign[], als)
-Vmodule(n, env::Vmodenv, ass, als) = Vmodule(n, env, Vmodinst[], ass, als)
+Vmodule(n, env::Vmodenv, ass::Vector{Assign}, als::Vector{Alwayscontent}) = Vmodule(n, env, Vmodinst[], ass, als)
+Vmodule(n, env::Vmodenv, insts::Vector{Vmodinst}, als::Vector{Alwayscontent}) = Vmodule(n, env, insts, Assign[], als)
 Vmodule(n, env::Vmodenv, insts, ass, als) = Vmodule(n, env.prms, env.prts, env.lprms, env.dcls, insts, ass, als)
 
 Vmodule(n::String, pas::Parameters, ps::Ports, lpas::Localparams,

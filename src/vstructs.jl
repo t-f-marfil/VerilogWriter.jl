@@ -348,7 +348,7 @@ struct Vmodule
     params::Parameters
     ports::Ports
 
-    locparams::Localparams
+    lparams::Localparams
     decls::Decls
     
     insts::Vector{Vmodinst}
