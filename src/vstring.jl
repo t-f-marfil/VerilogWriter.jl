@@ -315,16 +315,12 @@ function Base.string(x::Vmodule, systemverilog)
 
     txt1 *= string(
         (
-            s = string(x.locparams);
+            s = string(x.lparams);
             s == "" ? "" : string(
-                indent(string(x.locparams)),
+                indent(string(x.lparams)),
                 "\n\n"
             )
         ),
-        # indent(
-        #     string(x.locparams)
-        # ), 
-        # "\n"
     )
 
     txt1 *= string(

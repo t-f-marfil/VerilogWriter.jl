@@ -178,6 +178,11 @@ function transadd!(x::FSM, cond::Wireexpr, newtrans::Pair{String, String})
     nothing
 end
 
+"""
+    transadd!(x::FSM, rules::Vector{Tuple{Wireexpr, Pair{String, String}}})
+
+Add muliple rules to `x`.
+"""
 function transadd!(x::FSM, rules::Vector{Tuple{Wireexpr, Pair{String, String}}})
     for (c, nt) in rules 
         transadd!(x, c, nt)
