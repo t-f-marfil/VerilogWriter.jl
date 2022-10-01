@@ -41,7 +41,7 @@ export
 
 export
     wireextract, wireextract!,
-    lhsextract, lhsunify, autoreset,
+    lhsextract, lhsunify, autoreset, isreset,
     defclk, defrst,
     Vmodenv, autodecl, mergedeclenv
 

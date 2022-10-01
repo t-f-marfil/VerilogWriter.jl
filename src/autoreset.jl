@@ -123,15 +123,20 @@ type: Alwayscontent
 ```
 """
 function autoreset(x::Ifcontent; clk=defclk, rst=defrst, edge=posedge)
-    ext = lhsextract(x)
-    uniext = lhsunify(ext)
+    if isreset(x)
+        ans = Alwayscontent(ff, edge, clk, x)
+    else
+        ext = lhsextract(x)
+        uniext = lhsunify(ext)
 
-    rstcont = Ifcontent([Alassign(i, Wireexpr(0), ff) for i in uniext])
+        rstcont = Ifcontent([Alassign(i, Wireexpr(0), ff) for i in uniext])
 
-    ifb = Ifelseblock([rst], [rstcont, x])
-    ans = Alwayscontent(ff, edge, clk, Ifcontent(ifb))
-    (atp = atypealways(ans); atp == ff) || error("atype == $(atp).")
+        ifb = Ifelseblock([rst], [rstcont, x])
+        ans = Alwayscontent(ff, edge, clk, Ifcontent(ifb))
+    end
     
+    (atp = atypealways(ans); atp == ff) || error("atype == $(atp).")
+        
     ans 
 end
 
@@ -148,4 +153,42 @@ function autoreset(x::Alwayscontent; clk=defclk, rst=defrst, edge=posedge)
     else
         autoreset(x.content, clk=clk, rst=rst, edge=edge)
     end
+end
+
+
+"""
+    isreset(x::Alwayscontent; rst=defrst)
+
+Check if `x` contains synchronous reset statements.
+"""
+function isreset(x::Alwayscontent; rst=defrst)
+    ifc = x.content
+    isreset(ifc, rst=rst)
+end
+
+"""
+    isreset(x::Ifcontent; rst=defrst)
+
+Check if `x` contains synchronous reset statements.
+"""
+function isreset(x::Ifcontent; rst=defrst)
+    ifcontformat = (
+        length(x.assigns) == 0 
+        && length(x.ifelseblocks) == 1
+        && length(x.cases) == 0
+    )
+    if ifcontformat
+        ifb = x.ifelseblocks[1]
+        ifblockformat = (
+            length(ifb.conds) == 1
+        )
+        if ifblockformat
+            rstw = ifb.conds[1]
+            rstcheck = isequal(rstw, rst)
+
+            return rstcheck
+        end
+    end
+
+    return false
 end
