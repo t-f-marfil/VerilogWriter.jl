@@ -5,7 +5,7 @@ c = ifcontent(:(
     reg2 = $(Wireexpr(10, 5))
 ))
 
-d, _ = autodecl(c)
+d, _ = autodecl_core(c)
 
 @test string(d) == """
 reg [31:0] reg1;
@@ -17,7 +17,7 @@ c = ifcontent(:(
     reg2 = ~($(Wireexpr(10, 6)))
 ))
 
-d, _ = autodecl(c)
+d, _ = autodecl_core(c)
 
 @test string(d) == """
 reg reg1;
@@ -30,7 +30,7 @@ env = Vmodenv(
         @reg A+B reg2
     )
 )
-d, _ = autodecl(
+d, _ = autodecl_core(
     (@ifcontent (
         reg1 <= reg2;
         reg3 <= reg2;
@@ -51,7 +51,7 @@ c = always(:(
         a <= &(b == c)
     end
 ))
-d, nenv = autodecl(c)
+d, nenv = autodecl_core(c)
 @test string(d) == """
 reg a;
 reg b;
@@ -63,7 +63,7 @@ c = always(:(
     a <= $(Wireexpr(1, 0))
 ))
 
-@test (@strerror autodecl(c)) == """
+@test (@strerror autodecl_core(c)) == """
 width inference failure in evaluating a <=> 1'd0.
 width discrepancy between 32 and 1."""
 
@@ -80,7 +80,7 @@ c = @always (
     end
 )
 
-dc, _ = autodecl(c, Vmodenv(d))
+dc, _ = autodecl_core(c, Vmodenv(d))
 
 @test string(dc) == """
 reg [9:0] c;"""
@@ -98,5 +98,5 @@ c = @always (
     end
 )
 
-@test (@strerror autodecl(c, Vmodenv(d))) == """
+@test (@strerror autodecl_core(c, Vmodenv(d))) == """
 2d reg b is sliced at [(W << 2):0]."""

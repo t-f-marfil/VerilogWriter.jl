@@ -89,7 +89,6 @@ Wirewid(v::Int) = Wirewid(Wireexpr(v))
 Wirewid() = Wirewid(wwinvalid)
 
 
-# @eachfieldconstruct Vmodenv
 eachfieldconstruct(Vmodenv)
 
 """
@@ -98,7 +97,7 @@ eachfieldconstruct(Vmodenv)
 Create an empty `Vmodenv` object.
 """
 Vmodenv() = Vmodenv(Parameters(), Ports(), Localparams(), Decls())
-
+Vmodenv(m::Vmodule) = Vmodenv(m.params, m.ports, m.lparams, m.decls)
 
 """
     separate_widunknown(v::Vector{Onedecl})
@@ -537,7 +536,9 @@ end
 When env contains ports/wire declarations of unknown width, 
 return new `Vmodenv` object whose bitwidth are all filled in.
 
-`ansset` is supposed to contain enough information.
+`ansset` is supposed to contain enough information. 
+Data in `ansset` which is used in this method is removed from `ansset`, 
+this behavior is essential for `autodecl_core`.
 """
 function portdeclupdated!(env::Vmodenv, ansset::Dict{String, Wirewid})
 
@@ -572,6 +573,56 @@ end
 
 
 """
+    autodecl_core(x, env::Vmodenv)
+
+Core of `autodecl`, return `Decls` object of automatically declared wires, 
+and `env::Vmodenv` all of whose unknown width value is filled in through width inference.
+"""
+function autodecl_core(x, env::Vmodenv)
+    don, equ = wireextract(x)
+    ansset, widvars = widunify(don, equ, env)
+
+    length(widvars) == 0 || throw(
+        WirewidthUnresolved(
+            strwidunknown(widvars)
+        )
+    )
+    # length(widvars) == 0 || error("Wirewidth unresolved, ", strwidunknown(widvars))
+
+    # extract from ansset ports/declarations specified in `env`
+    newenv = portdeclupdated!(env, ansset)
+
+    newdecls = [Onedecl(reg, ww.val, n) for (n, ww) in ansset]
+    sort!(newdecls, by=(d -> d.name))
+    Decls(newdecls), newenv
+end
+
+"""
+    autodecl_core(x)
+
+Call `autodecl_core` under an empty environment.
+For debug (test) use.
+"""
+function autodecl_core(x)
+    autodecl_core(x, Vmodenv())
+end
+
+"""
+    mergedeclenv(d::Decls, env::Vmodenv)
+
+Merge return value from autodecl_core into a new `Vmodev` object.
+"""
+function mergedeclenv(d::Decls, env::Vmodenv)
+    Vmodenv(
+        env.prms, 
+        env.prts,
+        env.lprms,
+        declmerge(env.dcls, d)
+    )
+end
+
+
+"""
     autodecl(x, env::Vmodenv)
 
 Declare wires in `x` which are not yet declared in `env`.
@@ -598,14 +649,17 @@ c = @ifcontent (
     end
 ) 
 
-newds, _ = autodecl(c, env)
-vshow(newds)
+venv = autodecl(c, env)
+vshow(venv)
 
 # output
 
+input [15:0] din
+input b1
+
 reg [3:0] reg1;
 reg [15:0] reg2;
-type: Decls
+type: Vmodenv
 ```
 
 You may also declare ports/wires beforehand
@@ -631,11 +685,9 @@ ab = @always (
     r5 <= y + w2
 )
 env = Vmodenv(Parameters(), ps, Localparams(), ds)
-d, newenv = autodecl(ab.content, env)
+nenv = autodecl(ab.content, env)
 
-vshow(newenv)
-println()
-vshow(d)
+vshow(nenv)
 
 # output
 
@@ -645,14 +697,12 @@ output reg [A-1:0] z
 
 wire [B-1:0] w1;
 wire [B-1:0] w2;
-type: Vmodenv
-
 reg [A-1:0] r1;
 reg [A-1:0] r2;
 reg [A-1:0] r3;
 reg [B-1:0] r4;
 reg [B-1:0] r5;
-type: Decls
+type: Vmodenv
 ```
 
 
@@ -677,43 +727,24 @@ ERROR: Wire width cannot be inferred for the following wires.
 ```
 """
 function autodecl(x, env::Vmodenv)
-    don, equ = wireextract(x)
-    ansset, widvars = widunify(don, equ, env)
-
-    length(widvars) == 0 || throw(
-        WirewidthUnresolved(
-            strwidunknown(widvars)
-        )
-    )
-    # length(widvars) == 0 || error("Wirewidth unresolved, ", strwidunknown(widvars))
-
-    # extract from ansset ports/declarations specified in `env`
-    newenv = portdeclupdated!(env, ansset)
-
-    newdecls = [Onedecl(reg, ww.val, n) for (n, ww) in ansset]
-    sort!(newdecls, by=(d -> d.name))
-    Decls(newdecls), newenv
+    d, nenv = autodecl_core(x, env)
+    mergedeclenv(d, nenv)
 end
 
-"""
-    autodecl(x)
-
-Call `autodecl` under an empty environment.
-"""
 function autodecl(x)
     autodecl(x, Vmodenv())
 end
 
-"""
-    mergedeclenv(d::Decls, env::Vmodenv)
 
-Merge return value from autodecl into a new `Vmodev` object.
-"""
-function mergedeclenv(d::Decls, env::Vmodenv)
-    Vmodenv(
-        env.prms, 
-        env.prts,
-        env.lprms,
-        declmerge(env.dcls, d)
+function autodecl(x::Vmodule)
+    env = Vmodenv(x)
+    
+    nenv = autodecl(x.always, env)
+    Vmodule(
+        x.name, 
+        nenv, 
+        x.insts,
+        x.assigns, 
+        x.always
     )
 end

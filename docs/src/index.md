@@ -247,10 +247,12 @@ ERROR: Wire width cannot be inferred for the following wires.
 1. dwire1
 2. reg2 = dwire2
 
-julia> d, _ = autodecl(c, env); vshow(d); # using information in `env`
+julia> nenv = autodecl(c, env); vshow(nenv); # using information in `env`
+wire dwire1;
+wire [9:0] dwire2;
 reg reg1;
 reg [9:0] reg2;
-type: Decls
+type: Vmodenv
 ```
 
 ## Easy construction of Finite State Machines
