@@ -43,7 +43,7 @@ export
     wireextract, wireextract!,
     lhsextract, lhsunify, autoreset, isreset,
     defclk, defrst,
-    Vmodenv, autodecl, mergedeclenv
+    Vmodenv, autodecl, autodecl_core, mergedeclenv
 
 export 
     FSM, @FSM, fsmconv, transadd!, @tstate, transcond
