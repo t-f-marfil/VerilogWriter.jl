@@ -8,7 +8,7 @@ Return `declonly::Vector{Wireexpr}`, which contains wires appear in
 `x::Ifcontent`, and `equality::Vector{Tuple{Wireexpr, Wireexpr}}`, 
 which contains tuples of two `Wireexpr`s which are supposed to be of the same width.
 
-Type of `x` is restricted in `wireextract!`.
+Type of `x` is restricted by `wireextract!`.
 """
 function wireextract(x)
     declonly = Wireexpr[]
@@ -20,9 +20,8 @@ end
 
 """
     wireextract!(x::Ifcontent, declonly, equality)
-
-Helper function for [`wireextract`](@ref). 
-Add constraints to `declonly` and `equality`.
+ 
+For `Ifcontent`.
 """
 function wireextract!(x::Ifcontent, declonly, equality)
     for i in x.assigns 
@@ -47,7 +46,7 @@ end
 """
     wireextract!(x::Vector{T}, declonly, equality) where {T <: Union{Ifcontent, Alwayscontent}}
 
-For Vector{Ifcontent/Alwayscontent}.
+For `Vector{Ifcontent/Alwayscontent}`.
 """
 function wireextract!(x::Vector{T}, declonly, equality) where {T <: Union{Ifcontent, Alwayscontent}}
     for c in x 
@@ -58,11 +57,26 @@ end
 """
     wireextract!(x::Alwayscontent, declonly, equality)
 
-For always content. Sensitivity in `x` will be ignored.
+For `Alwayscontent`. 
 """
 function wireextract!(x::Alwayscontent, declonly, equality)
+    if x.atype == ff
+        wireextract!(x.sens, declonly, equality)
+    end
     wireextract!(x.content, declonly, equality)
 end
+
+"""
+    wireextract!(x::Sensitivity, declonly, equality)
+
+For `Sensitivity`.
+"""
+function wireextract!(x::Sensitivity, declonly, equality)
+    push!(declonly, x.sensitive)
+end
+
+"Helper function for [`wireextract`](@ref)."
+wireextract!
 
 
 "update julia to v1.8 and replace with `wirewidid::Int = 0`."
@@ -577,6 +591,8 @@ end
 
 Core of `autodecl`, return `Decls` object of automatically declared wires, 
 and `env::Vmodenv` all of whose unknown width value is filled in through width inference.
+
+Type of `x` is restricted to the type `wireextract!` accepts.
 """
 function autodecl_core(x, env::Vmodenv)
     don, equ = wireextract(x)
