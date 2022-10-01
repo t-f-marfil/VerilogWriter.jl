@@ -1,11 +1,6 @@
 function vpush!(coll::Decls, x::Onedecl...)
     push!(coll.val, x...)
 end
-# function vpush!(coll::Decls, x::Decls...)
-#     for v in x 
-#         vpush!(coll, v.val...)
-#     end
-# end
 
 function vpush!(coll::Ports, x::Oneport...)
     push!(coll.val, x...)
