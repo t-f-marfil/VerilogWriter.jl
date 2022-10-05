@@ -329,6 +329,9 @@ mod1 #(
 );
 type: Vmodinst
 ```
+
+For convenient instantiation 
+see also [`@preport`](@ref) and [`naiveinst`](@ref).
 """
 struct Vmodinst
     vmodname::String 

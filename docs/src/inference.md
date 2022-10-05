@@ -29,9 +29,6 @@ autodecl
 
 `env` in an argument for `autodecl` is of type `Vmodenv`.
 
-```@example top
-println(showfield(Vmodenv)) # hide
-```
 ```@docs
-Vmodenv
+finalized
 ```

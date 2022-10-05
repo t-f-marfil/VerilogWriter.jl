@@ -72,7 +72,9 @@ end
 For `Sensitivity`.
 """
 function wireextract!(x::Sensitivity, declonly, equality)
-    push!(declonly, x.sensitive)
+    if x.edge != unknownedge
+        push!(declonly, x.sensitive)
+    end
 end
 
 "Helper function for [`wireextract`](@ref)."
@@ -179,6 +181,11 @@ function extract2dreg(x::Vector{Onedecl})
     ans 
 end
 
+"""
+    extract2dreg(x::Decls)
+
+Extract 2d regs as dict object from `x`.
+"""
 function extract2dreg(x::Decls)
     extract2dreg(x.val)
 end
@@ -274,7 +281,7 @@ function eqwidflatten!(x::Wireexpr, envdicts, reg2d, ansset, eqwids::Vector{Wire
         subname = x.subnodes[1].name
 
         if length(x.subnodes) == 2
-            # e.g. x[1] --> bit select
+            # e.g. x[1] --> bit select or 2d reg
             # subname = x.subnodes[1].name
             push!(eqwids, Wirewid(
                     get(reg2d, subname, Wireexpr(1))
@@ -747,11 +754,22 @@ function autodecl(x, env::Vmodenv)
     mergedeclenv(d, nenv)
 end
 
+"""
+    autodecl(x)
+
+Conduct wire width inference under an empty environment.
+"""
 function autodecl(x)
     autodecl(x, Vmodenv())
 end
 
+"""
+    autodecl(x::Vmodule)
 
+Using ports, parameters, localparams, decls in `x::Vmodule` 
+as an environment, conduct wire width inference and 
+return a new `Vmodule` object with inferred wires.
+"""
 function autodecl(x::Vmodule)
     env = Vmodenv(x)
     

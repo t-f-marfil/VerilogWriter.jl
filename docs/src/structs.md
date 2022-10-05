@@ -32,6 +32,7 @@ This module offers several structs that contain a structure of Verilog component
   + [Edge](@ref)
 + [Vmodinst](@ref)
 + [Vmodule](@ref)
++ [Vmodenv](@ref)
   
 ```@setup 1
 push!(LOAD_PATH,"../../src/")
@@ -203,6 +204,14 @@ println(showfield(Vmodule)) # hide
 Vmodule
 ```
 
+### Vmodenv
+```@example 1
+println(showfield(Vmodenv)) # hide
+```
+```@docs
+Vmodenv
+```
+
 ## Converter Functions/Macros
 
 As in previous examples we offer functions and macros to convert Julia syntax into certain structs described above. You may use these instead of calling constructors.
@@ -256,7 +265,7 @@ end
 type: Alwayscontent
 ```
 
-## List of Converter Functions/Macros
+### List of Converter Functions/Macros
 
 Written inside parentheses are the types of objects the functions return.
 
@@ -375,16 +384,23 @@ end
 type: Alwayscontent
 ```
 
-## Other Functions
+## Miscellaneous Functions
 
 ### vshow 
+
+`vshow` calls `Base.string` inside. You may convert objects into a string of verilog codes calling `Base.string`. See also [vexport](@ref).
 ```@docs
 vshow
 ```
 
-### invports 
+### vexport
 ```@docs
-invports
+vexport
+```
+
+### vpush!
+```@docs
+vpush!
 ```
 
 ### declmerge
@@ -395,4 +411,19 @@ declmerge
 ### sym2wire
 ```@docs
 @sym2wire
+```
+
+### naiveinst
+```@docs
+naiveinst
+```
+
+### @preport
+```@docs
+@preport
+```
+
+### invports 
+```@docs
+invports
 ```

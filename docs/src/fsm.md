@@ -51,6 +51,7 @@ They are
 fsmconv
 ```
 
+`vpush!` is available to push all information above to a `Vmodule` object.
 You may also prewiew all of these with `vshow(x::FSM)`.
 
 ## Struct FSM Description

@@ -83,7 +83,7 @@ const defrst = Wireexpr("RST")
 
 # Detection of Lhs depends on [`lhsextract`](@ref) and [`lhsunify`](@ref).
 """
-    autoreset(x::Ifcontent; clk=Wireexpr("CLK"), rst=Wireexpr("RST"), edge=posedge)
+    autoreset(x::Ifcontent; clk=defclk, rst=defrst, edge=posedge)
 
 Given `x::Ifcontent`, returns `always_ff/always` block that 
 resets every `wire/reg`s appear at Lhs of `x`.
@@ -154,6 +154,21 @@ function autoreset(x::Alwayscontent; clk=defclk, rst=defrst, edge=posedge)
     else
         autoreset(x.content, clk=clk, rst=rst, edge=edge)
     end
+end
+
+function autoreset(x::Vmodule; clk=defclk, rst=defrst)
+    Vmodule(
+        x.name, 
+
+        x.params,
+        x.ports, 
+        x.lparams, 
+        x.decls,
+
+        x.insts,
+        x.assigns,
+        autoreset.(x.always, clk=clk, rst=rst)
+    )
 end
 
 """
