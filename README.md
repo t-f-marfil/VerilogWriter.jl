@@ -54,12 +54,12 @@ Another example is
 ###### In[3]
 ```Julia
 ps = @ports (
-    @in b1, RST
+    @in b1, CLK, RST
 )
 ds = @decls (
     @reg 8 dreg1
 )
-c = ifcontent(:(
+c = always(:(
     reg1 <= dreg1;
     if b1 
         reg2 <= reg1[7:6]
@@ -70,23 +70,28 @@ c = ifcontent(:(
         reg5 <= 0
     end
 ))
-ac = autoreset(c)
+autoreset!(c)
 env = Vmodenv(Parameters(), ps, Localparams(), ds)
-ad = autodecl(ac.content, env)
+ad = autodecl(c, env)
 
 vshow(ad)
-vshow(ac)
+vshow(c)
 ```
 
 ###### Out[3]
 
 ```systemverilog
+input b1
+input CLK
+input RST
+
+reg [7:0] dreg1;
 reg [7:0] reg1;
 reg [1:0] reg2;
 reg reg3;
 reg [7:0] reg4;
 reg [31:0] reg5;
-type: Decls
+type: Vmodenv
 always_ff @( posedge CLK ) begin
     if (RST) begin
         reg1 <= 0;
@@ -140,7 +145,7 @@ Dockerfile to build environment with julia and this module is also available in 
 It seems too many things are left to be done to make this `VerilogWriter.jl`, at least to some extent, useful, but to list few of them, 
 
 ### Unsupported Syntaxes
-Lots of operators and syntaxes in Verilog/SystemVerilog is not supported (e.g. for, generate for, interfaces, tasks, always_latch, indexed part select, and so on), although some of them can be replaced by using Julia syntaxes instead (e.g. using Julia for loop and generate multiple `always` blocks instead of Verilog), or rather it 'should be' replaced to make use of the power of Julia language.
+Lots of operators and syntaxes in Verilog/SystemVerilog is not supported (e.g. for, generate for, interfaces, tasks, always_latch, some of indexed part select, and so on), although some of them can be replaced by using Julia syntaxes instead (e.g. using Julia for loop and generate multiple `always` blocks instead of Verilog), or rather it is better to use Julia-for instead to make use of the power of Julia language (Verilog for-loop which changes its behavior according to parameters of the module cannot be imitated this way).
 
 ### Not Enough Handlers of the Structs 
 We offer here some structs to imitate what is done in Verilog codes, but few functions to handle them are offered together. Still you can construct some more functions to handle the structs offered here, making it a little easier to make more complex Verilog modules.

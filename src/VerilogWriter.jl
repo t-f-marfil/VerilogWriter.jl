@@ -34,14 +34,18 @@ export
     declmerge,
     @sym2wire,
     alloutreg,
-    naiveinst
+    naiveinst,
+    wrappergen,
+    @preport,
+    finalized,
+    vexport
 
 export 
     vpush!
 
 export
     wireextract, wireextract!,
-    lhsextract, lhsunify, autoreset, isreset,
+    lhsextract, lhsunify, autoreset, autoreset!, isreset,
     defclk, defrst,
     Vmodenv, autodecl, autodecl_core, mergedeclenv
 

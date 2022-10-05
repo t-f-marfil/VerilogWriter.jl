@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Quick Start · VerilogWriter Document</title><script data-outdated-warner src="assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="assets/documenter.js"></script><script src="siteinfo.js"></script><script src="../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="index.html">VerilogWriter Document</a></span></div><form class="docs-search" action="search.html"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="index.html">Examples</a></li><li><a class="tocitem" href="intro.html">Introduction</a></li><li class="is-active"><a class="tocitem" href="modgen.html">Quick Start</a><ul class="internal"><li><a class="tocitem" href="#Define-the-Name-of-a-Module"><span>Define the Name of a Module</span></a></li><li><a class="tocitem" href="#Define-Ports,-Parameters,-Localparams,-and-Wires"><span>Define Ports, Parameters, Localparams, and Wires</span></a></li><li><a class="tocitem" href="#Define-Combinational/Sequential-Logics"><span>Define Combinational/Sequential Logics</span></a></li><li><a class="tocitem" href="#Finalize-Verilog-Module"><span>Finalize Verilog Module</span></a></li></ul></li><li><a class="tocitem" href="structs.html">Basic Structs</a></li><li><a class="tocitem" href="inference.html">Basic Automation</a></li><li><a class="tocitem" href="fsm.html">Finite State Machines</a></li><li><a class="tocitem" href="reference.html">Reference</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href="modgen.html">Quick Start</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href="modgen.html">Quick Start</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/t-f-marfil/VerilogWriter.jl/blob/master/docs/src/modgen.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Generate-Verilog-Module"><a class="docs-heading-anchor" href="#Generate-Verilog-Module">Generate Verilog Module</a><a id="Generate-Verilog-Module-1"></a><a class="docs-heading-anchor-permalink" href="#Generate-Verilog-Module" title="Permalink"></a></h1><h2 id="Define-the-Name-of-a-Module"><a class="docs-heading-anchor" href="#Define-the-Name-of-a-Module">Define the Name of a Module</a><a id="Define-the-Name-of-a-Module-1"></a><a class="docs-heading-anchor-permalink" href="#Define-the-Name-of-a-Module" title="Permalink"></a></h2><p>We offer an type <code>Vmodule</code>, which imitates Verilog modules. Instantiate it defining its name.</p><pre><code class="language-julia-repl hljs">julia&gt; m = Vmodule(&quot;test&quot;);
+
+julia&gt; vshow(m)
+module test ();
+
+endmodule
+type: Vmodule</code></pre><p>A module named <code>test</code> is generated here.</p><h2 id="Define-Ports,-Parameters,-Localparams,-and-Wires"><a class="docs-heading-anchor" href="#Define-Ports,-Parameters,-Localparams,-and-Wires">Define Ports, Parameters, Localparams, and Wires</a><a id="Define-Ports,-Parameters,-Localparams,-and-Wires-1"></a><a class="docs-heading-anchor-permalink" href="#Define-Ports,-Parameters,-Localparams,-and-Wires" title="Permalink"></a></h2><p>Define ports, parameters, localparams, and wire/reg/logics as a Julia type we offer. Details on the types are at <a href="structs.html#Component-Structs">Component Structs</a>.</p><p>Add them to the module <code>test</code> calling <a href="structs.html#VerilogWriter.vpush!"><code>vpush!</code></a>.</p><pre><code class="language-julia-repl hljs">julia&gt; pa = @parameters (dummy = 10 &lt;&lt; 2);
+
+julia&gt; po = @ports (@in CLK, RST; @in 8 din; @out @reg -1 dout);
+
+julia&gt; lp = @localparams (A = 1; B = 2; C = A + B);
+
+julia&gt; ds = @decls (@reg dumreg; @wire A+B&lt;&lt;C dumwire);
+
+julia&gt; f(p) = vpush!(m, p); map(f, (pa, po, lp, ds));
+
+julia&gt; vshow(m);
+module test #(
+    parameter dummy = (10 &lt;&lt; 2)
+)(
+    input CLK,
+    input RST,
+    input [7:0] din,
+    output reg [unknown] dout
+);
+    localparam A = 1;
+    localparam B = 2;
+    localparam C = (A + B);
+
+    reg dumreg;
+    wire [(A + (B &lt;&lt; C))-1:0] dumwire;
+
+
+endmodule
+type: Vmodule</code></pre><p>Syntaxes for each types (usage of <code>@ports</code>, <code>@decls</code>, etc.) are at <a href="structs.html#List-of-Converter-Functions/Macros">List of Converter Functions/Macros</a>.</p><p>Instead of calling <code>vpush!</code> you may pass additional information to constructors of <code>Vmodule</code>. You may also wrap ports, parameters, etc. into type <code>Vmodenv</code>.</p><pre><code class="language-julia hljs">env = Vmodenv(pa, po, lp, ds); Vmodule(&quot;test&quot;, env);</code></pre><p>would generate the same result.</p><h2 id="Define-Combinational/Sequential-Logics"><a class="docs-heading-anchor" href="#Define-Combinational/Sequential-Logics">Define Combinational/Sequential Logics</a><a id="Define-Combinational/Sequential-Logics-1"></a><a class="docs-heading-anchor-permalink" href="#Define-Combinational/Sequential-Logics" title="Permalink"></a></h2><p>You may write always blocks in Julia syntax, and add them to <code>test</code> module. Details at <a href="structs.html#List-of-Converter-Functions/Macros">List of Converter Functions/Macros</a>.</p><pre><code class="language-julia-repl hljs">julia&gt; a1 = @always (dout &lt;= din[3:0]); vshow(a1)
+always_ff @( unknownedge  ) begin
+    dout &lt;= din[3:0];
+end
+type: Alwayscontent
+
+julia&gt; a2 = @always (dumreg = |(dumwire); duminfer = ~dumreg); vshow(a2);
+always_comb begin
+    dumreg = |(dumwire);
+    duminfer = ~dumreg;
+end
+type: Alwayscontent
+
+julia&gt; vpush!(m, a1); vpush!(m, a2);</code></pre><h2 id="Finalize-Verilog-Module"><a class="docs-heading-anchor" href="#Finalize-Verilog-Module">Finalize Verilog Module</a><a id="Finalize-Verilog-Module-1"></a><a class="docs-heading-anchor-permalink" href="#Finalize-Verilog-Module" title="Permalink"></a></h2><p>In the codes above some output was not completely of Verilog syntax (e.g. <code>@( unknownedge )</code>), and lacked some wire declarations (e.g. <code>duminfer</code> was not declared). You may automatically deal with these problems, for detailed information see also <a href="inference.html#Basic-Automation">Basic Automation</a>.</p><pre><code class="language-julia-repl hljs">julia&gt; m = finalized(m); vshow(m); # not `finalize`
+module test #(
+    parameter dummy = (10 &lt;&lt; 2)
+)(
+    input CLK,
+    input RST,
+    input [7:0] din,
+    output reg [3:0] dout
+);
+    localparam A = 1;
+    localparam B = 2;
+    localparam C = (A + B);
+
+    reg dumreg;
+    wire [(A + (B &lt;&lt; C))-1:0] dumwire;
+    reg duminfer;
+
+    always_ff @( posedge CLK ) begin
+        if (RST) begin
+            dout &lt;= 0;
+        end else begin
+            dout &lt;= din[3:0];
+        end
+    end
+    always_comb begin
+        dumreg = |(dumwire);
+        duminfer = ~dumreg;
+    end
+endmodule
+type: Vmodule</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="intro.html">« Introduction</a><a class="docs-footer-nextpage" href="structs.html">Basic Structs »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Wednesday 5 October 2022 20:34">Wednesday 5 October 2022</span>. Using Julia version 1.7.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
