@@ -1,7 +1,8 @@
 module VerilogWriter
 
 export 
-    showfield, vshow
+    # showfield, 
+    vshow
 
 export
     Oneparam, Parameters,
@@ -23,7 +24,8 @@ export
     onelocalparam, localparams, @onelocalparam, @localparams,
     wireexpr, @wireexpr,
     decloneline, decls, @decloneline, @decls,
-    oneblock, ifcontent, ralways, always, @oneblock, @ifcontent, @always, @ralways
+    # oneblock, 
+    ifcontent, ralways, always, @oneblock, @ifcontent, @always, @ralways
 
 export 
     paramsolve, paramcalc
@@ -37,7 +39,7 @@ export
     naiveinst,
     wrappergen,
     @preport,
-    finalized,
+    vfinalize,
     vexport
 
 export 
@@ -51,6 +53,26 @@ export
 
 export 
     FSM, @FSM, fsmconv, transadd!, @tstate, transcond
+
+macro listtestonly(args)
+    :($([string(s) for s in args.args]))
+end
+
+const testonlyvars = @listtestonly (
+    showfield,
+    oneblock
+)
+
+export @testonlyexport
+
+macro testonlyexport()
+    s = "$([
+        "$(s) = VerilogWriter.$(s);" for s in testonlyvars
+        ]...)"
+    q = Meta.parse(s)
+    esc(q)
+end
+
 
 # priority for files declaring `struct`s
 

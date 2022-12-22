@@ -30,5 +30,5 @@ autodecl
 `env` in an argument for `autodecl` is of type `Vmodenv`.
 
 ```@docs
-finalized
+vfinalize
 ```

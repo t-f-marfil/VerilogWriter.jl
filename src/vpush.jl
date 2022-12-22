@@ -1,5 +1,5 @@
 # Generated from "vpushgen.jl", do not edit manually,
-# edit "vpushraw.jl." instead
+# edit "vpushraw.jl" instead.
 
 """
     vpush!(coll::Decls, x::Onedecl...)

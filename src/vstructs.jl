@@ -301,7 +301,6 @@ struct Assign
 end
 
 """
-    Vmodinst
 
 Represents module instantiation.
 
