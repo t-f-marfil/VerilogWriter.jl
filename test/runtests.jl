@@ -2,6 +2,8 @@ using VerilogWriter, Test, Documenter
 
 include("testutils.jl")
 
+@testonlyexport()
+
 tpairs = [
     "Parsefunc" => "parsefunc.jl",
     "Print" => "print.jl",
@@ -26,7 +28,12 @@ end
         @testconduct tpair
     end
     
-    DocMeta.setdocmeta!(VerilogWriter, :DocTestSetup, :(using VerilogWriter); recursive=true)
+    DocMeta.setdocmeta!(
+        VerilogWriter, 
+        :DocTestSetup, 
+        :(using VerilogWriter; @testonlyexport()); 
+        recursive=true
+    )
     println("start doctest.")
     doctest(VerilogWriter)
     println("doctest done.")

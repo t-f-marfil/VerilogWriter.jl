@@ -33,7 +33,7 @@ ex = Meta.parse.(methvec)
 
 # add doc & method
 open("vpush.jl", "w") do io 
-    pre = "# Generated from \"vpushgen.jl\", do not edit manually,\n# edit \"vpushraw.jl.\" instead\n\n"
+    pre = "# Generated from \"vpushgen.jl\", do not edit manually,\n# edit \"vpushraw.jl\" instead.\n\n"
     write(io, pre)
 
     for meth in ex

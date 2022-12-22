@@ -98,7 +98,7 @@ In the codes above some output was not completely of Verilog syntax (e.g. `@( un
 You may automatically deal with these problems, for detailed information see also [Basic Automation](@ref).
 
 ```jldoctest t1
-julia> m = finalized(m); vshow(m); # not `finalize`
+julia> m = vfinalize(m); vshow(m); # not `finalize`
 module test #(
     parameter dummy = (10 << 2)
 )(

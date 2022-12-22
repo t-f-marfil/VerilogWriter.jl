@@ -156,6 +156,11 @@ function autoreset(x::Alwayscontent; clk=defclk, rst=defrst, edge=posedge)
     end
 end
 
+"""
+    autoreset(x::Vmodule; clk=defclk, rst=defrst)
+
+Return a new `Vmodule` object whose `Alwayscontent`s are all reset.
+"""
 function autoreset(x::Vmodule; clk=defclk, rst=defrst)
     Vmodule(
         x.name, 
