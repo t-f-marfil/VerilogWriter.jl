@@ -31,7 +31,7 @@ end
     DocMeta.setdocmeta!(
         VerilogWriter, 
         :DocTestSetup, 
-        :(using VerilogWriter; @testonlyexport()); 
+        :(using VerilogWriter); 
         recursive=true
     )
     println("start doctest.")

@@ -25,7 +25,13 @@ export
     wireexpr, @wireexpr,
     decloneline, decls, @decloneline, @decls,
     # oneblock, 
-    ifcontent, ralways, always, @oneblock, @ifcontent, @always, @ralways
+    ifcontent, 
+    # ralways, 
+    always, 
+    # @oneblock, 
+    @ifcontent, 
+    @always
+    # @ralways
 
 export 
     paramsolve, paramcalc
@@ -55,23 +61,26 @@ export
     FSM, @FSM, fsmconv, transadd!, @tstate, transcond
 
 macro listtestonly(args)
-    :($([string(s) for s in args.args]))
+    strs = Symbol[]
+    for arg in args.args 
+        if arg isa Symbol 
+            push!(strs, arg)
+        else
+            arg.head == :macrocall || error("$(arg) is not accepted")
+            # macroname
+            push!(strs, arg.args[1])
+        end
+    end
+    :($([string(s) for s in strs]))
 end
 
 const testonlyvars = @listtestonly (
     showfield,
-    oneblock
+    
+    oneblock, @oneblock, 
+    ralways, @ralways
 )
-
-export @testonlyexport
-
-macro testonlyexport()
-    s = "$([
-        "$(s) = VerilogWriter.$(s);" for s in testonlyvars
-        ]...)"
-    q = Meta.parse(s)
-    esc(q)
-end
+include("testonlyexport.jl")
 
 
 # priority for files declaring `struct`s
