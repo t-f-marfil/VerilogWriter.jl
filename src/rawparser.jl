@@ -230,6 +230,10 @@ it is of Verilog, there can be difference in grammatical matters
 between what can be given as the `expr` and real Verilog 
 (e.g. operator precedence of `<=`).
 
+Not necessarily used directly for constructing Verilog-ish structs, 
+in most cases may better use more high level constructors 
+such as [`always`](@ref) and [`@always`](@ref).
+
 # Syntax 
 ## `<wirename1> = <wireoperation>`
 One blocking assignment. (Note that bit width cannot be 
@@ -252,12 +256,14 @@ else
 end
 ```
 If-else statement written in 'Julia syntax', not in Verilog 
-syntax, can be accepted. `else` block and `elseif` are not compulsory.
-Since `if` `end` are at the top level no `;` inside if-else statement is needed.
+syntax, can be accepted. `else` block and `elseif` are not mandatory.
+Since `if` `end` are at the top level, no `;` inside if-else statement is needed.
 Nested if-else statement can be also accepted as in usual Julia.
 
 # Examples 
-```jldoctest
+```jldoctest oneblock
+julia> @testonlyexport(); # `oneblock` is not usually exported
+
 julia> a1 = oneblock(:(w1 <= w2)); 
 
 julia> vshow(a1);
@@ -268,7 +274,7 @@ julia> a2 = oneblock(:(w3 = w4 + ~w2)); vshow(a2);
 w3 = (w4 + ~w2);
 type: Alassign
 ```
-```jldoctest
+```jldoctest oneblock
 a3 = oneblock(:(
     if b1 == b2
         w5 = ~w6
@@ -306,8 +312,17 @@ end
     oneblock(expr::T) where {T <: Union{Alassign, Ifelseblock}}
 
 For interpolation through metaprogramming.
+
+Deprecated macro (note that `@oneblock` in macro is not even used
+inside `always`), rather use [`always`](@ref)
+for constructing Verilog-like structs.
+The exmaple below works the same way when `@oneblock` is 
+replaced by `@always`.
+
 # Example 
 ```jldoctest
+@testonlyexport() # @oneblock is not exported
+
 a = @oneblock r = s & t
 b = @oneblock (
     if b 
@@ -670,7 +685,7 @@ a xor operator in Julia.
 ## `<wire>[<wire>:<wire>]`, `<wire>[<wire>]`
 Bit select and slicing as in Verilog/SystemVerilog.
 Does not reject even if both wires in `[<wire>:<wire>]` are
-not of constant value.
+not of constant value although it is not a valid verilog syntax.
 
 ## `wire[<wire>-:<wire>]`
 Indexed part select. Does not reject even if `<wire>`
@@ -683,34 +698,34 @@ parentheses.
 Note that because `:` (quote) is used inside quote, 
 you (for now) cannot embed objects here through Metaprogramming.
 
-e.g. `w = (@wireexpr w); oneblock(:(x[A-:(\$w)] <= y))` is not 
+e.g. `w = (@wireexpr w); always(:(x[A-:(\$w)] <= y))` is not 
 allowed. 
 
-In such cases use constructors instead.
+In such cases use constructors instead as shown below.
 
 ```jldoctest
-julia> e = Wireexpr(ipselm, @wireexpr(x), @wireexpr(A), @wireexpr(w));
+julia> e = Wireexpr(ipselm, @wireexpr(x), @wireexpr(A), @wireexpr(w)); # Indexed Part SELect with Minus operator 
 
-julia> vshow(oneblock(:(\$(e) <= y)));
+julia> @testonlyexport; vshow(oneblock(:(\$(e) <= y)));
 x[A -: w] <= y;
 type: Alassign
 ```
 
 # Examples 
 ```jldoctest
-julia> w = wireexpr(:(w)); vshow(w);
+julia> wireexpr(:(w)) |> vshow;
 w
 type: Wireexpr
 
-julia> w = wireexpr(:(w1 & &(w2) )); vshow(w);
+julia> wireexpr(:(w1 & &(w2) )) |> vshow;
 (w1 & &(w2))
 type: Wireexpr
 
-julia> w = wireexpr(:(w[i:0])); vshow(w);
+julia> wireexpr(:(w[i:0])) |> vshow;
 w[i:0]
 type: Wireexpr
 
-julia> w = @wireexpr w[(P*Q)-:(R+10)]; vshow(w);
+julia> (@wireexpr w[(P*Q)-:(R+10)]) |> vshow;
 w[(P * Q) -: (R + 10)]
 type: Wireexpr
 
@@ -730,7 +745,7 @@ julia> w = @wireexpr x + y;
 
 julia> e = :(a + |(\$(w) & z));
 
-julia> ans = wireexpr(e); vshow(ans);
+julia> wireexpr(e) |> vshow;
 (a + |(((x + y) & z)))
 type: Wireexpr
 ```
@@ -866,7 +881,7 @@ end
     ralways(expr::Expr, ::T) where {T <: Val}
 
 The case where `expr.head` is not `block`, which means
-`expr` is one assign (inside always-block) or if-else block.
+`expr` is one assignment (inside always-block) or an if-else block.
 """
 function ralways(expr::Expr, ::T) where {T <: Val}
     return Alwayscontent(oneblock(expr, T()))
@@ -880,7 +895,8 @@ Parse always block with sensitivity list (e.g. @posedge clk).
 function ralwayswithSensitivity(expr)
     alblock = ralways(Expr(expr.head, expr.args[2:end]...))
     sensitivity = expr.args[1]
-    @assert sensitivity.head == :macrocall
+    # @assert sensitivity.head == :macrocall
+    sensitivity.head == :macrocall || error("$(sensitivity) is not a sensitivity list.")
     # sensitivity.args == [:@posedge, linenumnode, arg]
     edge = eval(Meta.parse(string(sensitivity.args[1])[2:end]))
     sens = oneblock(sensitivity.args[3])
@@ -914,7 +930,7 @@ function ralways(expr::Expr, ::Val{:block})
             if item isa LineNumberNode 
                 lineinfo = item 
             # for metaprogramming
-            # ignores sensitivity list
+            # ignores sensitivity list when interpolating `Alwayscontent`
             elseif item isa Case 
                 push!(caselist, item)
             elseif item isa Alwayscontent
@@ -930,7 +946,7 @@ function ralways(expr::Expr, ::Val{:block})
                     push!(ifblocklist, parsed)
                 else
                     @show parsed, typeof(parsed)
-                    throw(error)
+                    error("undefind behavior detected in ralways.")
                 end 
             end
         end
@@ -948,7 +964,7 @@ end
 `ralways` macro version. 
     
 Not supposed to be used in most cases, 
-`@always` and `always` are often better.
+[`@always`](@ref) and [`always`](@ref) are often better.
 """
 macro ralways(arg)
     return Expr(:call, ralways, Ref(arg))
