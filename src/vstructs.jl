@@ -211,7 +211,7 @@ struct Ifcontent_inner{T, U}
     Assign statements.
 
     Prioritizing assigns over ifelseblock may be good 
-    thinking the case of always_comb (default value is often useful).
+    thinking the case of always_comb (in which default value is often useful).
 
     May better obtain the order in which assigns and ifelseblocks
     are added?

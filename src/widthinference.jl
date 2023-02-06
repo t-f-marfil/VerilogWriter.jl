@@ -450,7 +450,18 @@ function unifycore_widunify!(items::Vector{T}, envdicts, reg2d, ansset, widvars,
     return nothing
 end
 
-function envdictsgen_widunify(env::Vmodenv)
+"""
+    envdictsgen_widunify(env::Vmodenv)::Tuple{Dict{String, Wirewid}, Dict{Wirewid, Vector{String}}, NTuple{4, Dict{String, Wirewid}}}
+
+Separate variables with known and unknown width.
+
+Appropriately insert them into the return value `ansset`, `widvars` and `envdicts`.
+"""
+function envdictsgen_widunify(env::Vmodenv)::Tuple{
+    Dict{String, Wirewid},
+    Dict{Wirewid, Vector{String}},
+    NTuple{4, Dict{String, Wirewid}}
+}
     prms = env.prms 
     prts = env.prts 
     lprms = env.lprms 
@@ -482,13 +493,16 @@ function envdictsgen_widunify(env::Vmodenv)
 end
 
 """
-    widunify(declonly::Vector{Wireexpr}, equality::Vector{Tuple{Wireexpr, Wireexpr}}, env::Vmodenv)
+    widunify(declonly::Vector{Wireexpr}, equality::Vector{Tuple{Wireexpr, Wireexpr}}, env::Vmodenv)::Tuple{Dict{String, Wirewid}, Dict{Wirewid, Vector{String}}}
 
 Given `declonly` and `equality` from [`wireextract`](@ref), 
 infer width of wires which appear in the conditions.
 """
 function widunify(declonly::Vector{Wireexpr}, 
-    equality::Vector{Tuple{Wireexpr, Wireexpr}}, env::Vmodenv)
+    equality::Vector{Tuple{Wireexpr, Wireexpr}}, env::Vmodenv)::Tuple{
+        Dict{String, Wirewid},
+        Dict{Wirewid, Vector{String}}
+    }
 
     # generate a dict object from env
     ansset, widvars, envdicts = envdictsgen_widunify(env)
@@ -633,7 +647,7 @@ end
 """
     mergedeclenv(d::Decls, env::Vmodenv)
 
-Merge return value from autodecl_core into a new `Vmodev` object.
+Merge return value from autodecl_core into a new `Vmodenv` object.
 """
 function mergedeclenv(d::Decls, env::Vmodenv)
     Vmodenv(
@@ -646,7 +660,7 @@ end
 
 
 """
-    autodecl(x, env::Vmodenv)
+    autodecl(x, env::Vmodenv)::Vmodenv
 
 Declare wires in `x` which are not yet declared in `env`.
 Raise error when not enough information to determine width of all wires is given.
@@ -749,28 +763,28 @@ ERROR: Wire width cannot be inferred for the following wires.
 2. reg2 = din
 ```
 """
-function autodecl(x, env::Vmodenv)
+function autodecl(x, env::Vmodenv)::Vmodenv
     d, nenv = autodecl_core(x, env)
     mergedeclenv(d, nenv)
 end
 
 """
-    autodecl(x)
+    autodecl(x)::Vmodenv
 
 Conduct wire width inference under an empty environment.
 """
-function autodecl(x)
+function autodecl(x)::Vmodenv
     autodecl(x, Vmodenv())
 end
 
 """
-    autodecl(x::Vmodule)
+    autodecl(x::Vmodule)::Vmodule
 
 Using ports, parameters, localparams, decls in `x::Vmodule` 
 as an environment, conduct wire width inference and 
 return a new `Vmodule` object with inferred wires.
 """
-function autodecl(x::Vmodule)
+function autodecl(x::Vmodule)::Vmodule
     env = Vmodenv(x)
     
     nenv = autodecl(x.always, env)
