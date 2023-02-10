@@ -199,24 +199,26 @@ macro localparams(arg)
 end
 
 
-"""
-    oneblock(expr::T) where {T <: Union{Symbol, Int}}
+# everything commented out below should be dealt with by `wireexpr`?
 
-Convert `expr` to `Wireexpr`. Needed in parsing `block`.
-"""
-function oneblock(expr::T) where {T <: Union{Symbol, Int}}
-    return Wireexpr(expr)
-end
+# """
+#     oneblock(expr::T) where {T <: Union{Symbol, Int}}
 
-"""
-    oneblock(expr::Unsigned)
+# Convert `expr` to `Wireexpr`. Needed in parsing `block`.
+# """
+# function oneblock(expr::T) where {T <: Union{Symbol, Int}}
+#     return Wireexpr(expr)
+# end
 
-Unsigned may be given when user writes e.g. 0b10, 0x1f.
-Used when parsing `block`
-"""
-function oneblock(expr::Unsigned)
-    return Wireexpr(Int(expr))
-end
+# """
+#     oneblock(expr::Unsigned)
+
+# Unsigned may be given when user writes e.g. 0b10, 0x1f.
+# Used when parsing `block`.
+# """
+# function oneblock(expr::Unsigned)
+#     return Wireexpr(Int(expr))
+# end
 
 """
     oneblock(expr::Expr)
@@ -233,6 +235,8 @@ between what can be given as the `expr` and real Verilog
 Not necessarily used directly for constructing Verilog-ish structs, 
 in most cases may better use more high level constructors 
 such as [`always`](@ref) and [`@always`](@ref).
+
+Type unstable function.
 
 # Syntax 
 ## `<wirename1> = <wireoperation>`
@@ -305,7 +309,23 @@ type: Ifelseblock
 ```
 """
 function oneblock(expr::Expr)
-    return oneblock(expr, Val(expr.head))
+    # return oneblock_expr(expr, Val(expr.head))
+
+    head = expr.head
+
+    if head == :if 
+        ifelseblock(expr)
+    elseif head == :(=)
+        alassign_comb(expr)
+    elseif head == :call && expr.args[1] == :<=
+        alassign_ff(expr)
+    elseif head == :block 
+        # ifcontent(expr)
+        error(":block in oneblock.")
+    else
+        error("unknown head $(head).")
+    end
+
 end
 
 """
@@ -313,7 +333,7 @@ end
 
 For interpolation through metaprogramming.
 
-Deprecated macro (note that `@oneblock` in macro is not even used
+`@oneblock` is a deprecated macro (note that `@oneblock` in macro is not even used
 inside `always`), rather use [`always`](@ref)
 for constructing Verilog-like structs.
 The exmaple below works the same way when `@oneblock` is 
@@ -352,101 +372,216 @@ end
 type: Alwayscontent
 ```
 """
-function oneblock(expr::T) where {T <: Union{Alassign, Ifelseblock}}
+function oneblock(expr::T) where {T <: Union{Alassign, Ifelseblock, Case}}
     expr 
 end
 
-function oneblock(expr::Case)
-    expr 
+# function oneblock(expr::Case)
+#     expr 
+# end
+
+# """
+#     oneblock_expr(expr, ::Val{:(=)})
+
+# Assignment in Julia, stands for combinational assignment in Verilog.
+# """
+# function oneblock_expr(expr, ::Val{:(=)})
+#     @assert expr.head == :(=)
+#     return Alassign(wireexpr.(expr.args)..., comb)
+# end
+function alassign_comb(expr)
+    Alassign(wireexpr.(expr.args)..., comb)
 end
 
-"""
-    oneblock(expr, ::Val{:(=)})
+# """
+#     oneblock_expr(expr, ::Val{:call})
 
-Assignment in Julia, stands for combinational assignment in Verilog.
-"""
-function oneblock(expr, ::Val{:(=)})
-    @assert expr.head == :(=)
-    return Alassign(wireexpr.(expr.args)..., comb)
+# Dispatch methods of `oneblock_call` according to `expr.args[1]`.
+# """
+# function oneblock_expr(expr, ::Val{:call})
+#     return oneblock_call(expr, Val(expr.args[1]), Val(:call))
+# end
+
+# """
+#     oneblock_call(expr, ::Val{:<=}, ::Val{:call})
+
+# Parse `expr` whose head is `call` and `expr.args[1]` is `<=`.
+
+# Parse as a comparison opertor in Julia, interpret as 
+# sequential assignment in Verilog.
+# """
+# function oneblock_call(expr, ::Val{:<=}, ::Val{:call})
+#     return Alassign(wireexpr(expr.args[2]), wireexpr(expr.args[3]), ff)
+# end
+function alassign_ff(expr)
+    Alassign(wireexpr(expr.args[2]), wireexpr(expr.args[3]), ff)
 end
 
-"""
-    oneblock(expr, ::Val{:call})
-
-Dispatch methods of `oneblock` according to `expr.args[1]`.
-"""
-function oneblock(expr, ::Val{:call})
-    return oneblock(expr, Val(expr.args[1]), Val(:call))
-end
-
-"""
-    oneblock(expr, ::Val{:<=})
-
-Parse `expr` whose head is `call` and `expr.args[1]` is `<=`.
-
-Parse as a comparison opertor in Julia, interpret as 
-sequential assignment in Verilog.
-"""
-function oneblock(expr, ::Val{:<=}, ::Val{:call})
-    return Alassign(wireexpr(expr.args[2]), wireexpr(expr.args[3]), ff)
-end
-
-"Types to which AST of `block` can be converted."
-const blockconvable = Union{Ifcontent, Ifelseblock, Wireexpr}
+# "Types to which AST of `block` can be converted."
+# const blockconvable = Union{Ifcontent, Ifelseblock, Wireexpr}
 # abstract type blockconvable end
 
-"""
-    oneblock(expr, ::Val{:elseif}, ::Val{T}) where {T <: blockconvable}
+# """
+#     oneblock_expr(expr, ::Val{:elseif}, ::Val{T}) where {T <: blockconvable}
 
-When given `Val{T}` as the third argument, if `expr` is not `block` 
-(= if the second argument is not `Val{:block}`), ignore `Val{T}`.
+# When given `Val{T}` as the third argument, if `expr` is not `block` 
+# (= if the second argument is not `Val{:block}`), ignore `Val{T}`.
 
-This is needed in `oneblock(expr, ::Val{:elseif})`, 
-for `expr`, whose `expr.head == :elseif`, can have either 
-`block` or `elseif` as its `expr.args[3]`.
-Checks that the return value is of type `T`.
-"""
-function oneblock(expr, ::Val{:elseif}, ::Val{T}) where {T <: blockconvable}
-    return oneblock(expr, Val(:elseif))::T
+# This is needed in `oneblock_expr(expr, ::Val{:elseif})`, 
+# for `expr`, whose `expr.head == :elseif`, can have either 
+# `block` or `elseif` as its `expr.args[3]`.
+# Checks that the return value is of type `T`.
+# """
+# function oneblock_expr(expr, ::Val{:elseif}, ::Val{T}) where {T <: blockconvable}
+#     return oneblock_expr(expr, Val(:elseif))::T
+# end
+
+# """
+#     oneblock_expr(expr, ::Val{:block}, ::Val{T}) where {T <: blockconvable}
+
+# Parse `expr` (which is `block`) into `T`. `block` appears at various nodes, thus need
+# to explicitly indicate which type the return value should be.
+# Types that is allowed as return value is in [`blockconvable`](@ref).
+
+# See also [`blockconv`](@ref).
+# """
+# function oneblock_expr(expr, ::Val{:block}, ::Val{T}) where {T <: blockconvable}
+#     # intended only for :block inside if/else
+#     @assert expr.head == :block 
+
+#     lineinfo = LineNumberNode(0, "noinfo")
+
+#     # only 3 types below may appear inside block
+#     assignlist = Alassign[]
+#     ifblocklist = Ifelseblock[]
+#     wirelist = Wireexpr[]
+
+#     try
+#         for item in expr.args 
+#             if item isa LineNumberNode
+#                 lineinfo = item 
+#             else
+#                 parsed = oneblock(item)
+#                 # push!(anslist, parsed)
+                
+#                 if parsed isa Alassign
+#                     push!(assignlist, parsed)
+#                 elseif parsed isa Ifelseblock 
+#                     push!(ifblocklist, parsed)
+#                 elseif parsed isa Wireexpr 
+#                     push!(wirelist, parsed)
+#                 else
+#                     @show parsed, typeof(parsed)
+#                     throw(error)
+#                 end
+#             end
+#         end
+#     catch e 
+#         println("failed in parsing, inner block at: $(string(lineinfo))")
+#         # dump(lineinfo)
+#         rethrow()
+#     end
+
+#     # return Ifcontent(assignlist, ifblocklist)
+#     return blockconv(assignlist, ifblocklist, wirelist, Val(T))
+# end
+
+# """
+#     oneblock_expr(expr, ::Val{T}) where {T <: blockconvable}
+
+# Helper method to make it possible to dispatch `oneblock_expr` without
+# giving `expr.head` as an argument.
+# """
+# function oneblock_expr(expr, ::Val{T}) where {T <: blockconvable}
+#     return oneblock_expr(expr, Val(expr.head), Val(T))
+# end
+
+
+# function oneblock_expr(expr, ::Val{:if})
+function ifelseblock(expr)
+
+    # cond = expr.args[1]
+    cond = (
+        if expr.head == :if 
+            expr.args[1]
+        elseif expr.head == :elseif
+            expr.args[1].args[2]
+        else
+            dump(expr)
+            error("unknown expr type.")
+        end
+    )
+    pcond = wireexpr(cond)::Wireexpr
+
+    # ifcont = oneblock_expr(expr.args[2], Val(Ifcontent))
+    ifcont = ifcontent(expr.args[2])
+
+    if length(expr.args) == 2
+        ans = Ifelseblock(pcond, ifcont)
+    else
+        # celse = oneblock_expr(expr.args[3], Val(Ifelseblock))
+        tgt = expr.args[3]
+        celse = (
+            if tgt.head == :elseif 
+                ifelseblock(tgt)
+            else 
+                Ifelseblock([], [ifcontent(tgt)])
+            end
+        )
+        ifadd!(celse, pcond, ifcont)
+        ans = celse
+    end
+
+    return ans
 end
 
-"""
-    oneblock(expr, ::Val{:block}, ::Val{T}) where {T <: blockconvable}
-
-Parse `expr` (which is `block`) into `T`. `block` appears at various nodes, thus need
-to explicitly indicate which type the return value should be.
-Types that is allowed as return value is in [`blockconvable`](@ref).
-
-See also [`blockconv`](@ref).
-"""
-function oneblock(expr, ::Val{:block}, ::Val{T}) where {T <: blockconvable}
-    # intended only for :block inside if/else
-    @assert expr.head == :block 
-
-    lineinfo = LineNumberNode(0, "noinfo")
-
+function ifcontent(expr)
     # only 3 types below may appear inside block
     assignlist = Alassign[]
     ifblocklist = Ifelseblock[]
-    wirelist = Wireexpr[]
+    # wirelist = Wireexpr[]
 
     try
-        for item in expr.args 
-            if item isa LineNumberNode
-                lineinfo = item 
+        # top level macro application?
+        # e.g.
+        # @ifcontent x = y
+        if expr.head != :block 
+            parsed = oneblock(expr)
+            if parsed isa Alassign
+                push!(assignlist, parsed)
+            elseif parsed isa Ifelseblock 
+                push!(ifblocklist, parsed)
+            # elseif parsed isa Wireexpr 
+            #     push!(wirelist, parsed)
             else
-                parsed = oneblock(item)
-                # push!(anslist, parsed)
-                
-                if parsed isa Alassign
-                    push!(assignlist, parsed)
-                elseif parsed isa Ifelseblock 
-                    push!(ifblocklist, parsed)
-                elseif parsed isa Wireexpr 
-                    push!(wirelist, parsed)
+                @show parsed, typeof(parsed)
+                error("unexpected branch.")
+            end
+
+        # parse block.
+        else
+
+            # expr.head == :block || (dump(expr); error("unknown expr."))
+
+            lineinfo = LineNumberNode(0, "noinfo")
+
+            for item in expr.args 
+                if item isa LineNumberNode
+                    lineinfo = item 
                 else
-                    @show parsed, typeof(parsed)
-                    throw(error)
+                    parsed = oneblock(item)
+                    # push!(anslist, parsed)
+                    
+                    if parsed isa Alassign
+                        push!(assignlist, parsed)
+                    elseif parsed isa Ifelseblock 
+                        push!(ifblocklist, parsed)
+                    # elseif parsed isa Wireexpr 
+                    #     push!(wirelist, parsed)
+                    else
+                        @show parsed, typeof(parsed)
+                        error("unexpected branch.")
+                    end
                 end
             end
         end
@@ -456,108 +591,79 @@ function oneblock(expr, ::Val{:block}, ::Val{T}) where {T <: blockconvable}
         rethrow()
     end
 
-    # return Ifcontent(assignlist, ifblocklist)
-    return blockconv(assignlist, ifblocklist, wirelist, Val(T))
+    return Ifcontent(assignlist, ifblocklist)
+    # return blockconv(assignlist, ifblocklist, wirelist, Val(T))
 end
 
-"""
-    oneblock(expr, ::Val{T}) where {T <: blockconvable}
 
-Helper method to make it possible to dispatch `oneblock` without
-giving `expr.head` as an argument.
-"""
-function oneblock(expr, ::Val{T}) where {T <: blockconvable}
-    return oneblock(expr, Val(expr.head), Val(T))
-end
+# """
+#     blockconv(vas, vif, vwire, ::Val{Ifelseblock})
 
-function oneblock(expr, ::Val{:if})
-    # ifelseblock
-    @assert expr.head == :if 
+# Convert lists of `Alassign`, `Ifelseblock`, and `Wireexpr` 
+# to a single `Ifelseblock` (whose `conds` is empty). `Wireexpr` is
+# supposed to be empty.
+# """
+# function blockconv(vas, vif, vwire, ::Val{Ifelseblock})
+#     @assert length(vwire) == 0
+#     return Ifelseblock([], [Ifcontent(vas, vif)])
+# end
 
-    cond = expr.args[1]
-    pcond = wireexpr(cond)::Wireexpr
+# """
+#     blockconv(vas, vif, vwire, ::Val{Ifcontent})
 
-    ifcont = oneblock(expr.args[2], Val(Ifcontent))
+# Convert lists of `Alassign`, `Ifelseblock`, and `Wireexpr` 
+# to a single `Ifcontent`. `Wireexpr` is supposed to be empty.
+# """
+# function blockconv(vas, vif, vwire, ::Val{Ifcontent})
+#     @assert length(vwire) == 0
+#     return Ifcontent(vas, vif)
+# end
 
-    if length(expr.args) == 2
-        ans = Ifelseblock(pcond, ifcont)
-    else
-        celse = oneblock(expr.args[3], Val(Ifelseblock))
-        ifadd!(celse, pcond, ifcont)
-        ans = celse
-    end
+# """
+#     blockconv(vas, vif, vwire, ::Val{Wireexpr})
 
-    return ans
-end
+# Convert input to a single Wireexpr. 
 
-"""
-    blockconv(vas, vif, vwire, ::Val{Ifelseblock})
+# It is expected that both `vas::Vector{Alassign}` and `vif::Vector{Ifelseblock}`
+# are empty, and vwire is of length 1. Only applied to `block` at `elseif.args[1]` 
+# (condition of elseif-clause).
+# """
+# function blockconv(vas, vif, vwire, ::Val{Wireexpr})
+#     @assert length(vas) == 0
+#     @assert length(vif) == 0
+#     @assert length(vwire) == 1
+#     return vwire[1]
+# end
 
-Convert lists of `Alassign`, `Ifelseblock`, and `Wireexpr` 
-to a single `Ifelseblock` (whose `conds` is empty). `Wireexpr` is
-supposed to be empty.
-"""
-function blockconv(vas, vif, vwire, ::Val{Ifelseblock})
-    @assert length(vwire) == 0
-    return Ifelseblock([], [Ifcontent(vas, vif)])
-end
+# """
+#     oneblock_expr(expr, ::Val{:elseif})
 
-"""
-    blockconv(vas, vif, vwire, ::Val{Ifcontent})
+# Parse `expr` into `Ifelseblock` where `expr` is elseif-clause.
+# """
+# function oneblock_expr(expr, ::Val{:elseif})
+#     @assert expr.head == :elseif 
 
-Convert lists of `Alassign`, `Ifelseblock`, and `Wireexpr` 
-to a single `Ifcontent`. `Wireexpr` is supposed to be empty.
-"""
-function blockconv(vas, vif, vwire, ::Val{Ifcontent})
-    @assert length(vwire) == 0
-    return Ifcontent(vas, vif)
-end
+#     cond = expr.args[1]
+#     @assert cond.head == :block 
 
-"""
-    blockconv(vas, vif, vwire, ::Val{Wireexpr})
+#     # block appears in elseif -> cond
+#     pcond = wireexpr(cond.args[2])
 
-Convert input to a single Wireexpr. 
+#     # block appears in elseif -> if-clause
+#     pelseif = oneblock_expr(expr.args[2], Val(Ifcontent))
 
-It is expected that both `vas::Vector{Alassign}` and `vif::Vector{Ifelseblock}`
-are empty, and vwire is of length 1. Only applied to `block` at `elseif.args[1]` 
-(condition of elseif-clause).
-"""
-function blockconv(vas, vif, vwire, ::Val{Wireexpr})
-    @assert length(vas) == 0
-    @assert length(vif) == 0
-    @assert length(vwire) == 1
-    return vwire[1]
-end
+#     if length(expr.args) == 3
+#         # block may appear in elseif -> else-clause
+#         # Note that elseif appears instead when more than 
+#         # two elseif clause occurs.
+#         fullblock = oneblock_expr(expr.args[3], Val(Ifelseblock))
+#     else
+#         fullblock = Ifelseblock()
+#     end
 
-"""
-    oneblock(expr, ::Val{:elseif})
-
-Parse `expr` into `Ifelseblock` where `expr` is elseif-clause.
-"""
-function oneblock(expr, ::Val{:elseif})
-    @assert expr.head == :elseif 
-
-    cond = expr.args[1]
-    @assert cond.head == :block 
-
-    # block appears in elseif -> cond
-    pcond = wireexpr(cond.args[2])
-
-    # block appears in elseif -> if-clause
-    pelseif = oneblock(expr.args[2], Val(Ifcontent))
-
-    if length(expr.args) == 3
-        # block may appear in elseif -> else-clause
-        # Note that elseif appears instead when more than 
-        # two elseif clause occurs.
-        fullblock = oneblock(expr.args[3], Val(Ifelseblock))
-    else
-        fullblock = Ifelseblock()
-    end
-
-    ifadd!(fullblock, pcond, pelseif)
-    return fullblock
-end
+#     ifadd!(fullblock, pcond, pelseif)
+#     return fullblock
+# end
 
 """
     @oneblock(arg)
@@ -866,7 +972,7 @@ Does not infer type of alwaysblock here.
 Dispatches methods here according to `expr.head`.
 """
 function ralways(expr::Expr) 
-    ralways(expr, Val(expr.head))::Alwayscontent
+    ralways_expr(expr, Val(expr.head))::Alwayscontent
 end
 
 function ralways(expr::T...) where {T <: Union{Alassign, Ifelseblock, Case}}
@@ -878,13 +984,13 @@ function ralways(expr::Alwayscontent)
 end
 
 """
-    ralways(expr::Expr, ::T) where {T <: Val}
+    ralways_expr(expr::Expr, ::T) where {T <: Val}
 
 The case where `expr.head` is not `block`, which means
 `expr` is one assignment (inside always-block) or an if-else block.
 """
-function ralways(expr::Expr, ::T) where {T <: Val}
-    return Alwayscontent(oneblock(expr, T()))
+function ralways_expr(expr::Expr, ::T) where {T <: Val}
+    return Alwayscontent(oneblock(expr))
 end
 
 """
@@ -899,7 +1005,7 @@ function ralwayswithSensitivity(expr)
     sensitivity.head == :macrocall || error("$(sensitivity) is not a sensitivity list.")
     # sensitivity.args == [:@posedge, linenumnode, arg]
     edge = eval(Meta.parse(string(sensitivity.args[1])[2:end]))
-    sens = oneblock(sensitivity.args[3])
+    sens = wireexpr(sensitivity.args[3])
 
     # alblock.edge = edge 
     # alblock.sensitive = sens 
@@ -910,11 +1016,11 @@ function ralwayswithSensitivity(expr)
 end
 
 """
-    ralways(expr::Expr, ::Val{:block})
+    ralways_expr(expr::Expr, ::Val{:block})
 
 Convert multiple ifelse-blocks and assigns to one always-block.
 """
-function ralways(expr::Expr, ::Val{:block})
+function ralways_expr(expr::Expr, ::Val{:block})
     if length(expr.args) > 0 && expr.args[1] isa Expr && expr.args[1].head == :macrocall
         return ralwayswithSensitivity(expr)
     end
@@ -980,39 +1086,39 @@ function ralways(expr::Ref{T}) where {T}
 end
 
 
-"""
-    ifcontent(x::Expr)
+# """
+#     ifcontent(x::Expr)
 
-Convert into `Ifcontent` what is convertible to `Alwayscontent`.
+# Convert into `Ifcontent` what is convertible to `Alwayscontent`.
 
-# Example
-```jldoctest
-x = @ifcontent (
-    a = b;
-    if b 
-        x = c
-    else
-        x = d 
-    end
-)
-vshow(x)
+# # Example
+# ```jldoctest
+# x = @ifcontent (
+#     a = b;
+#     if b 
+#         x = c
+#     else
+#         x = d 
+#     end
+# )
+# vshow(x)
 
-# output
+# # output
 
-a = b;
-if (b) begin
-    x = c;
-end else begin
-    x = d;
-end
-type: Ifcontent
-```
-"""
-function ifcontent(x::Expr)
-    al::Alwayscontent = ralways(x)
-    # Ifcontent(al.assigns, al.ifelseblocks)
-    al.content
-end
+# a = b;
+# if (b) begin
+#     x = c;
+# end else begin
+#     x = d;
+# end
+# type: Ifcontent
+# ```
+# """
+# function ifcontent(x::Expr)
+#     al::Alwayscontent = ralways(x)
+#     # Ifcontent(al.assigns, al.ifelseblocks)
+#     al.content
+# end
 
 """
     ifcontent(x::Ref{T}) where {T}
@@ -1518,4 +1624,42 @@ Macro version of `decls`.
 """
 macro decls(arg)
     return Expr(:call, :decls, Ref(arg))
+end
+
+"""
+    widliteral(arg)
+
+Convert verilog wire literals to `wireexpr`.
+
+Three bases are supported e.g. 3'b101, 10'd25, 8'hff
+"""
+function widliteral(arg)
+    arg.head == :call || error("unknown input head $(arg.head)")
+    wid::Int = arg.args[2].args[1]
+    body = string(arg.args[3])
+
+    enc, val = body[1], body[2:end]
+
+    numval = parse(Int, val, base=(
+        if enc == 'h'
+            16 
+        elseif enc == 'd'
+            10 
+        else 
+            enc == 'b' || error("unknown encoding \"$(enc)\".")
+            2
+        end
+    ))
+
+
+    Wireexpr(wid, numval)
+end
+
+"""
+    @widliteral(arg)
+
+Macro for `widliteral`.
+"""
+macro widliteral(arg)
+    widliteral(arg)
 end
