@@ -536,7 +536,6 @@ function ifelseblock(expr)
 end
 
 function ifcontent(expr)
-    # only 3 types below may appear inside block
     assignlist = Alassign[]
     ifblocklist = Ifelseblock[]
     # wirelist = Wireexpr[]
@@ -1423,7 +1422,8 @@ type: Onedecl
 ```
 """
 function decloneline(expr::Expr)
-    @assert expr.head == :macrocall
+    # @assert expr.head == :macrocall
+    expr.head == :macrocall || error("unknown head $(expr.head).")
     args = expr.args
     # targs = args[(x -> !(x isa LineNumberNode)).(args)]
     targs = removelinenumbernode(args)
@@ -1431,8 +1431,10 @@ function decloneline(expr::Expr)
     wt = wtypesym(targs[1])
 
     if length(targs) == 2
+        # implicit wire width 1
         decloneline_inner(wt, Wireexpr(1), targs[2])
     elseif length(targs) == 4 
+        # 2d reg declaration
         targs[3] isa Symbol || error("only a symbol is allowed for 2d array declaration, given $(targs[3]).")
         [Onedecl(wt, wireexpr(targs[2]), targs[3], true, wireexpr(targs[4]))]
     else 
@@ -1474,7 +1476,15 @@ Declaration of multiple wires (e.g. `logic x, y, z`).
 """
 function decloneline_inner(wt, wid::Wireexpr, vars::Expr)
     vars.head == :tuple || error("vars.head should be tuple, got $(vars.head).")
-    [Onedecl(wt, wid, string(v)) for v in vars.args]
+    # [Onedecl(wt, wid, string(v)) for v in vars.args]
+    ans = Vector{Onedecl}(undef, length(vars.args))
+    for (i, v) in enumerate(vars.args)
+        s = string(v)
+        !(' ' in s) || error("space included in name $(s)")
+        ans[i] = Onedecl(wt, wid, s)
+    end
+
+    ans
 end
 
 """

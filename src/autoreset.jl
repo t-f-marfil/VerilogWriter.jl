@@ -83,19 +83,38 @@ const defrst = Wireexpr("RST")
 
 # Detection of Lhs depends on [`lhsextract`](@ref) and [`lhsunify`](@ref).
 """
-    autoreset(x::Ifcontent; clk=defclk, rst=defrst, edge=posedge)
+    autoreset(x::Ifcontent; clk=defclk, rst=defrst, edge=posedge, reg2d::Dict{String, Wireexpr}=Dict{String, Wireexpr}())
 
 Given `x::Ifcontent`, returns `always_ff/always` block that 
 resets every `wire/reg`s appear at Lhs of `x`.
+
+`reg2d` is a pair of "name of wire" and "ram depth in wireexpr".
 """
-function autoreset(x::Ifcontent; clk=defclk, rst=defrst, edge=posedge)
+function autoreset(x::Ifcontent; clk=defclk, rst=defrst, edge=posedge, reg2d::Dict{String, Wireexpr}=Dict{String, Wireexpr}())
     if isreset(x)
         ans = Alwayscontent(ff, edge, clk, x)
     else
         ext = lhsextract(x)
         uniext = lhsunify(ext)
 
-        rstcont = Ifcontent([Alassign(i, Wireexpr(0), ff) for i in uniext])
+        prerstcont = Alassign[]
+        # reg2d is a pair of "name of wire" and "ram depth in wireexpr"
+        for i in uniext 
+            if i.name in keys(reg2d)
+                regdepth = reg2d[i.name]
+                regdepth.operation == literal || error("$(string(regdepth)) is currently not acceptable as reg depth.")
+
+                depthnum = regdepth.value
+                push!(prerstcont, reduce(
+                    vcat,
+                    [alassign_ff(:($(Symbol(i.name))[$(ind-1)] <= 0)) for ind in 1:depthnum]
+                )...)
+            else
+                push!(prerstcont, Alassign(i, Wireexpr(0), ff))
+            end
+        end
+        rstcont = Ifcontent(prerstcont)
+        # rstcont = Ifcontent([Alassign(i, Wireexpr(0), ff) for i in uniext])
 
         ifb = Ifelseblock([rst], [rstcont, x])
         ans = Alwayscontent(ff, edge, clk, Ifcontent(ifb))
@@ -106,8 +125,9 @@ function autoreset(x::Ifcontent; clk=defclk, rst=defrst, edge=posedge)
     ans 
 end
 
+
 """
-    autoreset(x::Alwayscontent; clk=defclk, rst=defrst, edge=posedge)
+    autoreset(x::Alwayscontent; clk=defclk, rst=defrst, edge=posedge, reg2d::Dict{String, Wireexpr}=Dict{String, Wireexpr}())
 
 Automatically reset wires which appear in `x::Alwayscontent`.
 
@@ -148,20 +168,20 @@ end
 type: Alwayscontent
 ```
 """
-function autoreset(x::Alwayscontent; clk=defclk, rst=defrst, edge=posedge)
+function autoreset(x::Alwayscontent; clk=defclk, rst=defrst, edge=posedge, reg2d::Dict{String, Wireexpr}=Dict{String, Wireexpr}())
     if x.atype == comb 
-        x 
+        x
     else
-        autoreset(x.content, clk=clk, rst=rst, edge=edge)
+        autoreset(x.content, clk=clk, rst=rst, edge=edge, reg2d=reg2d)
     end
 end
 
 """
-    autoreset(x::Vmodule; clk=defclk, rst=defrst)
+    autoreset(x::Vmodule; clk=defclk, rst=defrst, reg2d::Dict{String, Wireexpr}=Dict{String, Wireexpr}())
 
 Return a new `Vmodule` object whose `Alwayscontent`s are all reset.
 """
-function autoreset(x::Vmodule; clk=defclk, rst=defrst)
+function autoreset(x::Vmodule; clk=defclk, rst=defrst, reg2d::Dict{String, Wireexpr}=Dict{String, Wireexpr}())
     Vmodule(
         x.name, 
 
@@ -172,17 +192,17 @@ function autoreset(x::Vmodule; clk=defclk, rst=defrst)
 
         x.insts,
         x.assigns,
-        autoreset.(x.always, clk=clk, rst=rst)
+        autoreset.(x.always, clk=clk, rst=rst, reg2d=reg2d)
     )
 end
 
 """
-    autoreset!(x::Alwayscontent; clk=defclk, rst=defrst)
+    autoreset!(x::Alwayscontent; clk=defclk, rst=defrst, reg2d::Dict{String, Wireexpr}=Dict{String, Wireexpr}())
 
 Update `x` itself with synchronous reset statements.
 """
-function autoreset!(x::Alwayscontent; clk=defclk, rst=defrst)
-    r = autoreset(x, clk=clk, rst=rst)
+function autoreset!(x::Alwayscontent; clk=defclk, rst=defrst, reg2d::Dict{String, Wireexpr}=Dict{String, Wireexpr}())
+    r = autoreset(x, clk=clk, rst=rst, reg2d=reg2d)
 
     x.atype = r.atype
     x.sens = r.sens 
@@ -190,8 +210,8 @@ function autoreset!(x::Alwayscontent; clk=defclk, rst=defrst)
     return nothing 
 end
 
-function autoreset!(x::Vmodule; clk=defclk, rst=defrst)
-    autoreset!.(x.always, clk=clk, rst=rst)
+function autoreset!(x::Vmodule; clk=defclk, rst=defrst, reg2d::Dict{String, Wireexpr}=Dict{String, Wireexpr}())
+    autoreset!.(x.always, clk=clk, rst=rst, reg2d=reg2d)
     return nothing
 end
 

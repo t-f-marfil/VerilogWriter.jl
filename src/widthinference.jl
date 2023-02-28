@@ -171,10 +171,11 @@ end
 Extract 2d regs as dict object from `x`.
 """
 function extract2dreg(x::Vector{Onedecl})
-    ans = Dict{String, Wireexpr}()
+    ans = Dict{String, Onedecl}()
     for d in x
         if d.is2d 
-            ans[d.name] = d.width
+            # ans[d.name] = d.width
+            ans[d.name] = d
         end
     end
 
@@ -188,6 +189,10 @@ Extract 2d regs as dict object from `x`.
 """
 function extract2dreg(x::Decls)
     extract2dreg(x.val)
+end
+
+function extract2dreg(x::Vmodule)
+    extract2dreg(x.decls)
 end
 
 
@@ -241,7 +246,7 @@ function wirepush_widunify!(t::Tuple{Wireexpr, Wireexpr}, envdicts, ansset, widv
 end
 
 """
-    eqwidflatten!(x::Wireexpr, envdicts, ansset, eqwids::Vector{Wirewid}, declonly, equality)
+    eqwidflatten!(x::Wireexpr, envdicts, reg2d, ansset, eqwids::Vector{Wirewid}, declonly, equality)
 
 Extract wires that appear inside `x` which are of the same width as `x` itself, 
 find `Wirewid` objects which correspond to the wire and push them into `eqwids`.
@@ -359,7 +364,7 @@ function unifycore_errorstr(w::Wireexpr)
 end
 
 """
-    unifycore_widunify!(items::Vector{T}, envdicts, ansset, widvars, declonly, equality) where {T <: Union{Wireexpr, Tuple{Wireexpr, Wireexpr}}}
+    unifycore_widunify!(items::Vector{T}, envdicts, reg2d, ansset, widvars, declonly, equality) where {T <: Union{Wireexpr, Tuple{Wireexpr, Wireexpr}}}
 
 Called in [`widunify`](@ref), infer wire width from `equality` constraints.
 
@@ -508,7 +513,8 @@ function widunify(declonly::Vector{Wireexpr},
     ansset, widvars, envdicts = envdictsgen_widunify(env)
 
     # set of 2d regs
-    reg2d = extract2dreg(env.dcls)
+    prereg2d = extract2dreg(env.dcls)
+    reg2d = Dict([k=>i.width for (k, i) in prereg2d])
 
     # helper functions
     while length(declonly) > 0 || length(equality) > 0

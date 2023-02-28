@@ -75,3 +75,38 @@ always_ff @( posedge CLK ) begin
     end
 end"""
 
+
+# autoreset with 2d reg
+a = @always(
+    a <= a + 1
+) 
+d = @decls(
+    @reg 32 a 10
+)
+
+m = Vmodule("t")
+vpush!(m, a)
+vpush!(m, d)
+
+m = autoreset(m, reg2d=Dict(["a"=>@wireexpr 10]))
+@test string(m) == """
+module t ();
+    reg [31:0] a [9:0];
+
+    always_ff @( posedge CLK ) begin
+        if (RST) begin
+            a[0] <= 0;
+            a[1] <= 0;
+            a[2] <= 0;
+            a[3] <= 0;
+            a[4] <= 0;
+            a[5] <= 0;
+            a[6] <= 0;
+            a[7] <= 0;
+            a[8] <= 0;
+            a[9] <= 0;
+        end else begin
+            a <= (a + 1);
+        end
+    end
+endmodule"""

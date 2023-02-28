@@ -8,3 +8,8 @@
 /docs/build
 
 notes.md
+
+*.png
+*.txt
+*.sv
+*.v
