@@ -88,10 +88,11 @@ const defrst = Wireexpr("RST")
 Given `x::Ifcontent`, returns `always_ff/always` block that 
 resets every `wire/reg`s appear at Lhs of `x`.
 
+This is synchronous reset.
 `reg2d` is a pair of "name of wire" and "ram depth in wireexpr".
 """
 function autoreset(x::Ifcontent; clk=defclk, rst=defrst, edge=posedge, reg2d::Dict{String, Wireexpr}=Dict{String, Wireexpr}())
-    if isreset(x)
+    if isreset(x, rst=rst)
         ans = Alwayscontent(ff, edge, clk, x)
     else
         ext = lhsextract(x)

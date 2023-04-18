@@ -29,6 +29,25 @@ always_ff @( posedge CLK ) begin
     end
 end"""
 
+v = @always (
+    if ~rst
+        a <= 9
+    else 
+        a <= 10
+    end
+)
+
+# detect reset with user-defined resetting signal
+v = autoreset(v, rst = @wireexpr ~rst)
+@test string(v) == """
+always_ff @( posedge CLK ) begin
+    if (~rst) begin
+        a <= 9;
+    end else begin
+        a <= 10;
+    end
+end"""
+
 
 fsm = FSM("myfsm", "uno", "dos", "tres")
 transadd!(fsm, (@wireexpr b), "dos" => "tres")

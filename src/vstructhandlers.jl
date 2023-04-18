@@ -305,16 +305,19 @@ function nameextract(p::T) where {T <: Union{Ports, Parameters}}
     [i.name for i in p.val]
 end 
 
+function wirenamemodgen(v::Vmodule)
+    x -> string(x, "_", v.name)
+end
+
 """
-    vinstnamemod(v::Vmodule, strmod; instname=string(v.name, "_inst"))
+    vinstnamemod(v::Vmodule; strmod = wirenamemodgen(v), instname=string(v.name, "_inst"))
 
 Given `v`, return `Vmodinst` object whose name is `instname` 
 
 The ports and paramters are all connected to wires/parameters
 whose name is `strmod(<original_name>)`.
-
 """
-function vinstnamemod(v::Vmodule, strmod; instname=string(v.name, "_inst"))
+function vinstnamemod(v::Vmodule; strmod = wirenamemodgen(v), instname=string(v.name, "_inst"))
     prms = [i => Wireexpr(strmod(i)) for i in nameextract(v.params)]
     prts = [i => Wireexpr(strmod(i)) for i in nameextract(v.ports)]
     Vmodinst(
@@ -331,8 +334,8 @@ end
 
 Generate wrapper module named `n` for `x`.
 
-It may sometimes be needed for in a certain CAD software
-a block design does not accept system verilog, 
+It may sometimes be needed in a certain CAD software
+in which a block design does not accept system verilog, 
 thus verilog wrapper is required.
 """
 function wrappergen(n, x::Vmodule)
