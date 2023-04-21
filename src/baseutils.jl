@@ -57,3 +57,32 @@ Hash for `Wireexpr` to make it acceptable as keys for `Dict`.
 function Base.hash(x::Wireexpr, h::UInt)
     hash(Tuple(map(i -> getfield(x, i), fieldnames(Wireexpr))), h)
 end
+
+
+function Base.iterate(iter::Ports)
+    iterate(iter.val)
+end
+function Base.iterate(iter::Ports, state)
+    iterate(iter.val, state)
+end
+function Base.length(iter::Ports)
+    length(iter.val)
+end
+
+function Base.iterate(iter::Decls)
+    iterate(iter.val)
+end
+function Base.iterate(iter::Decls, state)
+    iterate(iter.val, state)
+end
+function Base.length(iter::Decls)
+    length(iter.val)
+end
+
+function Base.iterate(x::Vmodule)
+    (x, nothing)
+end
+
+function Base.iterate(x::Vmodule, ::Nothing)
+    nothing
+end
