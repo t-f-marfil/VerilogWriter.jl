@@ -49,14 +49,38 @@ function Base.isequal(uno::Wireexpr, dos::Wireexpr)
     hash(uno) == hash(dos)
 end
 
-"""
-    Base.hash(x::Wireexpr, h::UInt)
+macro basehashgen(tt...)
+    qs = [
+        esc(
+            quote
+                function Base.hash(x::$(t), h::UInt)
+                    hash(Tuple(map(i -> getfield(x, i), fieldnames($(t)))), h)
+                end
+            end
+        ) for t in tt
+    ]
 
-Hash for `Wireexpr` to make it acceptable as keys for `Dict`.
-"""
-function Base.hash(x::Wireexpr, h::UInt)
-    hash(Tuple(map(i -> getfield(x, i), fieldnames(Wireexpr))), h)
+    Expr(:block, qs...)
 end
+
+@basehashgen(
+    Wireexpr,
+    Oneport,
+    Ports
+)
+
+# """
+#     Base.hash(x::Wireexpr, h::UInt)
+
+# Hash for `Wireexpr` to make it acceptable as keys for `Dict`.
+# """
+# function Base.hash(x::Wireexpr, h::UInt)
+#     hash(Tuple(map(i -> getfield(x, i), fieldnames(Wireexpr))), h)
+# end
+
+# function Base.hash(x::Oneport, h::UInt)
+#     hash(Tuple(map(i -> getfield(x, i), fieldnames(Oneport))), h)
+# end
 
 
 function Base.iterate(iter::Ports)
@@ -76,6 +100,16 @@ function Base.iterate(iter::Decls, state)
     iterate(iter.val, state)
 end
 function Base.length(iter::Decls)
+    length(iter.val)
+end
+
+function Base.iterate(iter::Parameters)
+    iterate(iter.val)
+end
+function Base.iterate(iter::Parameters, state)
+    iterate(iter.val, state)
+end
+function Base.length(iter::Parameters)
     length(iter.val)
 end
 

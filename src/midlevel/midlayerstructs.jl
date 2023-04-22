@@ -10,7 +10,7 @@ end
 "struct to contain connection info."
 struct Layerconn
     # port names as wireexpr
-    wires::Set{Pair{Wireexpr, Wireexpr}}
+    ports::Set{Pair{Oneport, Oneport}}
 end
 
 "struct to store and connect Layerconn objects."

@@ -1,8 +1,7 @@
-function getname(x::Wireexpr)
+function getname(x::T) where {T <: Union{Wireexpr, Oneport, Vmodule}}
     x.name 
 end
 
-
 function getname(x::Midlayer)
-    x.vmod.name 
+    getname(x.vmod)
 end

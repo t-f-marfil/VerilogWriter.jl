@@ -7,7 +7,7 @@ const defaultlports = [
 Midlayer(t::Midlayertype, v::Vmodule) = Midlayer(t, defaultlports, v)
 Midlayer(t::Midlayertype, s) = Midlayer(t, Vmodule(s))
 
-Layerconn() = Layerconn(Set{Pair{Wireexpr, Wireexpr}}())
+Layerconn() = Layerconn(Set{Pair{Oneport, Oneport}}())
 
 
 Layergraph() = Layergraph(Dict{Pair{Midlayer, Midlayer}, Layerconn}(), Set{Midlayer}())
@@ -146,8 +146,8 @@ function connectall(x::Layergraph)
     for ((pre::Midlayer, post::Midlayer), conninfo) in x.edges
         vpre, vpost = pre.vmod, post.vmod
         
-        vpush!(vpre, lowerportsgen(vpost.name))
-        vpush!(vpost, upperportsgen(vpre.name))
+        vpush!(vpre, lowerportsgen(getname(vpost)))
+        vpush!(vpost, upperportsgen(getname(vpre)))
         # how do you connect valid/update interface?
     end
 
@@ -181,7 +181,7 @@ function layer2vmod(x::Layergraph; name = "Layers")
         
         # what is needed below: 
         #  function: <connection_name>, <modulename> -> <wirename_in_mother_module>
-        for (wpre, wpost) in conn.wires
+        for (wpre, wpost) in conn.ports
             al = always(:(
                 $(
                     name_wireconnectedattop(getname(wpost), dos.vmod)
@@ -194,6 +194,7 @@ function layer2vmod(x::Layergraph; name = "Layers")
         end
 
         # update pconnected
+        # pconnected[uno][]
     end
 
     ans = [v, [lay.vmod for lay in x.layers]...]
@@ -206,12 +207,12 @@ end
 
 
 macro layerconn(arg)
-    v = Vector{Pair{Wireexpr, Wireexpr}}()
+    v = Vector{Pair{Oneport, Oneport}}()
     if arg.head == :call 
-        v = [((_, x, y) = arg.args; wireexpr(x) => wireexpr(y))]
+        v = [((_, x, y) = arg.args; Oneport(pout, string(x)) => Oneport(pin, string(y)))]
     else
         arg.head == :tuple || error("unknown arg $(dump(arg)).")
-        v = [((_, x, y) = expr.args; wireexpr(x) => wireexpr(y)) for expr in arg.args]
+        v = [((_, x, y) = expr.args; Oneport(pout, string(x)) => Oneport(pin, string(y))) for expr in arg.args]
     end
     Layerconn(Set(v))
 end
