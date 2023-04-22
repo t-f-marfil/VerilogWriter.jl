@@ -87,6 +87,7 @@ include("testonlyexport.jl")
 
 include("codegenfunc.jl")
 include("vstructs.jl")
+include("midlevel/midlayerstructs.jl")
 
 for myenum in [Portdirec, Wiretype, Wireop, Atype, Edge]
     for i in instances(myenum)
@@ -111,6 +112,10 @@ include("widthinference.jl")
 
 include("vstring.jl")
 include("vpush.jl")
+
+include("accessor.jl")
+
+include("midlevel/main.jl")
 
 
 end
