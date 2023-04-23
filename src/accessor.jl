@@ -5,3 +5,18 @@ end
 function getname(x::Midlayer)
     getname(x.vmod)
 end
+
+
+macro vrenamehelp(x, nn)
+    fields = fieldnames(Oneport)
+    :name in fields || error("field 'name' no longer exists")
+    quote 
+        Oneport(
+            $([fn == :name ? :($(esc(nn))) : :($(esc(x)).$(fn)) for fn in fields]...)
+        )
+    end
+end
+
+function vrename(x::Oneport, nn::String)
+    @vrenamehelp(x, nn)
+end

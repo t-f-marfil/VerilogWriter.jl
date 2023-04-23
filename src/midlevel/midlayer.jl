@@ -1,17 +1,3 @@
-
-const defaultlports = [
-    (@ports (
-        @in CLK, RST
-    ))...
-]
-Midlayer(t::Midlayertype, v::Vmodule) = Midlayer(t, defaultlports, v)
-Midlayer(t::Midlayertype, s) = Midlayer(t, Vmodule(s))
-
-Layerconn() = Layerconn(Set{Pair{Oneport, Oneport}}())
-
-
-Layergraph() = Layergraph(Dict{Pair{Midlayer, Midlayer}, Layerconn}(), Set{Midlayer}())
-
 """
     function (cls::Layergraph)(p::Pair{Midlayer, Midlayer}, conn::Layerconn)
 
@@ -157,6 +143,16 @@ function name_wireconnectedattop(connname::String, v::Vmodule)
     Wireexpr(wirenamemodgen(v)(connname))
 end
 
+"""
+
+Given the name if a port and the vmodule object the port belongs to,
+return the name of a wire which is connected to the port at the top module.
+"""
+function outerportnamegen(portname::String, vmod::Vmodule)
+    wirenamemodgen(vmod)(portname)
+end
+
+
 function layer2vmod(x::Layergraph; name = "Layers")
     v = Vmodule(name)
 
@@ -181,21 +177,43 @@ function layer2vmod(x::Layergraph; name = "Layers")
         
         # what is needed below: 
         #  function: <connection_name>, <modulename> -> <wirename_in_mother_module>
-        for (wpre, wpost) in conn.ports
+        for (ppre, ppost) in conn.ports
             al = always(:(
                 $(
-                    name_wireconnectedattop(getname(wpost), dos.vmod)
+                    name_wireconnectedattop(getname(ppost), dos.vmod)
                 ) = $(
-                    name_wireconnectedattop(getname(wpre), uno.vmod)
+                    name_wireconnectedattop(getname(ppre), uno.vmod)
                 )
             ))
 
             vpush!(v, al)
+
+            # update pconnected
+            ppre in keys(pconnected[uno]) || error("$(string(ppre)) not in module $(getname(uno))")
+            pconnected[uno][ppre] = true
+            ppost in keys(pconnected[dos]) || error("$(string(ppost)) not in module $(getname(dos))")
+            pconnected[dos][ppost] = true
+
         end
 
-        # update pconnected
-        # pconnected[uno][]
     end
+
+    unconnectedvec = [midl => filter(k -> !d[k], keys(d)) for (midl, d) in pconnected]
+
+    npvec = Vector{Oneport}(undef, sum([length(s) for (_, s) in unconnectedvec]))
+    ci = 1
+    for (midl, d) in unconnectedvec
+        for p in d 
+            nname = outerportnamegen(getname(p), midl.vmod)
+            newport = vrename(p, nname)
+
+            npvec[ci] = newport
+            ci += 1
+        end
+    end
+
+    vpush!(v, npvec...)
+    # invports
 
     ans = [v, [lay.vmod for lay in x.layers]...]
     # vfinalize.(ans)

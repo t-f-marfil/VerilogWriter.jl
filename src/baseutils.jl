@@ -49,12 +49,16 @@ function Base.isequal(uno::Wireexpr, dos::Wireexpr)
     hash(uno) == hash(dos)
 end
 
+function Base.:(==)(uno::Oneport, dos::Oneport)
+    hash(uno) == hash(dos)
+end
+
 macro basehashgen(tt...)
     qs = [
         esc(
             quote
                 function Base.hash(x::$(t), h::UInt)
-                    hash(Tuple(map(i -> getfield(x, i), fieldnames($(t)))), h)
+                    hash(Tuple(map(i -> getproperty(x, i), fieldnames($(t)))), h)
                 end
             end
         ) for t in tt
