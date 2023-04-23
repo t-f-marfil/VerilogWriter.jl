@@ -348,6 +348,10 @@ function wrappergen(n, x::Vmodule)
     
 end
 
+function wrappergen(x::Vmodule)
+    wrappergen(string(getname(x), "_wrapper"), x)
+end
+
 """
     @preport(pre::Symbol, pnames)
 

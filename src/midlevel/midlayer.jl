@@ -120,14 +120,12 @@ function upperportsgen(uppername::String)
 end
 
 function connectall(x::Layergraph)
+    # should insert clk,rst before width inference
     for ml in x.layers 
         for p in ml.lports
             vpush!(ml.vmod, p)
         end
     end
-
-    # counts = [Dict([lay=>0 for lay in x.layers]) for _ in 1:2]
-    # tolower, toupper = counts
 
     for ((pre::Midlayer, post::Midlayer), conninfo) in x.edges
         vpre, vpost = pre.vmod, post.vmod
@@ -153,16 +151,13 @@ function outerportnamegen(portname::String, vmod::Vmodule)
 end
 
 
-function layer2vmod(x::Layergraph; name = "Layers")
-    v = Vmodule(name)
+"""
+    unconnectedports_mlay(x::Layergraph)
 
-    connectall(x)
-
-    # execute below after connecting modules
-    # instantiate every layer
-    for lay in x.layers 
-        vpush!(v, vinstnamemod(lay.vmod))
-    end
+Using data in `x::Layergraph` detect unconnected ports
+in submodules.
+"""
+function unconnectedports_mlay(x::Layergraph)
 
     # try detecting unconnected ports 
     pconnected = Dict{Midlayer, Dict{Oneport, Bool}}([
@@ -170,11 +165,26 @@ function layer2vmod(x::Layergraph; name = "Layers")
         for lay in x.layers
     ])
 
-    # generate always_comb that connects ports 
-    # connected with each other as described in Layerconn
     for ((uno::Midlayer, dos::Midlayer), conn) in x.edges 
-        # nmoduno, nmoddos = [w -> Wireexpr(wirenamemodgen(lay.vmod)(w)) for lay in (uno, dos)]
-        
+        for (ppre, ppost) in conn.ports
+            # update pconnected
+            ppre in keys(pconnected[uno]) || error("$(string(ppre)) not in module $(getname(uno))")
+            pconnected[uno][ppre] = true
+            ppost in keys(pconnected[dos]) || error("$(string(ppost)) not in module $(getname(dos))")
+            pconnected[dos][ppost] = true
+
+        end
+    end
+
+    [midl => filter(k -> !d[k], keys(d)) for (midl, d) in pconnected]
+end
+
+function layer2vmod(x::Layergraph; name = "Layers")
+    v = Vmodule(name)
+
+    # # generate always_comb that connects ports 
+    # # as described in Layerconn
+    for ((uno::Midlayer, dos::Midlayer), conn) in x.edges 
         # what is needed below: 
         #  function: <connection_name>, <modulename> -> <wirename_in_mother_module>
         for (ppre, ppost) in conn.ports
@@ -188,17 +198,12 @@ function layer2vmod(x::Layergraph; name = "Layers")
 
             vpush!(v, al)
 
-            # update pconnected
-            ppre in keys(pconnected[uno]) || error("$(string(ppre)) not in module $(getname(uno))")
-            pconnected[uno][ppre] = true
-            ppost in keys(pconnected[dos]) || error("$(string(ppost)) not in module $(getname(dos))")
-            pconnected[dos][ppost] = true
-
         end
 
     end
 
-    unconnectedvec = [midl => filter(k -> !d[k], keys(d)) for (midl, d) in pconnected]
+    # unconnectedvec = [midl => filter(k -> !d[k], keys(d)) for (midl, d) in pconnected]
+    unconnectedvec = unconnectedports_mlay(x)
 
     npvec = Vector{Oneport}(undef, sum([length(s) for (_, s) in unconnectedvec]))
     ci = 1
@@ -212,8 +217,39 @@ function layer2vmod(x::Layergraph; name = "Layers")
         end
     end
 
-    vpush!(v, npvec...)
-    # invports
+    vpush!(v, alloutwire(Ports(npvec)))
+
+    commonports = (x -> Oneport(pin, getname(x))).(
+        [defclk, defrst]
+    )
+    vpush!(v, commonports...)
+
+    for lay in x.layers 
+        qvec = Vector{Expr}(undef, length(commonports))
+        for (ind, prt::Oneport) in enumerate(commonports)
+            f = wirenamemodgen(lay.vmod)
+            q = :(
+                $(
+                    Symbol(f(getname(prt)))
+                ) = $(
+                    Symbol(getname(prt))
+                )
+            )
+
+            qvec[ind] = q
+            # vpush!(v, al)
+        end
+
+        vpush!(v, always(Expr(:block, qvec...)))
+    end
+
+    connectall(x)
+
+    # execute below after connecting modules
+    # instantiate every layer
+    for lay in x.layers 
+        vpush!(v, vinstnamemod(lay.vmod))
+    end
 
     ans = [v, [lay.vmod for lay in x.layers]...]
     # vfinalize.(ans)
