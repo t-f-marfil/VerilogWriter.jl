@@ -113,7 +113,7 @@ module test #(
 
     reg dumreg;
     wire [(A + (B << C))-1:0] dumwire;
-    reg duminfer;
+    logic duminfer;
 
     always_ff @( posedge CLK ) begin
         if (RST) begin

@@ -250,8 +250,8 @@ ERROR: Wire width cannot be inferred for the following wires.
 julia> nenv = autodecl(c, env); vshow(nenv); # using information in `env`
 wire dwire1;
 wire [9:0] dwire2;
-reg reg1;
-reg [9:0] reg2;
+logic reg1;
+logic [9:0] reg2;
 type: Vmodenv
 ```
 

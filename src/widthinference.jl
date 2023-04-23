@@ -635,7 +635,7 @@ function autodecl_core(x, env::Vmodenv)
     # extract from ansset ports/declarations specified in `env`
     newenv = portdeclupdated!(env, ansset)
 
-    newdecls = [Onedecl(reg, ww.val, n) for (n, ww) in ansset]
+    newdecls = [Onedecl(logic, ww.val, n) for (n, ww) in ansset]
     sort!(newdecls, by=(d -> d.name))
     Decls(newdecls), newenv
 end
@@ -700,8 +700,8 @@ vshow(venv)
 input [15:0] din
 input b1
 
-reg [3:0] reg1;
-reg [15:0] reg2;
+logic [3:0] reg1;
+logic [15:0] reg2;
 type: Vmodenv
 ```
 
@@ -740,11 +740,11 @@ output reg [A-1:0] z
 
 wire [B-1:0] w1;
 wire [B-1:0] w2;
-reg [A-1:0] r1;
-reg [A-1:0] r2;
-reg [A-1:0] r3;
-reg [B-1:0] r4;
-reg [B-1:0] r5;
+logic [A-1:0] r1;
+logic [A-1:0] r2;
+logic [A-1:0] r3;
+logic [B-1:0] r4;
+logic [B-1:0] r5;
 type: Vmodenv
 ```
 

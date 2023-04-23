@@ -8,8 +8,8 @@ c = ifcontent(:(
 d, _ = autodecl_core(c)
 
 @test string(d) == """
-reg [31:0] reg1;
-reg [9:0] reg2;"""
+logic [31:0] reg1;
+logic [9:0] reg2;"""
 
 # Bitwise and reduction unary operator
 c = ifcontent(:(
@@ -20,8 +20,8 @@ c = ifcontent(:(
 d, _ = autodecl_core(c)
 
 @test string(d) == """
-reg reg1;
-reg [9:0] reg2;"""
+logic reg1;
+logic [9:0] reg2;"""
 
 # parameter width
 env = Vmodenv(
@@ -42,8 +42,8 @@ d, _ = autodecl_core(
     env
 )
 @test string(d) == """
-reg [(A + B)-1:0] reg3;
-reg [(A + B)-1:0] reg4;"""
+logic [(A + B)-1:0] reg3;
+logic [(A + B)-1:0] reg4;"""
 
 # recursive check for '==' and reductions
 c = always(:(
@@ -53,9 +53,9 @@ c = always(:(
 ))
 d, nenv = autodecl_core(c)
 @test string(d) == """
-reg a;
-reg b;
-reg c;"""
+logic a;
+logic b;
+logic c;"""
 
 # error message 
 c = always(:(
@@ -83,7 +83,7 @@ c = @always (
 dc, _ = autodecl_core(c, Vmodenv(d))
 
 @test string(dc) == """
-reg [9:0] c;"""
+logic [9:0] c;"""
 
 # 2d reg error message
 d = @decls (
