@@ -106,17 +106,45 @@ macro Randlayer(arg)
     layermacro(arg, "Rand")
 end
 
+@enum Interlaysigtype ilvalid ilupdate
+
+const prep4ilst_lower = Dict([
+    ilvalid => "to"
+    ilupdate => "from"
+])
+const prep4ilst_upper = Dict([
+    (k => (v == "to" ? "from" : "to")) for (k, v) in prep4ilst_lower
+])
+
+function nametolower(lowername::String, st::Interlaysigtype)
+    "$(string(st)[3:end])_$(prep4ilst_lower[st])_lower_$(lowername)"
+end
+function nametoupper(uppername::String, st::Interlaysigtype)
+    "$(string(st)[3:end])_$(prep4ilst_upper[st])_upper_$(uppername)"
+end
 function lowerportsgen(lowername::String)
     ports(:(
-        @out $(Symbol("valid_to_lower_$(lowername)"));
-        @in $(Symbol("update_from_lower_$(lowername)"))
+        @out @logic $(Symbol(nametolower(lowername, ilvalid)));
+        @in $(Symbol(nametolower(lowername, ilupdate)))
     ))
 end
 function upperportsgen(uppername::String)
     ports(:(
         @in $(Symbol("valid_from_upper_$(uppername)"));
-        @out $(Symbol("update_to_upper_$(uppername)"))
+        @out @logic $(Symbol("update_to_upper_$(uppername)"))
     ))
+end
+function nametolower(lowerobj, st::Interlaysigtype)
+    nametolower(getname(lowerobj), st)
+end
+function nametoupper(upperobj, st::Interlaysigtype)
+    nametoupper(getname(upperobj), st)
+end
+function lowerportsgen(lowerobj)
+    lowerportsgen(getname(lowerobj))
+end
+function upperportsgen(upperobj)
+    upperportsgen(getname(upperobj))
 end
 
 function connectall(x::Layergraph)
@@ -179,31 +207,73 @@ function unconnectedports_mlay(x::Layergraph)
     [midl => filter(k -> !d[k], keys(d)) for (midl, d) in pconnected]
 end
 
+
 function layer2vmod(x::Layergraph; name = "Layers")
     v = Vmodule(name)
 
     # # generate always_comb that connects ports 
     # # as described in Layerconn
+    qvec = Expr[]
+    rvec = Expr[]
     for ((uno::Midlayer, dos::Midlayer), conn) in x.edges 
         # what is needed below: 
         #  function: <connection_name>, <modulename> -> <wirename_in_mother_module>
         for (ppre, ppost) in conn.ports
-            al = always(:(
+            q = :(
                 $(
                     name_wireconnectedattop(getname(ppost), dos.vmod)
                 ) = $(
                     name_wireconnectedattop(getname(ppre), uno.vmod)
                 )
-            ))
-
-            vpush!(v, al)
-
+            )
+            push!(qvec, q)
         end
+
+        # for now connect valid & requests in a simple manner
+        # , thus of no use at all 
+        r1lhs = name_wireconnectedattop(
+            nametoupper(getname(uno), ilvalid),
+            dos.vmod
+        )
+        r1rhs = name_wireconnectedattop(
+            nametolower(getname(dos), ilvalid),
+            uno.vmod
+        )
+        r1 = :(
+            $(
+                r1lhs
+            ) = $(
+                r1rhs
+            )
+        )
+        r2lhs = name_wireconnectedattop(
+            nametolower(getname(dos), ilupdate),
+            uno.vmod
+        )
+        r2rhs = name_wireconnectedattop(
+            nametoupper(getname(uno), ilupdate),
+            dos.vmod
+        )
+        r2 = :(
+            $(
+                r2lhs
+            ) = $(
+                r2rhs
+            )
+        )
+        push!(rvec, r1, r2)
+        vpush!(v, decls(:(
+            @logic $(r1lhs), $(r1rhs), $(r2lhs), $(r2rhs)
+        )))
 
     end
 
-    # unconnectedvec = [midl => filter(k -> !d[k], keys(d)) for (midl, d) in pconnected]
-    unconnectedvec = unconnectedports_mlay(x)
+    vpush!(v, always(Expr(:block, qvec...)))
+    vpush!(v, always(Expr(:block, rvec...)))
+
+
+    # connect unconnected ports to outer ports
+    unconnectedvec::Vector{Pair{Midlayer, Set{Oneport}}} = unconnectedports_mlay(x)
 
     npvec = Vector{Oneport}(undef, sum([length(s) for (_, s) in unconnectedvec]))
     ci = 1
@@ -219,6 +289,8 @@ function layer2vmod(x::Layergraph; name = "Layers")
 
     vpush!(v, alloutwire(Ports(npvec)))
 
+
+    # CLK and RST
     commonports = (x -> Oneport(pin, getname(x))).(
         [defclk, defrst]
     )
@@ -243,7 +315,10 @@ function layer2vmod(x::Layergraph; name = "Layers")
         vpush!(v, always(Expr(:block, qvec...)))
     end
 
+
+    # reflect data in layerconn to Vmodule objects
     connectall(x)
+
 
     # execute below after connecting modules
     # instantiate every layer

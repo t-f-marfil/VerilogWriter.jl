@@ -757,7 +757,7 @@ function wireexpr(expr, ::Val{:ref})
         Wireexpr(slice, body, wireexpr(rngexpr))
     end
 end
-function wireexpr(expr::T) where {T <: Union{Symbol, Int}}
+function wireexpr(expr::T) where {T <: Union{Symbol, Int, String}}
     return Wireexpr(expr)
 end
 
