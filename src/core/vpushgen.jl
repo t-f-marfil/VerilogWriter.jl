@@ -20,7 +20,7 @@ end
 
 # get code from vpushraw.jl
 methstr = ""
-open("vpushraw.jl") do io 
+open(joinpath(@__DIR__, "vpushraw.jl")) do io 
     # scope problem
     global methstr = read(io, String)
 end
@@ -32,7 +32,7 @@ methvec = rstrip.(f.(methvec)[begin+1:end])
 ex = Meta.parse.(methvec)
 
 # add doc & method
-open("vpush.jl", "w") do io 
+open(joinpath(@__DIR__, "vpush.jl"), "w") do io 
     pre = "# Generated from \"vpushgen.jl\", do not edit manually,\n# edit \"vpushraw.jl\" instead.\n\n"
     write(io, pre)
 

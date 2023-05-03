@@ -6,7 +6,7 @@ noincludehere = abspath.([
 
 
 # @show readdir(abspath(@__DIR__), join=true)
-for p in readdir(abspath(@__DIR__), join=true)
+for p in readdir(@__DIR__, join=true)
     if !(p in noincludehere)
         include(p)
     end

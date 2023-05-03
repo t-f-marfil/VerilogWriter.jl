@@ -86,8 +86,7 @@ include("testonlyexport.jl")
 # priority for files declaring `struct`s
 
 include("codegenfunc.jl")
-include("vstructs.jl")
-include("midlevel/midlayerstructs.jl")
+include("includestructs.jl")
 
 for myenum in [Portdirec, Wiretype, Wireop, Atype, Edge]
     for i in instances(myenum)
@@ -95,27 +94,7 @@ for myenum in [Portdirec, Wiretype, Wireop, Atype, Edge]
     end
 end
 
-include("baseutils.jl")
-include("textutils.jl")
-include("vstructhandlers.jl")
-include("vconstructors.jl")
-include("rawparser.jl")
-include("alwaysinference.jl")
-include("paramsolve.jl")
-
-include("vopoverloads.jl")
-
-include("fsm.jl")
-
-include("autoreset.jl")
-include("widthinference.jl")
-
-include("vstring.jl")
-include("vpush.jl")
-
-include("accessor.jl")
-
-include("midlevel/main.jl")
+include("includecore.jl")
 
 
 end
