@@ -10,11 +10,11 @@ end
 "struct to contain connection info."
 struct Layerconn
     # port names as wireexpr
-    ports::Set{Pair{Oneport, Oneport}}
+    ports::OrderedSet{Pair{Oneport, Oneport}}
 end
 
 "struct to store and connect Layerconn objects."
 struct Layergraph
-    edges::Dict{Pair{Midlayer, Midlayer}, Layerconn}
-    layers::Set{Midlayer}
+    edges::OrderedDict{Pair{Midlayer, Midlayer}, Layerconn}
+    layers::OrderedSet{Midlayer}
 end

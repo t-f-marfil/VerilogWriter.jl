@@ -69,8 +69,21 @@ end
 
 @basehashgen(
     Wireexpr,
-    Oneport,
-    Ports
+    Ports,
+        Oneport,
+    Parameters,
+        Oneparam,
+    Localparams,
+        Onelocalparam,
+    Decls,
+        Onedecl,
+    Vmodinst,
+    Assign,
+    Alwayscontent,
+        Sensitivity,
+            Ifcontent,
+                Ifelseblock,
+                Case
 )
 
 # """

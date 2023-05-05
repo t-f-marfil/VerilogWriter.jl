@@ -1,1 +1,1 @@
-`julia make.jl` to update sources
+`julia core/make.jl` to update sources

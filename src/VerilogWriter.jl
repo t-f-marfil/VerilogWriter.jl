@@ -1,5 +1,7 @@
 module VerilogWriter
 
+include("includedeps.jl")
+
 export 
     # showfield, 
     vshow

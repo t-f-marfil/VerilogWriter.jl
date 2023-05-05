@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/t-f-marfil/VerilogWriter.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/t-f-marfil/VerilogWriter.jl/actions/workflows/CI.yml)
 
-A package to generate Verilog/SystemVerilog codes and offer an introductory HLS (high level synthesis) on Julia.
+A package to generate Verilog/SystemVerilog codes (primarily targeted on FPGAs) and offer an introductory HLS (high level synthesis) on Julia.
 
 You may:
 + Convert Verilog-like Julia code into objects

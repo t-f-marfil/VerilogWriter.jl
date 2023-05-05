@@ -13,6 +13,11 @@ function (cls::Layergraph)(p::Pair{Midlayer, Midlayer})
     cls(p, Layerconn())
 end
 
+@basehashgen(
+    Midlayer,
+    Layerconn
+)
+
 """
     function pushhelp_dotgen!(lay::Midlayer, randset::Set{Midlayer}, regset::Set{Midlayer}, fifoset::Set{Midlayer})
 
@@ -171,7 +176,7 @@ end
 
 """
 
-Given the name if a port and the vmodule object the port belongs to,
+Given the name of a port and the vmodule object the port belongs to,
 return the name of a wire which is connected to the port at the top module.
 """
 function outerportnamegen(portname::String, vmod::Vmodule)
@@ -182,14 +187,14 @@ end
 """
     unconnectedports_mlay(x::Layergraph)
 
-Using data in `x::Layergraph` detect unconnected ports
+Using data in `x::Layergraph`, detect unconnected ports
 in submodules.
 """
 function unconnectedports_mlay(x::Layergraph)
 
     # try detecting unconnected ports 
-    pconnected = Dict{Midlayer, Dict{Oneport, Bool}}([
-        lay => Dict([p => false for p in lay.vmod.ports]) 
+    pconnected = OrderedDict{Midlayer, Dict{Oneport, Bool}}([
+        lay => OrderedDict([p => false for p in lay.vmod.ports]) 
         for lay in x.layers
     ])
 
@@ -207,14 +212,16 @@ function unconnectedports_mlay(x::Layergraph)
     [midl => filter(k -> !d[k], keys(d)) for (midl, d) in pconnected]
 end
 
+"""
+    layerconnInstantiate_mlay!(v::Vmodule, x::Layergraph)
 
-function layer2vmod(x::Layergraph; name = "Layers")
-    v = Vmodule(name)
+Push data in Layerconn objects into Vmodule in a form of Verilog codes.
+"""
+function layerconnInstantiate_mlay!(v::Vmodule, x::Layergraph)
 
     # # generate always_comb that connects ports 
     # # as described in Layerconn
     qvec = Expr[]
-    rvec = Expr[]
     for ((uno::Midlayer, dos::Midlayer), conn) in x.edges 
         # what is needed below: 
         #  function: <connection_name>, <modulename> -> <wirename_in_mother_module>
@@ -229,51 +236,60 @@ function layer2vmod(x::Layergraph; name = "Layers")
             push!(qvec, q)
         end
 
-        # for now connect valid & requests in a simple manner
-        # , thus of no use at all 
-        r1lhs = name_wireconnectedattop(
-            nametoupper(getname(uno), ilvalid),
-            dos.vmod
-        )
-        r1rhs = name_wireconnectedattop(
-            nametolower(getname(dos), ilvalid),
-            uno.vmod
-        )
-        r1 = :(
-            $(
-                r1lhs
-            ) = $(
-                r1rhs
-            )
-        )
-        r2lhs = name_wireconnectedattop(
-            nametolower(getname(dos), ilupdate),
-            uno.vmod
-        )
-        r2rhs = name_wireconnectedattop(
-            nametoupper(getname(uno), ilupdate),
-            dos.vmod
-        )
-        r2 = :(
-            $(
-                r2lhs
-            ) = $(
-                r2rhs
-            )
-        )
-        push!(rvec, r1, r2)
-        vpush!(v, decls(:(
-            @logic $(r1lhs), $(r1rhs), $(r2lhs), $(r2rhs)
-        )))
-
     end
 
     vpush!(v, always(Expr(:block, qvec...)))
+    
+end
+
+"""
+    lconnect_mlay!(v::Vmodule, x::Layergraph)
+
+Connect valid/update wires, which are generated automatically
+when converting `Midlayer` objects into Verilog HDL, between `Midlayer` objects.
+"""
+function lconnect_mlay!(v::Vmodule, x::Layergraph)
+    rvec = Expr[]
+    dvec = Expr[]
+    for ((uno::Midlayer, dos::Midlayer), _) in x.edges 
+        for ilattr in instances(Interlaysigtype)
+            rlhs = name_wireconnectedattop(
+                nametoupper(getname(uno), ilattr),
+                dos.vmod
+            )
+            rrhs = name_wireconnectedattop(
+                nametolower(getname(dos), ilattr),
+                uno.vmod
+            )
+            r = :(
+                $(
+                    rlhs
+                ) = $(
+                    rrhs
+                )
+            )
+            push!(rvec, r)
+            push!(dvec, :(@logic $(rrhs), $(rlhs)))
+            
+        end
+
+    end
+
     vpush!(v, always(Expr(:block, rvec...)))
+    vpush!(v, decls(Expr(:block, dvec...)))
 
+    return nothing
+end
 
+"""
+    bypassUnconnected_mlay!(v::Vmodule, x::Layergraph)
+
+Add to the top-level module ports that are connected to counterparts of 
+submodules, which are not connected to ports of other `Midlayer` objects.
+"""
+function bypassUnconnected_mlay!(v::Vmodule, x::Layergraph)
     # connect unconnected ports to outer ports
-    unconnectedvec::Vector{Pair{Midlayer, Set{Oneport}}} = unconnectedports_mlay(x)
+    unconnectedvec::Vector{Pair{Midlayer, OrderedSet{Oneport}}} = unconnectedports_mlay(x)
 
     npvec = Vector{Oneport}(undef, sum([length(s) for (_, s) in unconnectedvec]))
     ci = 1
@@ -289,11 +305,22 @@ function layer2vmod(x::Layergraph; name = "Layers")
 
     vpush!(v, alloutwire(Ports(npvec)))
 
+    return nothing
+end
 
-    # CLK and RST
-    commonports = (x -> Oneport(pin, getname(x))).(
-        [defclk, defrst]
-    )
+"CLK and RST"
+const commonports = (x -> Oneport(pin, getname(x))).(
+    [defclk, defrst]
+)
+
+"""
+    connectCommonPorts_mlay!(v::Vmodule, x::Layergraph)
+
+Connect ports which all submodules have in common to the 
+proper ports in the top module.
+"""
+function connectCommonPorts_mlay!(v::Vmodule, x::Layergraph)
+
     vpush!(v, commonports...)
 
     for lay in x.layers 
@@ -314,6 +341,65 @@ function layer2vmod(x::Layergraph; name = "Layers")
 
         vpush!(v, always(Expr(:block, qvec...)))
     end
+
+    return nothing
+end
+
+function layer2vmod(x::Layergraph; name = "Layers")
+    # toplevel module 
+    v = Vmodule(name)
+
+    # # generate always_comb that connects ports 
+    # # as described in Layerconn
+    # note that 2 function calls below do not modify 
+    # Vmodules in each midlayer objects
+    layerconnInstantiate_mlay!(v, x)
+    lconnect_mlay!(v, x)
+    
+
+    # # connect unconnected ports to outer ports
+    bypassUnconnected_mlay!(v, x)
+    # unconnectedvec::Vector{Pair{Midlayer, Set{Oneport}}} = unconnectedports_mlay(x)
+
+    # npvec = Vector{Oneport}(undef, sum([length(s) for (_, s) in unconnectedvec]))
+    # ci = 1
+    # for (midl, d) in unconnectedvec
+    #     for p in d 
+    #         nname = outerportnamegen(getname(p), midl.vmod)
+    #         newport = vrename(p, nname)
+
+    #         npvec[ci] = newport
+    #         ci += 1
+    #     end
+    # end
+
+    # vpush!(v, alloutwire(Ports(npvec)))
+
+    connectCommonPorts_mlay!(v, x)
+    # # CLK and RST
+    # commonports = (x -> Oneport(pin, getname(x))).(
+    #     [defclk, defrst]
+    # )
+    # vpush!(v, commonports...)
+
+    # for lay in x.layers 
+    #     qvec = Vector{Expr}(undef, length(commonports))
+    #     for (ind, prt::Oneport) in enumerate(commonports)
+    #         f = wirenamemodgen(lay.vmod)
+    #         q = :(
+    #             $(
+    #                 Symbol(f(getname(prt)))
+    #             ) = $(
+    #                 Symbol(getname(prt))
+    #             )
+    #         )
+
+    #         qvec[ind] = q
+    #         # vpush!(v, al)
+    #     end
+
+    #     vpush!(v, always(Expr(:block, qvec...)))
+    # end
 
 
     # reflect data in layerconn to Vmodule objects
