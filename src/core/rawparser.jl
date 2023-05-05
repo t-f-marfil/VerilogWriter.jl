@@ -1214,25 +1214,6 @@ function pdirecsym(sym)
         pout 
     end
 end
-# function portoneline(expr::Expr)
-#     @assert expr.head == :macrocall
-#     args = expr.args
-
-#     direc = args[1] 
-#     if direc == Symbol("@in")
-#         d = pin 
-#     else
-#         @assert direc == Symbol("@out")
-#         d = pout 
-#     end
-#     # ignore LineNumberNode
-#     try
-#         portonelinecore(d, args[3:end]...)
-#     catch e
-#         println("Port parsing error at $(string(args[2])).")
-#         rethrow(e)
-#     end
-# end
 
 """
     portoneline(expr::Ref{T}) where {T}
@@ -1250,6 +1231,35 @@ Macro version of `portoneline`.
 """
 macro portoneline(arg)
     Expr(:call, :portoneline, Ref(arg))
+end
+
+"""
+    oneport(expr::Expr) 
+
+Declaration of one `Oneport` object.
+"""
+function oneport(expr::Expr) 
+    v = portoneline(expr)
+    length(v) == 1 || error("$(length(v)) ports are declared in oneport.")
+    v[begin]
+end
+
+"""
+    oneport(expr::Ref{T}) where {T}
+
+For macro call.
+"""
+function oneport(expr::Ref{T}) where {T}
+    oneport(expr[])
+end
+
+"""
+    @oneport(arg)
+
+Macro version of `oneport`.
+"""
+macro oneport(arg)
+    Expr(:call, :oneport, Ref(arg))
 end
 
 """

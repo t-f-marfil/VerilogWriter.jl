@@ -349,62 +349,20 @@ function layer2vmod(x::Layergraph; name = "Layers")
     # toplevel module 
     v = Vmodule(name)
 
-    # # generate always_comb that connects ports 
-    # # as described in Layerconn
+    # generate always_comb that connects ports 
+    # as described in Layerconn
     # note that 2 function calls below do not modify 
     # Vmodules in each midlayer objects
     layerconnInstantiate_mlay!(v, x)
     lconnect_mlay!(v, x)
     
-
-    # # connect unconnected ports to outer ports
+    # connect unconnected ports to outer ports
     bypassUnconnected_mlay!(v, x)
-    # unconnectedvec::Vector{Pair{Midlayer, Set{Oneport}}} = unconnectedports_mlay(x)
-
-    # npvec = Vector{Oneport}(undef, sum([length(s) for (_, s) in unconnectedvec]))
-    # ci = 1
-    # for (midl, d) in unconnectedvec
-    #     for p in d 
-    #         nname = outerportnamegen(getname(p), midl.vmod)
-    #         newport = vrename(p, nname)
-
-    #         npvec[ci] = newport
-    #         ci += 1
-    #     end
-    # end
-
-    # vpush!(v, alloutwire(Ports(npvec)))
 
     connectCommonPorts_mlay!(v, x)
-    # # CLK and RST
-    # commonports = (x -> Oneport(pin, getname(x))).(
-    #     [defclk, defrst]
-    # )
-    # vpush!(v, commonports...)
-
-    # for lay in x.layers 
-    #     qvec = Vector{Expr}(undef, length(commonports))
-    #     for (ind, prt::Oneport) in enumerate(commonports)
-    #         f = wirenamemodgen(lay.vmod)
-    #         q = :(
-    #             $(
-    #                 Symbol(f(getname(prt)))
-    #             ) = $(
-    #                 Symbol(getname(prt))
-    #             )
-    #         )
-
-    #         qvec[ind] = q
-    #         # vpush!(v, al)
-    #     end
-
-    #     vpush!(v, always(Expr(:block, qvec...)))
-    # end
-
 
     # reflect data in layerconn to Vmodule objects
     connectall(x)
-
 
     # execute below after connecting modules
     # instantiate every layer
@@ -429,6 +387,6 @@ macro layerconn(arg)
         arg.head == :tuple || error("unknown arg $(dump(arg)).")
         v = [((_, x, y) = expr.args; Oneport(pout, string(x)) => Oneport(pin, string(y))) for expr in arg.args]
     end
-    Layerconn(Set(v))
+    Layerconn(OrderedSet(v))
 end
 
