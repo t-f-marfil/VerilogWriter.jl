@@ -97,15 +97,16 @@ end
 Reglayer(arg) = Midlayer(lreg, arg)
 Randlayer(arg) = Midlayer(lrand, arg)
 FIFOlayer(arg) = Midlayer(lfifo, arg)
+FIFOlayer(arg, dep, wid) = Midlayer(lfifo, fifogen(dep, wid, name=arg))
 
 
-function layermacro(arg, n::String)
-    :($(esc(arg)) = $(Symbol(string(n, "layer")))($(string(arg))))
+function layermacro(arg, n::String, others...)
+    :($(esc(arg)) = $(Symbol(string(n, "layer")))($(tuple(string(arg), (esc(t) for t in others)...)...)))
 end
 
 
-macro FIFOlayer(arg)
-    layermacro(arg, "FIFO")
+macro FIFOlayer(arg, others...)
+    layermacro(arg, "FIFO", others...)
 end
 macro Randlayer(arg)
     layermacro(arg, "Rand")

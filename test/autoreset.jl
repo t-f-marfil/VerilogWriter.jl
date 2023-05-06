@@ -107,7 +107,8 @@ m = Vmodule("t")
 vpush!(m, a)
 vpush!(m, d)
 
-m = autoreset(m, reg2d=Dict(["a"=>@wireexpr 10]))
+# m = autoreset(m, reg2d=Dict(["a"=>@wireexpr 10]))
+m = autoreset(m)
 @test string(m) == """
 module t ();
     reg [31:0] a [9:0];

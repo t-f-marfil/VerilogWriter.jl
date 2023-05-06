@@ -178,11 +178,22 @@ function autoreset(x::Alwayscontent; clk=defclk, rst=defrst, edge=posedge, reg2d
 end
 
 """
+    extract2dreg_autoreset(x::Vmodule)
+
+Generate a `Dict` object of `ram_name => depth_of_the_ram` for 2D `reg`s.
+"""
+function extract2dreg_autoreset(x::Vmodule)
+    prereg2d::Dict{String, Onedecl} = extract2dreg(x)
+    # string(name) => i::Onedecl.wid2d
+    Dict([k => i.wid2d for (k, i) in prereg2d])
+end
+
+"""
     autoreset(x::Vmodule; clk=defclk, rst=defrst, reg2d::Dict{String, Wireexpr}=Dict{String, Wireexpr}())
 
 Return a new `Vmodule` object whose `Alwayscontent`s are all reset.
 """
-function autoreset(x::Vmodule; clk=defclk, rst=defrst, reg2d::Dict{String, Wireexpr}=Dict{String, Wireexpr}())
+function autoreset(x::Vmodule; clk=defclk, rst=defrst)
     Vmodule(
         x.name, 
 
@@ -193,7 +204,7 @@ function autoreset(x::Vmodule; clk=defclk, rst=defrst, reg2d::Dict{String, Wiree
 
         x.insts,
         x.assigns,
-        autoreset.(x.always, clk=clk, rst=rst, reg2d=reg2d)
+        autoreset.(x.always, clk=clk, rst=rst, reg2d=extract2dreg_autoreset(x))
     )
 end
 
@@ -211,8 +222,8 @@ function autoreset!(x::Alwayscontent; clk=defclk, rst=defrst, reg2d::Dict{String
     return nothing 
 end
 
-function autoreset!(x::Vmodule; clk=defclk, rst=defrst, reg2d::Dict{String, Wireexpr}=Dict{String, Wireexpr}())
-    autoreset!.(x.always, clk=clk, rst=rst, reg2d=reg2d)
+function autoreset!(x::Vmodule; clk=defclk, rst=defrst)
+    autoreset!.(x.always, clk=clk, rst=rst, reg2d=extract2dreg_autoreset(x))
     return nothing
 end
 
