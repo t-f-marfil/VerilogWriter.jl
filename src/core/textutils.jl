@@ -39,6 +39,12 @@ function vshow(x::T; systemverilog=true) where {T <: Union{Vmodule, Alwaysconten
     println(string("type: ", typeof(x)))
 end
 
+function vshow(x...; systemverilog=true)
+    for item in x 
+        vshow(item, systemverilog=systemverilog)
+    end
+end
+
 function vshow(x::Vector{T}; systemverilog=true) where {T}
     vshow.(x, systemverilog=systemverilog)
 end

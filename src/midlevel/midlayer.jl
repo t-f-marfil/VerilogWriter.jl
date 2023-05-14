@@ -114,6 +114,7 @@ end
 
 @enum Interlaysigtype ilvalid ilupdate
 
+"Chose proper preposition."
 const prep4ilst_lower = Dict([
     ilvalid => "to"
     ilupdate => "from"
@@ -122,12 +123,29 @@ const prep4ilst_upper = Dict([
     (k => (v == "to" ? "from" : "to")) for (k, v) in prep4ilst_lower
 ])
 
-function nametolower(lowername::String, st::Interlaysigtype)
-    "$(string(st)[3:end])_$(prep4ilst_lower[st])_lower_$(lowername)"
+
+const portdir4ilst_lower = Dict([
+    ilvalid => pout
+    ilupdate => pin
+])
+const portdir4ilst_upper = Dict([
+    (k => (v == pin ? pout : pin)) for (k, v) in portdir4ilst_lower
+])
+
+function nametolower(st::Interlaysigtype)
+    "$(string(st)[3:end])_$(prep4ilst_lower[st])_lower"
 end
-function nametoupper(uppername::String, st::Interlaysigtype)
-    "$(string(st)[3:end])_$(prep4ilst_upper[st])_upper_$(uppername)"
+function nametoupper(st::Interlaysigtype)
+    "$(string(st)[3:end])_$(prep4ilst_upper[st])_upper"
 end
+
+function nametolower(st::Interlaysigtype, suffix::Midlayer)
+    string(nametolower(st), "_", getname(suffix))
+end
+function nametoupper(st::Interlaysigtype, suffix::Midlayer)
+    string(nametoupper(st), "_", getname(suffix))
+end
+
 function lowerportsgen(lowername::String)
     ports(:(
         @out @logic $(Symbol(nametolower(lowername, ilvalid)));
@@ -140,12 +158,7 @@ function upperportsgen(uppername::String)
         @out @logic $(Symbol("update_to_upper_$(uppername)"))
     ))
 end
-function nametolower(lowerobj, st::Interlaysigtype)
-    nametolower(getname(lowerobj), st)
-end
-function nametoupper(upperobj, st::Interlaysigtype)
-    nametoupper(getname(upperobj), st)
-end
+
 function lowerportsgen(lowerobj)
     lowerportsgen(getname(lowerobj))
 end
@@ -153,26 +166,63 @@ function upperportsgen(upperobj)
     upperportsgen(getname(upperobj))
 end
 
-function connectall(x::Layergraph)
-    # should insert clk,rst before width inference
+function addCommonPortEachLayer(x::Layergraph)
     for ml in x.layers 
         for p in ml.lports
             vpush!(ml.vmod, p)
         end
     end
 
+    return nothing
+end
+
+function addIlPortEachLayer(x::Layergraph)
+    preadded = Dict([lay => false for lay in x.layers])
+    postadded = Dict([lay => false for lay in x.layers])
+
     for ((pre::Midlayer, post::Midlayer), conninfo) in x.edges
         vpre, vpost = pre.vmod, post.vmod
-        
-        vpush!(vpre, lowerportsgen(getname(vpost)))
-        vpush!(vpost, upperportsgen(getname(vpre)))
+
+        for ilattr in instances(Interlaysigtype)
+            preadded[pre] || vpush!(vpre, Oneport(portdir4ilst_lower[ilattr], nametolower(ilattr)))
+            postadded[post] || vpush!(vpost, Oneport(portdir4ilst_upper[ilattr], nametoupper(ilattr)))
+        end
+
+        preadded[pre] = postadded[post] = true
+        # vpush!(vpre, lowerportsgen(getname(vpost)))
+        # vpush!(vpost, upperportsgen(getname(vpre)))
         # how do you connect valid/update interface?
     end
 
+    return nothing
 end
 
-function name_wireconnectedattop(connname::String, v::Vmodule)
-    Wireexpr(wirenamemodgen(v)(connname))
+function addPortEachLayer(x::Layergraph)
+    addCommonPortEachLayer(x)
+    addIlPortEachLayer(x)
+    # # should insert clk,rst before width inference
+    # for ml in x.layers 
+    #     for p in ml.lports
+    #         vpush!(ml.vmod, p)
+    #     end
+    # end
+
+    # for ((pre::Midlayer, post::Midlayer), conninfo) in x.edges
+    #     vpre, vpost = pre.vmod, post.vmod
+
+    #     for ilattr in instances(Interlaysigtype)
+    #         vpush!(vpre, Oneport(portdir4ilst_lower[ilattr], nametolower(ilattr)))
+    #         vpush!(vpost, Oneport(portdir4ilst_upper[ilattr], nametoupper(ilattr)))
+    #     end
+    #     # vpush!(vpre, lowerportsgen(getname(vpost)))
+    #     # vpush!(vpost, upperportsgen(getname(vpre)))
+    #     # how do you connect valid/update interface?
+    # end
+
+end
+
+function wireAddSuffix(wirename::String, vsuffix::Vmodule)
+    Wireexpr(wirenamemodgen(vsuffix)(wirename))
 end
 
 """
@@ -194,7 +244,7 @@ in submodules.
 function unconnectedports_mlay(x::Layergraph)
 
     # try detecting unconnected ports 
-    pconnected = OrderedDict{Midlayer, Dict{Oneport, Bool}}([
+    pconnected = OrderedDict{Midlayer, OrderedDict{Oneport, Bool}}([
         lay => OrderedDict([p => false for p in lay.vmod.ports]) 
         for lay in x.layers
     ])
@@ -229,9 +279,9 @@ function layerconnInstantiate_mlay!(v::Vmodule, x::Layergraph)
         for (ppre, ppost) in conn.ports
             q = :(
                 $(
-                    name_wireconnectedattop(getname(ppost), dos.vmod)
+                    wireAddSuffix(getname(ppost), dos.vmod)
                 ) = $(
-                    name_wireconnectedattop(getname(ppre), uno.vmod)
+                    wireAddSuffix(getname(ppre), uno.vmod)
                 )
             )
             push!(qvec, q)
@@ -252,16 +302,27 @@ when converting `Midlayer` objects into Verilog HDL, between `Midlayer` objects.
 function lconnect_mlay!(v::Vmodule, x::Layergraph)
     rvec = Expr[]
     dvec = Expr[]
+    rregistered = Dict([lay => false for lay in x.layers])
+    lregistered = Dict([lay => false for lay in x.layers])
+
     for ((uno::Midlayer, dos::Midlayer), _) in x.edges 
         for ilattr in instances(Interlaysigtype)
-            rlhs = name_wireconnectedattop(
-                nametoupper(getname(uno), ilattr),
-                dos.vmod
-            )
-            rrhs = name_wireconnectedattop(
-                nametolower(getname(dos), ilattr),
-                uno.vmod
-            )
+            # rlhs = wireAddSuffix(
+            #     # nametoupper(getname(uno), ilattr),
+            #     nametoupper(ilattr),
+            #     dos.vmod
+            # )
+            rlhs = nametoupper(ilattr, dos)
+            # rrhs = wireAddSuffix(
+            #     # nametolower(getname(dos), ilattr),
+            #     nametolower(ilattr),
+            #     uno.vmod
+            # )
+            rrhs = nametolower(ilattr, uno)
+            # set appropiate lhs <=> rhs
+            if portdir4ilst_upper[ilattr] == pout
+                rlhs, rrhs = rrhs, rlhs 
+            end
             r = :(
                 $(
                     rlhs
@@ -270,10 +331,13 @@ function lconnect_mlay!(v::Vmodule, x::Layergraph)
                 )
             )
             push!(rvec, r)
-            push!(dvec, :(@logic $(rrhs), $(rlhs)))
-            
+            # push!(dvec, :(@logic $(rrhs), $(rlhs)))
+
+            rregistered[uno] || push!(dvec, :(@logic $(rrhs)))
+            lregistered[dos] || push!(dvec, :(@logic $(rlhs)))
         end
 
+        rregistered[uno] = lregistered[dos] = true
     end
 
     vpush!(v, always(Expr(:block, rvec...)))
@@ -363,7 +427,7 @@ function layer2vmod(x::Layergraph; name = "Layers")
     connectCommonPorts_mlay!(v, x)
 
     # reflect data in layerconn to Vmodule objects
-    connectall(x)
+    addPortEachLayer(x)
 
     # execute below after connecting modules
     # instantiate every layer

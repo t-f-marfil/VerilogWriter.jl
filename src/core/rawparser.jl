@@ -376,128 +376,14 @@ function oneblock(expr::T) where {T <: Union{Alassign, Ifelseblock, Case}}
     expr 
 end
 
-# function oneblock(expr::Case)
-#     expr 
-# end
-
-# """
-#     oneblock_expr(expr, ::Val{:(=)})
-
-# Assignment in Julia, stands for combinational assignment in Verilog.
-# """
-# function oneblock_expr(expr, ::Val{:(=)})
-#     @assert expr.head == :(=)
-#     return Alassign(wireexpr.(expr.args)..., comb)
-# end
 function alassign_comb(expr)
     Alassign(wireexpr.(expr.args)..., comb)
 end
 
-# """
-#     oneblock_expr(expr, ::Val{:call})
-
-# Dispatch methods of `oneblock_call` according to `expr.args[1]`.
-# """
-# function oneblock_expr(expr, ::Val{:call})
-#     return oneblock_call(expr, Val(expr.args[1]), Val(:call))
-# end
-
-# """
-#     oneblock_call(expr, ::Val{:<=}, ::Val{:call})
-
-# Parse `expr` whose head is `call` and `expr.args[1]` is `<=`.
-
-# Parse as a comparison opertor in Julia, interpret as 
-# sequential assignment in Verilog.
-# """
-# function oneblock_call(expr, ::Val{:<=}, ::Val{:call})
-#     return Alassign(wireexpr(expr.args[2]), wireexpr(expr.args[3]), ff)
-# end
 function alassign_ff(expr)
     Alassign(wireexpr(expr.args[2]), wireexpr(expr.args[3]), ff)
 end
 
-# "Types to which AST of `block` can be converted."
-# const blockconvable = Union{Ifcontent, Ifelseblock, Wireexpr}
-# abstract type blockconvable end
-
-# """
-#     oneblock_expr(expr, ::Val{:elseif}, ::Val{T}) where {T <: blockconvable}
-
-# When given `Val{T}` as the third argument, if `expr` is not `block` 
-# (= if the second argument is not `Val{:block}`), ignore `Val{T}`.
-
-# This is needed in `oneblock_expr(expr, ::Val{:elseif})`, 
-# for `expr`, whose `expr.head == :elseif`, can have either 
-# `block` or `elseif` as its `expr.args[3]`.
-# Checks that the return value is of type `T`.
-# """
-# function oneblock_expr(expr, ::Val{:elseif}, ::Val{T}) where {T <: blockconvable}
-#     return oneblock_expr(expr, Val(:elseif))::T
-# end
-
-# """
-#     oneblock_expr(expr, ::Val{:block}, ::Val{T}) where {T <: blockconvable}
-
-# Parse `expr` (which is `block`) into `T`. `block` appears at various nodes, thus need
-# to explicitly indicate which type the return value should be.
-# Types that is allowed as return value is in [`blockconvable`](@ref).
-
-# See also [`blockconv`](@ref).
-# """
-# function oneblock_expr(expr, ::Val{:block}, ::Val{T}) where {T <: blockconvable}
-#     # intended only for :block inside if/else
-#     @assert expr.head == :block 
-
-#     lineinfo = LineNumberNode(0, "noinfo")
-
-#     # only 3 types below may appear inside block
-#     assignlist = Alassign[]
-#     ifblocklist = Ifelseblock[]
-#     wirelist = Wireexpr[]
-
-#     try
-#         for item in expr.args 
-#             if item isa LineNumberNode
-#                 lineinfo = item 
-#             else
-#                 parsed = oneblock(item)
-#                 # push!(anslist, parsed)
-                
-#                 if parsed isa Alassign
-#                     push!(assignlist, parsed)
-#                 elseif parsed isa Ifelseblock 
-#                     push!(ifblocklist, parsed)
-#                 elseif parsed isa Wireexpr 
-#                     push!(wirelist, parsed)
-#                 else
-#                     @show parsed, typeof(parsed)
-#                     throw(error)
-#                 end
-#             end
-#         end
-#     catch e 
-#         println("failed in parsing, inner block at: $(string(lineinfo))")
-#         # dump(lineinfo)
-#         rethrow()
-#     end
-
-#     # return Ifcontent(assignlist, ifblocklist)
-#     return blockconv(assignlist, ifblocklist, wirelist, Val(T))
-# end
-
-# """
-#     oneblock_expr(expr, ::Val{T}) where {T <: blockconvable}
-
-# Helper method to make it possible to dispatch `oneblock_expr` without
-# giving `expr.head` as an argument.
-# """
-# function oneblock_expr(expr, ::Val{T}) where {T <: blockconvable}
-#     return oneblock_expr(expr, Val(expr.head), Val(T))
-# end
-
-
-# function oneblock_expr(expr, ::Val{:if})
 function ifelseblock(expr)
 
     # cond = expr.args[1]
@@ -1477,6 +1363,9 @@ Declaration of a single wire (e.g. `wire [1:0] d1`, `reg clk`).
 """
 function decloneline_inner(wt, wid::Wireexpr, var::Symbol)
     [Onedecl(wt, wid, string(var))]
+end
+function decloneline_inner(wt, wid::Wireexpr, var::String)
+    [Onedecl(wt, wid, var)]
 end
 
 """

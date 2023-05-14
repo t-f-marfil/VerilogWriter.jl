@@ -19,11 +19,11 @@ macro testconduct(tpair)
         @testset "$tname" begin 
             include(tfile)
         end
-        println(tname, " done.")
+        # println(tname, " done.")
     end
 end
 
-@testset "VerilogWriter.jl" begin
+# @testset "VerilogWriter.jl" begin
     for tpair in tpairs 
         @testconduct tpair
     end
@@ -37,4 +37,4 @@ end
     println("start doctest.")
     doctest(VerilogWriter)
     println("doctest done.")
-end
+# end

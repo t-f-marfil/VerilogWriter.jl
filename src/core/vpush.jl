@@ -7,8 +7,6 @@
 vpush! method, add Onedecl to Decls.
 """
 function vpush!(coll::Decls, x::Onedecl...)
-    #= none:1 =#
-    #= none:2 =#
     push!(coll.val, x...)
 end
 
@@ -18,8 +16,6 @@ end
 vpush! method, add Oneport to Ports.
 """
 function vpush!(coll::Ports, x::Oneport...)
-    #= none:1 =#
-    #= none:2 =#
     push!(coll.val, x...)
 end
 
@@ -29,8 +25,6 @@ end
 vpush! method, add Oneparam to Parameters.
 """
 function vpush!(coll::Parameters, x::Oneparam...)
-    #= none:1 =#
-    #= none:2 =#
     push!(coll.val, x...)
 end
 
@@ -40,24 +34,20 @@ end
 vpush! method, add Onelocalparam to Localparams.
 """
 function vpush!(coll::Localparams, x::Onelocalparam...)
-    #= none:1 =#
-    #= none:2 =#
     push!(coll.val, x...)
 end
 
 """
-    vpush!(coll::T, x::T...) where T <: Union{Decls, Ports, Parameters, Localparams}
+    vpush!(coll::T, x::T...) where {T <: Union{Decls, Ports, Parameters, Localparams}}
 
 vpush! method, add T to T.
 """
-function vpush!(coll::T, x::T...) where T <: Union{Decls, Ports, Parameters, Localparams}
-    #= none:1 =#
-    #= none:2 =#
-    for v = x
-        #= none:3 =#
+function vpush!(coll::T, x::T...) where {T <: Union{Decls, Ports, Parameters, Localparams}}
+    for v in x 
         vpush!(coll, v.val...)
     end
 end
+
 
 """
     vpush!(coll::Vmodule, x::Vmodinst...)
@@ -65,8 +55,6 @@ end
 vpush! method, add Vmodinst to Vmodule.
 """
 function vpush!(coll::Vmodule, x::Vmodinst...)
-    #= none:1 =#
-    #= none:2 =#
     push!(coll.insts, x...)
 end
 
@@ -76,8 +64,6 @@ end
 vpush! method, add Assign to Vmodule.
 """
 function vpush!(coll::Vmodule, x::Assign...)
-    #= none:1 =#
-    #= none:2 =#
     push!(coll.assigns, x...)
 end
 
@@ -87,8 +73,6 @@ end
 vpush! method, add Alwayscontent to Vmodule.
 """
 function vpush!(coll::Vmodule, x::Alwayscontent...)
-    #= none:1 =#
-    #= none:2 =#
     push!(coll.always, x...)
 end
 
@@ -98,8 +82,6 @@ end
 vpush! method, add Oneparam to Vmodule.
 """
 function vpush!(coll::Vmodule, x::Oneparam...)
-    #= none:1 =#
-    #= none:2 =#
     vpush!(coll.params, x...)
 end
 
@@ -109,8 +91,6 @@ end
 vpush! method, add Oneport to Vmodule.
 """
 function vpush!(coll::Vmodule, x::Oneport...)
-    #= none:1 =#
-    #= none:2 =#
     vpush!(coll.ports, x...)
 end
 
@@ -120,8 +100,6 @@ end
 vpush! method, add Onelocalparam to Vmodule.
 """
 function vpush!(coll::Vmodule, x::Onelocalparam...)
-    #= none:1 =#
-    #= none:2 =#
     vpush!(coll.lparams, x...)
 end
 
@@ -131,21 +109,16 @@ end
 vpush! method, add Onedecl to Vmodule.
 """
 function vpush!(coll::Vmodule, x::Onedecl...)
-    #= none:1 =#
-    #= none:2 =#
     vpush!(coll.decls, x...)
 end
 
 """
-    vpush!(coll::Vmodule, x::T...) where T <: Union{Decls, Ports, Parameters, Localparams}
+    vpush!(coll::Vmodule, x::T...) where {T <: Union{Decls, Ports, Parameters, Localparams}}
 
 vpush! method, add T to Vmodule.
 """
-function vpush!(coll::Vmodule, x::T...) where T <: Union{Decls, Ports, Parameters, Localparams}
-    #= none:1 =#
-    #= none:2 =#
-    for v = x
-        #= none:3 =#
+function vpush!(coll::Vmodule, x::T...) where {T <: Union{Decls, Ports, Parameters, Localparams}}
+    for v in x 
         vpush!(coll, v.val...)
     end
 end
@@ -156,15 +129,20 @@ end
 vpush! method, add FSM to Vmodule.
 """
 function vpush!(coll::Vmodule, x::FSM...)
-    #= none:1 =#
-    #= none:2 =#
-    for m = x
-        #= none:3 =#
+    for m in x
         vpush!(coll, fsmconv(Onedecl, m))
-        #= none:4 =#
         vpush!(coll, fsmconv(Localparams, m))
-        #= none:5 =#
         vpush!(coll, fsmconv(Alwayscontent, m))
     end
 end
 
+"""
+    vpush!(coll::Vmodule, x::Vector{T}...) where {T}
+
+vpush! method, add Vector to Vmodule.
+"""
+function vpush!(coll::Vmodule, x::Vector{T}...) where {T}
+    for v in x 
+        vpush!(coll, v...)
+    end
+end

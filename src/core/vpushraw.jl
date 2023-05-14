@@ -55,11 +55,16 @@ function vpush!(coll::Vmodule, x::T...) where {T <: Union{Decls, Ports, Paramete
     end
 end
 
-
 function vpush!(coll::Vmodule, x::FSM...)
     for m in x
         vpush!(coll, fsmconv(Onedecl, m))
         vpush!(coll, fsmconv(Localparams, m))
         vpush!(coll, fsmconv(Alwayscontent, m))
+    end
+end
+
+function vpush!(coll::Vmodule, x::Vector{T}...) where {T}
+    for v in x 
+        vpush!(coll, v...)
     end
 end
