@@ -221,8 +221,8 @@ function addPortEachLayer(x::Layergraph)
 
 end
 
-function wireAddSuffix(wirename::String, vsuffix::Vmodule)
-    Wireexpr(wirenamemodgen(vsuffix)(wirename))
+function wireAddSuffix(wirename::String, lsuffix::Midlayer)
+    Wireexpr(wirenamemodgen(lsuffix)(wirename))
 end
 
 """
@@ -230,8 +230,8 @@ end
 Given the name of a port and the vmodule object the port belongs to,
 return the name of a wire which is connected to the port at the top module.
 """
-function outerportnamegen(portname::String, vmod::Vmodule)
-    wirenamemodgen(vmod)(portname)
+function outerportnamegen(portname::String, mlay::Midlayer)
+    wirenamemodgen(mlay)(portname)
 end
 
 
@@ -279,9 +279,9 @@ function layerconnInstantiate_mlay!(v::Vmodule, x::Layergraph)
         for (ppre, ppost) in conn.ports
             q = :(
                 $(
-                    wireAddSuffix(getname(ppost), dos.vmod)
+                    wireAddSuffix(getname(ppost), dos)
                 ) = $(
-                    wireAddSuffix(getname(ppre), uno.vmod)
+                    wireAddSuffix(getname(ppre), uno)
                 )
             )
             push!(qvec, q)
@@ -289,7 +289,8 @@ function layerconnInstantiate_mlay!(v::Vmodule, x::Layergraph)
 
     end
 
-    vpush!(v, always(Expr(:block, qvec...)))
+    alans = Alwayscontent(comb, ifcontent(Expr(:block, qvec...)))
+    vpush!(v, alans)
     
 end
 
@@ -307,21 +308,12 @@ function lconnect_mlay!(v::Vmodule, x::Layergraph)
 
     for ((uno::Midlayer, dos::Midlayer), _) in x.edges 
         for ilattr in instances(Interlaysigtype)
-            # rlhs = wireAddSuffix(
-            #     # nametoupper(getname(uno), ilattr),
-            #     nametoupper(ilattr),
-            #     dos.vmod
-            # )
             rlhs = nametoupper(ilattr, dos)
-            # rrhs = wireAddSuffix(
-            #     # nametolower(getname(dos), ilattr),
-            #     nametolower(ilattr),
-            #     uno.vmod
-            # )
             rrhs = nametolower(ilattr, uno)
             # set appropiate lhs <=> rhs
             if portdir4ilst_upper[ilattr] == pout
-                rlhs, rrhs = rrhs, rlhs 
+                rlhs, rrhs = rrhs, rlhs
+                uno, dos = dos, uno
             end
             r = :(
                 $(
@@ -333,6 +325,8 @@ function lconnect_mlay!(v::Vmodule, x::Layergraph)
             push!(rvec, r)
             # push!(dvec, :(@logic $(rrhs), $(rlhs)))
 
+            @show uno.name, rregistered[uno], dos.name, lregistered[dos]
+            @show rlhs, rrhs
             rregistered[uno] || push!(dvec, :(@logic $(rrhs)))
             lregistered[dos] || push!(dvec, :(@logic $(rlhs)))
         end
@@ -360,7 +354,7 @@ function bypassUnconnected_mlay!(v::Vmodule, x::Layergraph)
     ci = 1
     for (midl, d) in unconnectedvec
         for p in d 
-            nname = outerportnamegen(getname(p), midl.vmod)
+            nname = outerportnamegen(getname(p), midl)
             newport = vrename(p, nname)
 
             npvec[ci] = newport
@@ -391,7 +385,7 @@ function connectCommonPorts_mlay!(v::Vmodule, x::Layergraph)
     for lay in x.layers 
         qvec = Vector{Expr}(undef, length(commonports))
         for (ind, prt::Oneport) in enumerate(commonports)
-            f = wirenamemodgen(lay.vmod)
+            f = wirenamemodgen(lay)
             q = :(
                 $(
                     Symbol(f(getname(prt)))
@@ -410,7 +404,7 @@ function connectCommonPorts_mlay!(v::Vmodule, x::Layergraph)
     return nothing
 end
 
-function layer2vmod(x::Layergraph; name = "Layers")
+function layer2vmod!(x::Layergraph; name = "Layers")::Vector{Vmodule}
     # toplevel module 
     v = Vmodule(name)
 

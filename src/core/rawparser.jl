@@ -425,6 +425,7 @@ function ifcontent(expr)
     assignlist = Alassign[]
     ifblocklist = Ifelseblock[]
     # wirelist = Wireexpr[]
+    lineinfo = nothing
 
     try
         # top level macro application?

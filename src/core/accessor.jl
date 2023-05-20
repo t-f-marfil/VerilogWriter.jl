@@ -2,11 +2,6 @@ function getname(x::T) where {T <: Union{Wireexpr, Oneport, Vmodule}}
     x.name 
 end
 
-function getname(x::Midlayer)
-    getname(x.vmod)
-end
-
-
 macro vrenamehelp(x, nn)
     fields = fieldnames(Oneport)
     :name in fields || error("field 'name' no longer exists")

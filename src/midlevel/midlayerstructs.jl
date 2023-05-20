@@ -1,6 +1,7 @@
 @enum Midlayertype lrand lreg lfifo
 
-struct Midlayer 
+struct Midlayer
+    name::String
     type::Midlayertype
     # ports declared by Midlayer-related operations
     lports::Vector{Oneport}

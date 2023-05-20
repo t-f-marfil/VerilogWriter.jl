@@ -1,4 +1,5 @@
-# include("midlayer.jl")
+# add files which should not included here
+# if not specified here then the file is automatically included in VerilogWriter module.
 noincludehere = abspath.([
     @__FILE__,
     "midlayerstructs.jl",

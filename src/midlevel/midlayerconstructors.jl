@@ -3,6 +3,8 @@ const defaultlports = [
         @in CLK, RST
     ))...
 ]
+Midlayer(t::Midlayertype, lp::Vector{Oneport}, v::Vmodule) = Midlayer(getname(v), t, lp, v)
+Midlayer(n::String, t::Midlayertype, v::Vmodule) = Midlayer(n, t, defaultlports, v)
 Midlayer(t::Midlayertype, v::Vmodule) = Midlayer(t, defaultlports, v)
 Midlayer(t::Midlayertype, s) = Midlayer(t, Vmodule(s))
 

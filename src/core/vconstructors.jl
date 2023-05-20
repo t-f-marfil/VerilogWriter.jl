@@ -132,7 +132,7 @@ Alassign(lhs, rhs) = Alassign(lhs, rhs, aunknown)
 
 
 Ifcontent(x::Vector{Alassign}, y::Vector{Ifelseblock}) = Ifcontent(x, y, Case[])
-Ifcontent() = Ifcontent([], [])
+Ifcontent() = Ifcontent(Alassign[], Ifelseblock[])
 Ifcontent(x::Vector{Alassign}) = Ifcontent(x, Ifelseblock[])
 Ifcontent(x::Alassign...) = Ifcontent([x...])
 Ifcontent(x::Ifelseblock...) = Ifcontent(Alassign[], [x...])
@@ -142,10 +142,12 @@ Ifelseblock() = Ifelseblock([], [])
 Ifelseblock(cond::Wireexpr, ifcont::Ifcontent) = Ifelseblock([cond], [ifcont])
 Ifelseblock(cond::Wireexpr, ifcont::Ifcontent, elsecont::Ifcontent) = Ifelseblock([cond], [ifcont, elsecont])
 
+Sensitivity() = Sensitivity(unknownedge, Wireexpr())
 
 Alwayscontent(atype::Atype, edge::Edge, sens::Wireexpr, cont::Ifcontent) = Alwayscontent(atype, Sensitivity(edge, sens), cont)
 
 Alwayscontent(atype::Atype) = Alwayscontent(atype, unknownedge, Wireexpr(), Ifcontent())
+Alwayscontent(atype::Atype, ifcont::Ifcontent) = Alwayscontent(atype, Sensitivity(), ifcont)
 Alwayscontent(ifcont::Ifcontent) = Alwayscontent(aunknown, unknownedge, Wireexpr(), ifcont)
 Alwayscontent(assigns::Vector{Alassign}, ifblocks::Vector{Ifelseblock}) = Alwayscontent(Ifcontent(assigns, ifblocks))
 Alwayscontent(assigns::Vector{Alassign}, ifblocks::Vector{Ifelseblock}, cases::Vector{Case}) = Alwayscontent(Ifcontent(assigns, ifblocks, cases))
@@ -156,7 +158,7 @@ Alwayscontent(case::Case...) = Alwayscontent(Alassign[], Ifelseblock[], [case...
 Alwayscontent() = Alwayscontent(aunknown)
 
 
-Vmodinst(vname, iname, pts, wild::Bool) = Vmodinst(vname, iname, Pair{String, Wireexpr}[], pts, wild)
+Vmodinst(vname, iname, pts, wild::Bool=false) = Vmodinst(vname, iname, Pair{String, Wireexpr}[], pts, wild)
 Vmodinst(vname, iname, ps, pts) = Vmodinst(vname, iname, ps, pts, false)
 
 
