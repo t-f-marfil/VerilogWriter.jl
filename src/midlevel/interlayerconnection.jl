@@ -51,10 +51,10 @@ function ilconnectSUML(parent::Midlayer, children::Midlayer...)::Vmodule
             )
         ))
         acceptedFf = always(:(
-            if $(acceptedAll)
-                $(acceptedreg) <= 0
+            if $acceptedAll
+                $acceptedreg <= 0
             else 
-                $(acceptedreg) <= $(acceptedwire);
+                $acceptedreg <= $acceptedwire | $acceptedreg;
             end
         ))
 
