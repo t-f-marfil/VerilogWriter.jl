@@ -7,7 +7,7 @@ Parameters(args::Oneparam...) = Parameters([args...])
 # Oneport(d::Portdirec, wt::Wiretype, wid::Wireexpr, n) = Oneport(d, Onedecl(wt, wid, n))
 Oneport(d::Portdirec, wt::Wiretype, wid::Int, n) = Oneport(d, wt, Wireexpr(wid), n)
 
-# Oneport(d::Portdirec, w::Int, n::String) = Oneport(d, wire, w, n)
+Oneport(d::Portdirec, wt::Wiretype, n::String) = Oneport(d, wt, 1, n)
 Oneport(d::Portdirec, w, n::String) = Oneport(d, wire, w, n)
 Oneport(d::Portdirec, n::String) = Oneport(d, 1, n)
 Oneport(d::Portdirec, n::Ref{Symbol}) = Oneport(d, string(n[]))
@@ -121,7 +121,7 @@ julia> vshow(c);
 type: Wireexpr
 
 julia> d = Wireexpr(redor, a); vshow(d); # wireexpr(:(|(\$(a))))
-|(a)
+(|(a))
 type: Wireexpr
 ```
 """

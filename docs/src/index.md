@@ -44,7 +44,7 @@ always_ff @( posedge clk ) begin
     if ((b1 && b2)) begin
         d4 <= (d5 ^ d6);
     end else begin
-        d4 <= ~d4[7:0];
+        d4 <= (~d4[7:0]);
     end
 end
 type: Alwayscontent
@@ -101,13 +101,13 @@ module mymodule #(
     reg [7:0] dbuf;
 
     always @( posedge clk ) begin
-        if ((sig2 && |(din2))) begin
+        if ((sig2 && (|(din2)))) begin
             dbuf <= din;
         end else if ((sig1 ^ sig2)) begin
             dout[7:splind] <= dbuf[7:splind];
             dout[(splind - 1):0] <= din[(splind - 1):0];
         end else begin
-            dout <= ~din;
+            dout <= (~din);
         end
     end
 endmodule
@@ -151,7 +151,7 @@ always_comb begin
     d1 = (d2 + d3);
     d4 = (d4 & d5);
     if ((b1 == b2)) begin
-        d6 = ~d7;
+        d6 = (~d7);
     end
 end
 type: Alwayscontent

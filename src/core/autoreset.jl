@@ -152,7 +152,7 @@ vshow(r)
 # output
 
 always_ff @( posedge clk ) begin
-    if (~resetn) begin
+    if ((~resetn)) begin
         r1 <= 0;
         r2 <= 0;
         r3 <= 0;

@@ -84,8 +84,8 @@ type: Alwayscontent
 
 julia> a2 = @always (dumreg = |(dumwire); duminfer = ~dumreg); vshow(a2);
 always_comb begin
-    dumreg = |(dumwire);
-    duminfer = ~dumreg;
+    dumreg = (|(dumwire));
+    duminfer = (~dumreg);
 end
 type: Alwayscontent
 
@@ -123,8 +123,8 @@ module test #(
         end
     end
     always_comb begin
-        dumreg = |(dumwire);
-        duminfer = ~dumreg;
+        dumreg = (|(dumwire));
+        duminfer = (~dumreg);
     end
 endmodule
 type: Vmodule

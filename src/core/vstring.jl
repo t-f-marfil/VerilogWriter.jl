@@ -116,11 +116,13 @@ function Base.string(x::Wireexpr)
             "]"
         )
     elseif x.operation in keys(wunaopdict)
+        txt = ""
         if x.operation in explicitCallop
             txt = string(wunaopdict[x.operation], "(", string(x.subnodes[begin]), ")")
         else
             txt = string(wunaopdict[x.operation], string(x.subnodes[begin]))
         end
+        txt = string("(", txt, ")")
     elseif x.operation in keys(wbinopdict)
         txt = string("(", string(x.subnodes[1]), spacewrap(wbinopdict[x.operation]), string(x.subnodes[2]), ")")
     # elseif x.operation == dec 

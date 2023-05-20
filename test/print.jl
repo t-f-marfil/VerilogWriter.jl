@@ -85,7 +85,7 @@ w = @wireexpr (a + b) << (c - d) >> e & f
 @test string(w) == "((((a + b) << (c - d)) >> e) & f)"
 
 w = @wireexpr &(a) | ~(^(b) ^ -c) == |(d)
-@test string(w) == "((&(a) | ~(^(b) ^ -c)) == |(d))"
+@test string(w) == "(((&(a)) | (~((^(b)) ^ (-c)))) == (|(d)))"
 
 ## + and * parses in a special manner
 w = @wireexpr a+b+c+d+e

@@ -13,7 +13,7 @@ rr = autoreset(v, rst= @wireexpr ~resetn)
 
 @test string(rr) == """
 always_ff @( posedge CLK ) begin
-    if (~resetn) begin
+    if ((~resetn)) begin
         a <= 0;
         b <= 0;
         c <= 0;
@@ -41,7 +41,7 @@ v = @always (
 v = autoreset(v, rst = @wireexpr ~rst)
 @test string(v) == """
 always_ff @( posedge CLK ) begin
-    if (~rst) begin
+    if ((~rst)) begin
         a <= 9;
     end else begin
         a <= 10;

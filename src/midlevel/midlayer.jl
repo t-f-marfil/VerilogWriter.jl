@@ -184,8 +184,8 @@ function addIlPortEachLayer(x::Layergraph)
         vpre, vpost = pre.vmod, post.vmod
 
         for ilattr in instances(Interlaysigtype)
-            preadded[pre] || vpush!(vpre, Oneport(portdir4ilst_lower[ilattr], nametolower(ilattr)))
-            postadded[post] || vpush!(vpost, Oneport(portdir4ilst_upper[ilattr], nametoupper(ilattr)))
+            preadded[pre] || vpush!(vpre, Oneport(portdir4ilst_lower[ilattr], logic, nametolower(ilattr)))
+            postadded[post] || vpush!(vpost, Oneport(portdir4ilst_upper[ilattr], logic, nametoupper(ilattr)))
         end
 
         preadded[pre] = postadded[post] = true
@@ -325,13 +325,13 @@ function lconnect_mlay!(v::Vmodule, x::Layergraph)
             push!(rvec, r)
             # push!(dvec, :(@logic $(rrhs), $(rlhs)))
 
-            @show uno.name, rregistered[uno], dos.name, lregistered[dos]
-            @show rlhs, rrhs
+
             rregistered[uno] || push!(dvec, :(@logic $(rrhs)))
             lregistered[dos] || push!(dvec, :(@logic $(rlhs)))
+
+            rregistered[uno] = lregistered[dos] = true
         end
 
-        rregistered[uno] = lregistered[dos] = true
     end
 
     vpush!(v, always(Expr(:block, rvec...)))

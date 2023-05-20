@@ -275,7 +275,7 @@ w1 <= w2;
 type: Alassign
 
 julia> a2 = oneblock(:(w3 = w4 + ~w2)); vshow(a2);
-w3 = (w4 + ~w2);
+w3 = (w4 + (~w2));
 type: Alassign
 ```
 ```jldoctest oneblock
@@ -296,7 +296,7 @@ vshow(a3)
 # output
 
 if ((b1 == b2)) begin
-    w5 = ~w6;
+    w5 = (~w6);
     w7 = w8;
 end else if (b2) begin
     w9 = (w9 + w10);
@@ -710,7 +710,7 @@ w
 type: Wireexpr
 
 julia> wireexpr(:(w1 & &(w2) )) |> vshow;
-(w1 & &(w2))
+(w1 & (&(w2)))
 type: Wireexpr
 
 julia> wireexpr(:(w[i:0])) |> vshow;
@@ -738,7 +738,7 @@ julia> w = @wireexpr x + y;
 julia> e = :(a + |(\$(w) & z));
 
 julia> wireexpr(e) |> vshow;
-(a + |(((x + y) & z)))
+(a + (|(((x + y) & z))))
 type: Wireexpr
 ```
 """

@@ -80,7 +80,7 @@ always_ff @( posedge clk ) begin
     if ((b1 == b2)) begin
         w1 <= (w2 + w3);
     end else begin
-        w1 <= ~w1;
+        w1 <= (~w1);
     end
 end
 type: Alwayscontent
