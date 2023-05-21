@@ -17,6 +17,7 @@ function ilconnectSUML(parent::Midlayer, children::Midlayer...)::Vmodule
 
     validParent = nametolower(ilvalid)
     updateParent = nametolower(ilupdate)
+    updateParentRhs = Wireexpr(1, 1)
 
     prts = ports(:(
         @in $(validParent);
@@ -33,15 +34,18 @@ function ilconnectSUML(parent::Midlayer, children::Midlayer...)::Vmodule
         accepted = acceptedwire | acceptedreg
         acceptedAllrhs &= accepted
 
-        validChildNow = string(nametoupper(ilvalid), "_", ind)
-        updateChildNow = string(nametoupper(ilupdate), "_", ind)
+        validChildNow = Wireexpr(string(nametoupper(ilvalid), "_", ind))
+        updateChildNow = Wireexpr(string(nametoupper(ilupdate), "_", ind))
+        # updatereg = Wireexpr("update_child$(ind)_reg")
+        # updateLocal = updatereg | updateChildNow
 
+        updateParentRhs &= accepted | updateChildNow
         # vpush!(m, ports(:(
         #     @out @logic $(validChildNow);
         #     @in $(updateChildNow)
         # )))
-        outvalidvec[ind] = Wireexpr(validChildNow)
-        inupdatevec[ind] = Wireexpr(updateChildNow)
+        outvalidvec[ind] = validChildNow
+        inupdatevec[ind] = updateChildNow
 
         acceptedComb = always(:(
             $(acceptedwire) = $(
@@ -102,7 +106,7 @@ function ilconnectSUML(parent::Midlayer, children::Midlayer...)::Vmodule
     ))
     
     parentUpdateComb = always(:(
-        $(updateParent) = $acceptedAll
+        $updateParent = $updateParentRhs
     ))
 
     push!(alvec, phaseAllFf, acceptedAllComb, parentUpdateComb)
@@ -111,5 +115,34 @@ function ilconnectSUML(parent::Midlayer, children::Midlayer...)::Vmodule
     # for wire width inference
     vpush!(m, Onedecl(logic, phaseGlobal))
     
+    return m
+end
+
+function ilconnectMUSL(child::Midlayer, parents::Midlayer...)
+    length(parents) > 0 || error("number of upper Midlayers should be more than zero.")
+    vmodname = "ilMUSL_$(getname(child))_to_$(reduce((x, y)->string(x,"_and_",y), [getname(p) for p in parents]))"
+    m = Vmodule(vmodname)
+
+    chiports = ports(:(
+        @in $(nametoupper(ilupdate));
+        @out @logic $(nametoupper(ilvalid))
+    ))
+    parports = ports(:(
+        @in $(length(parents)) $(nametolower(ilvalid));
+        @out @logic $(length(parents)) $(nametolower(ilupdate))
+    ))
+    vpush!(m, chiports, parports)
+
+    pupdateassigns = Vector{Alassign}(undef, length(parents))
+    for (ind, lay) in enumerate(parents)
+        pupdateassigns[ind] = Alassign(
+            wireexpr(:($(nametolower(ilupdate))[$(ind-1)])),
+            Wireexpr(nametoupper(ilupdate)),
+            comb
+        )
+    end
+    vpush!(m, Alwayscontent(comb, Ifcontent(pupdateassigns)))
+    vpush!(m, always(:($(nametoupper(ilvalid)) = &($(nametolower(ilvalid))))))
+
     return m
 end
