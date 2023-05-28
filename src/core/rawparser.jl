@@ -622,7 +622,7 @@ function wireexpr(expr, ::Val{:ref})
         && rngexpr.head == :call 
         && (
             rngexpr.args[3] isa QuoteNode
-            || rngexpr.args[3].head == :quote
+            || (rngexpr.args[3] isa Expr && rngexpr.args[3].head == :quote)
         )
     )
         rngexpr.args[1] == :- || error(
