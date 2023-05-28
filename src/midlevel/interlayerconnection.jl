@@ -146,3 +146,23 @@ function ilconnectMUSL(child::Midlayer, parents::Midlayer...)
 
     return m
 end
+
+function graph2adlist(lay::Layergraph)
+    # pre: no duplicate egdes in lay.edges
+    suml = OrderedDict{Midlayer, Vector{Midlayer}}()
+    musl = OrderedDict{Midlayer, Vector{Midlayer}}()
+
+    for ((uno, dos), _) in lay.edges
+        if !(uno in keys(suml))
+            suml[uno] = Midlayer[]
+        end
+        if !(dos in keys(musl))
+            musl[dos] = Midlayer[]
+        end
+
+        push!(suml[uno], dos)
+        push!(musl[dos], uno)
+    end
+
+    return suml, musl
+end

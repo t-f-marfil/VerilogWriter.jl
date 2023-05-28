@@ -39,11 +39,11 @@ function pushhelp_dotgen!(lay::Midlayer, randset::Set{Midlayer}, regset::Set{Mid
 end
 
 """
-    edgepush_dotgen!(iobuf::IOBuffer, edges::Dict{Pair{Midlayer, Midlayer}, Layerconn})
+    edgepush_dotgen!(iobuf::IOBuffer, edges::D) where {D <: AbstractDict{Pair{Midlayer, Midlayer}, Layerconn}}
 
 Helper function for `dotgen`.
 """
-function edgepush_dotgen!(iobuf::IOBuffer, edges::Dict{Pair{Midlayer, Midlayer}, Layerconn})
+function edgepush_dotgen!(iobuf::IOBuffer, edges::D) where {D <: AbstractDict{Pair{Midlayer, Midlayer}, Layerconn}}
     for ((n1, n2), ninfo) in edges 
         write(iobuf, "$(getname(n1)) -> $(getname(n2));\n")
     end

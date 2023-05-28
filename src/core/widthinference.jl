@@ -197,17 +197,17 @@ end
 
 
 """
-    findandpush_widunify!(newval::String, envdicts, ansset, widvars)
+    findandpush_widunify!(newval::String, envdicts::NTuple{4, Dict{String, Wirewid}}, ansset, widvars)
 
 Looking inside envdicts, add `newval` to `ansset` and `widvars`
 if `newval` is not in `envdicts`.
 """
-function findandpush_widunify!(newval::String, envdicts, ansset, widvars)
+function findandpush_widunify!(newval::String, envdicts::NTuple{4, Dict{String, Wirewid}}, ansset, widvars)
     dictans = map(d -> get(d, newval, nothing), envdicts)
     
-    if all(x -> x == nothing, dictans)
+    if all(isnothing, dictans)
         v = get(ansset, newval, nothing)
-        if v == nothing
+        if isnothing(v)
             widvar = Wirewid()
             ansset[newval] = widvar
             widvars[widvar] = [newval]
@@ -218,11 +218,11 @@ function findandpush_widunify!(newval::String, envdicts, ansset, widvars)
 end
 
 """
-    wirepush_widunify!(w::Wireexpr, envdicts, ansset, widvars)
+    wirepush_widunify!(w::Wireexpr, envdicts::NTuple{4, Dict{String, Wirewid}}, ansset, widvars)
 
 Push every wire that appears inside `w` to `ansset` and `widvars`.
 """
-function wirepush_widunify!(w::Wireexpr, envdicts, ansset, widvars)
+function wirepush_widunify!(w::Wireexpr, envdicts::NTuple{4, Dict{String, Wirewid}}, ansset, widvars)
     f!(x) = findandpush_widunify!(x, envdicts, ansset, widvars)
     g!(x) = wirepush_widunify!(x, envdicts, ansset, widvars)
 
@@ -239,7 +239,7 @@ function wirepush_widunify!(w::Wireexpr, envdicts, ansset, widvars)
     return nothing
 end
 
-function wirepush_widunify!(t::Tuple{Wireexpr, Wireexpr}, envdicts, ansset, widvars)
+function wirepush_widunify!(t::Tuple{Wireexpr, Wireexpr}, envdicts::NTuple{4, Dict{String, Wirewid}}, ansset, widvars)
     for w in t 
         wirepush_widunify!(w, envdicts, ansset, widvars)
     end
