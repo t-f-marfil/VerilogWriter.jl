@@ -120,7 +120,7 @@ end
 
 function ilconnectMUSL(child::Midlayer, parents::Midlayer...)
     length(parents) > 0 || error("number of upper Midlayers should be more than zero.")
-    vmodname = "ilMUSL_$(getname(child))_to_$(reduce((x, y)->string(x,"_and_",y), [getname(p) for p in parents]))"
+    vmodname = "ilMUSL_$(getname(child))_from_$(reduce((x, y)->string(x,"_and_",y), [getname(p) for p in parents]))"
     m = Vmodule(vmodname)
 
     chiports = ports(:(
@@ -147,8 +147,13 @@ function ilconnectMUSL(child::Midlayer, parents::Midlayer...)
     return m
 end
 
+"""
+    graph2adlist(lay::Layergraph)
+
+Generate adjacency list from Layergraph.
+"""
 function graph2adlist(lay::Layergraph)
-    # pre: no duplicate egdes in lay.edges
+    # precond: no duplicate egdes in lay.edges
     suml = OrderedDict{Midlayer, Vector{Midlayer}}()
     musl = OrderedDict{Midlayer, Vector{Midlayer}}()
 
@@ -165,4 +170,108 @@ function graph2adlist(lay::Layergraph)
     end
 
     return suml, musl
+end
+
+function wirenameMlayToSuml(il::Interlaysigtype, upper::Midlayer)
+    "$(string(il)[3:end])_mlay2suml_from_$(getname(upper))"
+end
+function wirenameMuslToMlay(il::Interlaysigtype, lower::Midlayer)
+    "$(string(il)[3:end])_musl2mlay_to_$(getname(lower))"
+end
+function wirenameSumlToMusl(il::Interlaysigtype, upper::Midlayer, lower::Midlayer)
+    "$(string(il)[3:end])_suml2musl_$(getname(upper))_to_$(getname(lower))"
+end
+
+const InfotypeSuml = Tuple{Decls, Vmodinst, Alwayscontent}
+
+function generateSUML(suml::D) where {D <: AbstractDict{Midlayer, Vector{Midlayer}}}
+    hublist = Vector{Vmodule}(undef, length(suml))
+    addinfolist = Vector{InfotypeSuml}(undef, length(suml))
+    for (i, (upper, lowers)) in enumerate(suml)
+        hub = ilconnectSUML(upper, lowers...)
+
+        bundlevalid = Wireexpr("bundle_valid_SUML_from_$(getname(upper))")
+        bundleupdate = Wireexpr("bundle_update_SUML_from_$(getname(upper))")
+        dcls = decls(:(@logic $(length(lowers)) $bundlevalid, $bundleupdate))
+
+        hubinst = Vmodinst(
+            getname(hub),
+            "uSUML_from_$(getname(upper))",
+            [
+                "CLK" => Wireexpr("CLK"),
+                "RST" => Wireexpr("RST"),
+                "valid_to_lower" => Wireexpr(wirenameMlayToSuml(ilvalid, upper)),
+                "update_from_lower" => Wireexpr(wirenameMlayToSuml(ilupdate, upper)),
+                "valid_from_upper" => bundlevalid,
+                "update_to_upper" => bundleupdate
+            ]
+        )
+
+        valids = Vector{Expr}(undef, length(lowers))
+        updates = Vector{Expr}(undef, length(lowers))
+
+        for (ind, low) in enumerate(lowers)
+            valnow = Wireexpr(wirenameSumlToMusl(ilvalid, upper, low))
+            updnow = Wireexpr(wirenameSumlToMusl(ilupdate, upper, low))
+            valids[ind] = :($valnow = $(bundlevalid)[$(ind-1)])
+            updates[ind] = :($(bundleupdate)[$(ind-1)] = $updnow)
+        end
+
+        alcomb = always(Expr(:block, valids..., updates...))
+    
+        hublist[i] = hub
+        addinfolist[i] = tuple(dcls, hubinst, alcomb)
+    end
+
+    return hublist, addinfolist
+end
+
+
+function generateMUSL(musl::D) where {D <: AbstractDict{Midlayer, Vector{Midlayer}}}
+    hublist = Vector{Vmodule}(undef, length(musl))
+    addinfolist = Vector{InfotypeSuml}(undef, length(musl))
+    for (i, (lower, uppers)) in enumerate(musl)
+        hub = ilconnectMUSL(lower, uppers...)
+
+        bundlevalid = Wireexpr("bundle_valid_MUSL_from_$(getname(lower))")
+        bundleupdate = Wireexpr("bundle_update_MUSL_from_$(getname(lower))")
+        dcls = decls(:(@logic $(length(uppers)) $bundlevalid, $bundleupdate))
+
+        hubinst = Vmodinst(
+            getname(hub),
+            "uMUSL_from_$(getname(lower))",
+            [
+                "CLK" => Wireexpr("CLK"),
+                "RST" => Wireexpr("RST"),
+                "valid_to_lower" => bundlevalid,
+                "update_from_lower" => bundleupdate,
+                "valid_from_upper" => Wireexpr(wirenameMuslToMlay(ilvalid, lower)),
+                "update_to_upper" => Wireexpr(wirenameMuslToMlay(ilupdate, lower))
+            ]
+        )
+
+        valids = Vector{Expr}(undef, length(uppers))
+        updates = Vector{Expr}(undef, length(uppers))
+
+        for (ind, upp) in enumerate(uppers)
+            valnow = Wireexpr(wirenameSumlToMusl(ilvalid, upp, lower))
+            updnow = Wireexpr(wirenameSumlToMusl(ilupdate, upp, lower))
+            valids[ind] = :($(bundlevalid)[$(ind-1)] = $valnow)
+            updates[ind] = :($updnow = $(bundleupdate)[$(ind-1)])
+        end
+
+        alcomb = always(Expr(:block, valids..., updates...))
+    
+        hublist[i] = hub
+        addinfolist[i] = tuple(dcls, hubinst, alcomb)
+    end
+
+    return hublist, addinfolist
+end
+
+function addsumlinfo!(m::Vmodule, lst::Vector{InfotypeSuml})
+    for item in lst
+        vpush!.(Ref(m), item)
+    end
+    return nothing
 end
