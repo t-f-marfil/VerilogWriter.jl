@@ -36,14 +36,9 @@ function ilconnectSUML(parent::Midlayer, children::Midlayer...)::Vmodule
 
         validChildNow = Wireexpr(string(nametoupper(ilvalid), "_", ind))
         updateChildNow = Wireexpr(string(nametoupper(ilupdate), "_", ind))
-        # updatereg = Wireexpr("update_child$(ind)_reg")
-        # updateLocal = updatereg | updateChildNow
-
+        
         updateParentRhs &= accepted | updateChildNow
-        # vpush!(m, ports(:(
-        #     @out @logic $(validChildNow);
-        #     @in $(updateChildNow)
-        # )))
+        
         outvalidvec[ind] = validChildNow
         inupdatevec[ind] = updateChildNow
 
@@ -92,9 +87,14 @@ function ilconnectSUML(parent::Midlayer, children::Midlayer...)::Vmodule
 
     vpush!(m, childprts)
     # assign valid_to_lower[i] = valid_to_lower_i
-    vpush!(m, always(Expr(:block, [Alassign(w, wireexpr(:($(bundleupdate)[$(i-1)])), comb) for (i, w) in enumerate(inupdatevec)]...)))
-    vpush!(m, always(Expr(:block, [Alassign(wireexpr(:($(bundlevalid)[$(i-1)])), w, comb) for (i, w) in enumerate(outvalidvec)]...)))
 
+    if length(children) > 1
+        vpush!(m, always(Expr(:block, [Alassign(w, wireexpr(:($(bundleupdate)[$(i-1)])), comb) for (i, w) in enumerate(inupdatevec)]...)))
+        vpush!(m, always(Expr(:block, [Alassign(wireexpr(:($(bundlevalid)[$(i-1)])), w, comb) for (i, w) in enumerate(outvalidvec)]...)))
+    else
+        vpush!(m, always(Expr(:block, Alassign(inupdatevec[], wireexpr(:($(bundleupdate))), comb))))
+        vpush!(m, always(Expr(:block, Alassign(wireexpr(:($(bundlevalid))), outvalidvec[], comb))))
+    end
 
     phaseAllFf = always(:(
         if $acceptedAll
@@ -135,8 +135,9 @@ function ilconnectMUSL(child::Midlayer, parents::Midlayer...)
 
     pupdateassigns = Vector{Alassign}(undef, length(parents))
     for (ind, lay) in enumerate(parents)
+        ww = length(parents) > 1 ? wireexpr(:($(nametolower(ilupdate))[$(ind-1)])) : wireexpr(:($(nametolower(ilupdate))))
         pupdateassigns[ind] = Alassign(
-            wireexpr(:($(nametolower(ilupdate))[$(ind-1)])),
+            ww,
             Wireexpr(nametoupper(ilupdate)),
             comb
         )
@@ -213,8 +214,14 @@ function generateSUML(suml::D) where {D <: AbstractDict{Midlayer, Vector{Midlaye
         for (ind, low) in enumerate(lowers)
             valnow = Wireexpr(wirenameSumlToMusl(ilvalid, upper, low))
             updnow = Wireexpr(wirenameSumlToMusl(ilupdate, upper, low))
-            valids[ind] = :($valnow = $(bundlevalid)[$(ind-1)])
-            updates[ind] = :($(bundleupdate)[$(ind-1)] = $updnow)
+
+            if length(lowers) > 1
+                valids[ind] = :($valnow = $(bundlevalid)[$(ind-1)])
+                updates[ind] = :($(bundleupdate)[$(ind-1)] = $updnow)
+            else
+                valids[ind] = :($valnow = $(bundlevalid))
+                updates[ind] = :($(bundleupdate) = $updnow)
+            end
         end
 
         alcomb = always(Expr(:block, valids..., updates...))
@@ -256,8 +263,14 @@ function generateMUSL(musl::D) where {D <: AbstractDict{Midlayer, Vector{Midlaye
         for (ind, upp) in enumerate(uppers)
             valnow = Wireexpr(wirenameSumlToMusl(ilvalid, upp, lower))
             updnow = Wireexpr(wirenameSumlToMusl(ilupdate, upp, lower))
-            valids[ind] = :($(bundlevalid)[$(ind-1)] = $valnow)
-            updates[ind] = :($updnow = $(bundleupdate)[$(ind-1)])
+
+            if length(uppers) > 1
+                valids[ind] = :($(bundlevalid)[$(ind-1)] = $valnow)
+                updates[ind] = :($updnow = $(bundleupdate)[$(ind-1)])
+            else
+                valids[ind] = :($(bundlevalid) = $valnow)
+                updates[ind] = :($updnow = $(bundleupdate))
+            end
         end
 
         alcomb = always(Expr(:block, valids..., updates...))

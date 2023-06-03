@@ -19,3 +19,5 @@ struct Layergraph
     edges::OrderedDict{Pair{Midlayer, Midlayer}, Layerconn}
     layers::OrderedSet{Midlayer}
 end
+
+@enum Interlaysigtype ilvalid ilupdate

@@ -112,8 +112,6 @@ macro Randlayer(arg)
     layermacro(arg, "Rand")
 end
 
-@enum Interlaysigtype ilvalid ilupdate
-
 "Chose proper preposition."
 const prep4ilst_lower = Dict([
     ilvalid => "to"
