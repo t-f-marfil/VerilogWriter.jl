@@ -332,7 +332,7 @@ function lconnect_mlay!(v::Vmodule, x::Layergraph)
 
     end
 
-    vpush!(v, always(Expr(:block, rvec...)))
+    # vpush!(v, always(Expr(:block, rvec...)))
     vpush!(v, decls(Expr(:block, dvec...)))
 
     return nothing

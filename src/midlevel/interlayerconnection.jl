@@ -134,16 +134,17 @@ function ilconnectMUSL(child::Midlayer, parents::Midlayer...)
     vpush!(m, chiports, parports)
 
     pupdateassigns = Vector{Alassign}(undef, length(parents))
+    upperallvalid = Wireexpr(redand, Wireexpr(nametolower(ilvalid)))
     for (ind, lay) in enumerate(parents)
-        ww = length(parents) > 1 ? wireexpr(:($(nametolower(ilupdate))[$(ind-1)])) : wireexpr(:($(nametolower(ilupdate))))
+        wlhs = length(parents) > 1 ? wireexpr(:($(nametolower(ilupdate))[$(ind-1)])) : wireexpr(:($(nametolower(ilupdate))))
         pupdateassigns[ind] = Alassign(
-            ww,
-            Wireexpr(nametoupper(ilupdate)),
+            wlhs,
+            Wireexpr(nametoupper(ilupdate)) & upperallvalid,
             comb
         )
     end
     vpush!(m, Alwayscontent(comb, Ifcontent(pupdateassigns)))
-    vpush!(m, always(:($(nametoupper(ilvalid)) = &($(nametolower(ilvalid))))))
+    vpush!(m, always(:($(nametoupper(ilvalid)) = $upperallvalid)))
 
     return m
 end
@@ -185,6 +186,12 @@ end
 
 const InfotypeSuml = Tuple{Decls, Vmodinst, Alwayscontent}
 
+"""
+    generateSUML(suml::D) where {D <: AbstractDict{Midlayer, Vector{Midlayer}}}
+
+instantiate all `ilconnectSUML` verilog modules from
+an adjacency list.
+"""
 function generateSUML(suml::D) where {D <: AbstractDict{Midlayer, Vector{Midlayer}}}
     hublist = Vector{Vmodule}(undef, length(suml))
     addinfolist = Vector{InfotypeSuml}(undef, length(suml))
