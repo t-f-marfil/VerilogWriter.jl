@@ -187,9 +187,6 @@ function addIlPortEachLayer(x::Layergraph)
         end
 
         preadded[pre] = postadded[post] = true
-        # vpush!(vpre, lowerportsgen(getname(vpost)))
-        # vpush!(vpost, upperportsgen(getname(vpre)))
-        # how do you connect valid/update interface?
     end
 
     return nothing
@@ -198,25 +195,6 @@ end
 function addPortEachLayer(x::Layergraph)
     addCommonPortEachLayer(x)
     addIlPortEachLayer(x)
-    # # should insert clk,rst before width inference
-    # for ml in x.layers 
-    #     for p in ml.lports
-    #         vpush!(ml.vmod, p)
-    #     end
-    # end
-
-    # for ((pre::Midlayer, post::Midlayer), conninfo) in x.edges
-    #     vpre, vpost = pre.vmod, post.vmod
-
-    #     for ilattr in instances(Interlaysigtype)
-    #         vpush!(vpre, Oneport(portdir4ilst_lower[ilattr], nametolower(ilattr)))
-    #         vpush!(vpost, Oneport(portdir4ilst_upper[ilattr], nametoupper(ilattr)))
-    #     end
-    #     # vpush!(vpre, lowerportsgen(getname(vpost)))
-    #     # vpush!(vpost, upperportsgen(getname(vpre)))
-    #     # how do you connect valid/update interface?
-    # end
-
 end
 
 function wireAddSuffix(wirename::String, lsuffix::Midlayer)
@@ -224,6 +202,7 @@ function wireAddSuffix(wirename::String, lsuffix::Midlayer)
 end
 
 """
+    outerportnamegen(portname::String, mlay::Midlayer)
 
 Given the name of a port and the vmodule object the port belongs to,
 return the name of a wire which is connected to the port at the top module.
@@ -231,7 +210,6 @@ return the name of a wire which is connected to the port at the top module.
 function outerportnamegen(portname::String, mlay::Midlayer)
     wirenamemodgen(mlay)(portname)
 end
-
 
 """
     unconnectedports_mlay(x::Layergraph)
@@ -293,13 +271,13 @@ function layerconnInstantiate_mlay!(v::Vmodule, x::Layergraph)
 end
 
 """
-    lconnect_mlay!(v::Vmodule, x::Layergraph)
+    ilconndecl_mlay!(v::Vmodule, x::Layergraph)
 
 Connect valid/update wires, which are generated automatically
 when converting `Midlayer` objects into Verilog HDL, between `Midlayer` objects.
 """
-function lconnect_mlay!(v::Vmodule, x::Layergraph)
-    rvec = Expr[]
+function ilconndecl_mlay!(v::Vmodule, x::Layergraph)
+    # rvec = Expr[]
     dvec = Expr[]
     rregistered = Dict([lay => false for lay in x.layers])
     lregistered = Dict([lay => false for lay in x.layers])
@@ -308,20 +286,20 @@ function lconnect_mlay!(v::Vmodule, x::Layergraph)
         for ilattr in instances(Interlaysigtype)
             rlhs = nametoupper(ilattr, dos)
             rrhs = nametolower(ilattr, uno)
-            # set appropiate lhs <=> rhs
+            # # set appropiate lhs <=> rhs
             if portdir4ilst_upper[ilattr] == pout
                 rlhs, rrhs = rrhs, rlhs
                 uno, dos = dos, uno
             end
-            r = :(
-                $(
-                    rlhs
-                ) = $(
-                    rrhs
-                )
-            )
-            push!(rvec, r)
-            # push!(dvec, :(@logic $(rrhs), $(rlhs)))
+            # r = :(
+            #     $(
+            #         rlhs
+            #     ) = $(
+            #         rrhs
+            #     )
+            # )
+            # push!(rvec, r)
+            # # push!(dvec, :(@logic $(rrhs), $(rlhs)))
 
 
             rregistered[uno] || push!(dvec, :(@logic $(rrhs)))
@@ -336,6 +314,55 @@ function lconnect_mlay!(v::Vmodule, x::Layergraph)
     vpush!(v, decls(Expr(:block, dvec...)))
 
     return nothing
+end
+
+"""
+    ilconnect_mlay(v::Vmodule, lay::Layergraph)
+
+Connect valid and update signals of `Midlayer` objects with each other.
+
+## Overview
++ Upper_Layer -> ilSUML -> ilMUSL -> Lower_Layer
+
+Currently all this connections are placed at the top module.
+May better create one verilog module other than top module and push these
+wires there.
+"""
+function ilconnect_mlay!(v::Vmodule, lay::Layergraph)
+    suml, musl = graph2adlist(lay)
+
+    # hublist: list of ilconnect_something Vmodules
+    # addinfolist: other additional information (e.g. Decls objects)
+    hublist1, addinfolist1 = generateSUML(suml)
+    hublist2, addinfolist2 = generateMUSL(musl)
+
+    addsumlinfo!(v, addinfolist1)
+    addsumlinfo!(v, addinfolist2)
+
+    # Connection between upstream layer and SUML hub
+    qs = Vector{Expr}(undef, length(suml)*2)
+    for (ind, (upper, _)) in enumerate(suml)
+        qupdate = :($(nametolower(ilupdate, upper)) = $(wirenameMlayToSuml(ilupdate, upper)))
+        qvalid = :($(wirenameMlayToSuml(ilvalid, upper)) = $(nametolower(ilvalid, upper)))
+        qs[2ind-1] = qupdate
+        qs[2ind] = qvalid
+    end
+    vpush!(v, always(Expr(:block, qs...)))
+
+    # Connection between downstream layer and MUSL hub
+    qs = Vector{Expr}(undef, length(musl)*2)
+    for (ind, (lower, _)) in enumerate(musl)
+        qupdate = :($(wirenameMuslToMlay(ilupdate, lower)) = $(nametoupper(ilupdate, lower)))
+        qvalid = :($(nametoupper(ilvalid, lower)) = $(wirenameMuslToMlay(ilvalid, lower)))
+        qs[2ind-1] = qupdate
+        qs[2ind] = qvalid
+    end
+    vpush!(v, always(Expr(:block, qs...)))
+
+    vpush!.(hublist1, Ref(@ports @in CLK, RST))
+    vpush!.(hublist2, Ref(@ports @in CLK, RST))
+
+    return [hublist1; hublist2]
 end
 
 """
@@ -411,7 +438,9 @@ function layer2vmod!(x::Layergraph; name = "Layers")::Vector{Vmodule}
     # note that 2 function calls below do not modify 
     # Vmodules in each midlayer objects
     layerconnInstantiate_mlay!(v, x)
-    lconnect_mlay!(v, x)
+    ilconndecl_mlay!(v, x)
+
+    hubs = ilconnect_mlay!(v, x)
     
     # connect unconnected ports to outer ports
     bypassUnconnected_mlay!(v, x)
@@ -427,7 +456,7 @@ function layer2vmod!(x::Layergraph; name = "Layers")::Vector{Vmodule}
         vpush!(v, vinstnamemod(lay.vmod))
     end
 
-    ans = [v, [lay.vmod for lay in x.layers]...]
+    ans = [v; [lay.vmod for lay in x.layers]; hubs]
     # vfinalize.(ans)
 end
 
