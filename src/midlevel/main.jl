@@ -1,4 +1,4 @@
-# add files which should not included here
+# add files which should not be included here
 # if not specified here then the file is automatically included in VerilogWriter module.
 noincludehere = abspath.([
     @__FILE__,

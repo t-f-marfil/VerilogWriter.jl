@@ -137,3 +137,7 @@ end
 function Base.iterate(x::Vmodule, ::Nothing)
     nothing
 end
+
+function Base.broadcastable(x::Vmodule)
+    Ref(x)
+end
