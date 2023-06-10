@@ -109,7 +109,7 @@ end
 
 Return [Oneport](@ref) object whose directions are reversed
 from `onep`. Wiretype information (`reg`, `wire`, `logic`) is 
-lost when inverted for `reg` cannot be at input port.
+lost when inverted, for `reg` cannot be at input port.
 """
 function invport(onep::Oneport)
     # d = onep.decl
@@ -267,6 +267,10 @@ Return a new `Ports` object all of whose output ports are of `reg`.
 """
 function alloutreg(p::Ports)
     alloutwtype(p, reg)
+end
+
+function alloutlogic(p::Ports)
+    alloutwtype(p, logic)
 end
 
 

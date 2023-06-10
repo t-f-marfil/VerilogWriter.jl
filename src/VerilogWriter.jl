@@ -43,7 +43,7 @@ export
     invport, invports, 
     declmerge,
     @sym2wire,
-    alloutreg,
+    alloutreg, alloutwire, alloutlogic,
     naiveinst,
     wrappergen,
     @preport,

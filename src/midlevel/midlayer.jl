@@ -456,8 +456,7 @@ function layer2vmod!(x::Layergraph; name = "Layers")::Vector{Vmodule}
         vpush!(v, vinstnamemod(lay.vmod))
     end
 
-    ans = [v; [lay.vmod for lay in x.layers]; hubs]
-    # vfinalize.(ans)
+    return [v; [lay.vmod for lay in x.layers]; hubs]
 end
 
 function vpush!(x::Midlayer, items...)

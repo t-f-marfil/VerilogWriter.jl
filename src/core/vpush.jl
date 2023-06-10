@@ -1,6 +1,3 @@
-# Generated from "vpushgen.jl", do not edit manually,
-# edit "vpushraw.jl" instead.
-
 """
     vpush!(coll::Decls, x::Onedecl...)
 
@@ -145,4 +142,8 @@ function vpush!(coll::Vmodule, x::Vector{T}...) where {T}
     for v in x 
         vpush!(coll, v...)
     end
+end
+
+function vpush!(coll::Vmodule)
+    return nothing
 end
