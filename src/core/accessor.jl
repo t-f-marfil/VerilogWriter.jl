@@ -2,6 +2,14 @@ function getname(x::T) where {T <: Union{Wireexpr, Oneport, Vmodule}}
     x.name 
 end
 
+function getwidth(x::T) where {T <: Union{Oneport}}
+    return x.width
+end
+
+function getdirec(x::Oneport)
+    return x.direc
+end
+
 macro vrenamehelp(x, nn)
     fields = fieldnames(Oneport)
     :name in fields || error("field 'name' no longer exists")

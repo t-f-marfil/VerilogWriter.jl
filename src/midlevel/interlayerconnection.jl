@@ -295,3 +295,39 @@ function addsumlinfo!(m::Vmodule, lst::Vector{InfotypeSuml})
     end
     return nothing
 end
+
+function ildatabuffer(lay::Midlayer, conn::Layerconn)
+    m = Vmodule("ildatabuf_$(getname(lay))")
+    prts = Ports([p for (p, _) in conn.ports])
+    ilprts = ports(:(
+        @in $(nametolower(ilvalid)), $(nametolower(ilupdate))
+    ))
+    trans = Wireexpr(nametolower(ilvalid)) & Wireexpr(nametolower(ilupdate))
+
+    for prt in prts
+        nm = getname(prt)
+        din = string("din_", nm)
+        dout = string("dout_", nm)
+        dbuf = string("dbuf_", nm)
+        alff = always(:(
+            if $trans
+                $dbuf <= $din
+            end
+        ))
+        alcomb = always(:(
+            if $trans
+                $dout = $din
+            else
+                $dout = $dbuf
+            end
+        ))
+
+        vpush!.(m, (alff, alcomb))
+    end
+
+    vpush!(m, portsNameMod(alloutlogic(prts), x -> string("dout_", x)))
+    vpush!(m, portsNameMod(invports(prts), x -> string("din_", x)))
+    vpush!(m, ilprts)
+
+    return m
+end

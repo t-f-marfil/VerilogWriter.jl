@@ -464,3 +464,13 @@ function vexport(x::Vector{Vmodule}, fpath=""; systemverilog=true, mode="w")
         end
     end
 end
+
+"""
+    portsNameMod(prts::Ports, namemod)
+
+Return a new `Ports` object whose `Oneport` objects' name is modified
+by `namemod` function.
+"""
+function portsNameMod(prts::Ports, namemod)
+    return Ports([Oneport(p.direc, p.wtype, p.width, namemod(p.name)) for p in prts])
+end

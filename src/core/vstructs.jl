@@ -180,7 +180,6 @@ struct Oneport
     wtype::Wiretype
     width::Wireexpr
     name::String
-    # decl::Onedecl
 end
 
 "Gather multiple ports."

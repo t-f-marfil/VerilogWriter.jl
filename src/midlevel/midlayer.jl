@@ -198,7 +198,8 @@ function addPortEachLayer(x::Layergraph)
 end
 
 function wireAddSuffix(wirename::String, lsuffix::Midlayer)
-    Wireexpr(wirenamemodgen(lsuffix)(wirename))
+    # Wireexpr(wirenamemodgen(lsuffix)(wirename))
+    Wireexpr(string(wirename, "_", getname(lsuffix)))
 end
 
 """
@@ -245,22 +246,47 @@ end
 Push data in Layerconn objects into Vmodule in a form of Verilog codes.
 """
 function layerconnInstantiate_mlay!(v::Vmodule, x::Layergraph)
-
+    mvec = Vmodule[]
     # # generate always_comb that connects ports 
     # # as described in Layerconn
     qvec = Expr[]
     for ((uno::Midlayer, dos::Midlayer), conn) in x.edges 
         # what is needed below: 
         #  function: <connection_name>, <modulename> -> <wirename_in_mother_module>
+        db = ildatabuffer(uno, conn)
+        push!(mvec, db)
+
+        smod = wirenamemodgen(db)
+        vpush!(v, vinstnamemod(db))
+        alil = always(:(
+            $(smod(nametolower(ilupdate))) = $(nametolower(ilupdate, uno));
+            $(smod(nametolower(ilvalid))) = $(nametolower(ilvalid, uno))
+        ))
+        vpush!(v, alil)
+        
         for (ppre, ppost) in conn.ports
-            q = :(
+            # q = :(
+            #     $(
+            #         wireAddSuffix(getname(ppost), dos)
+            #     ) = $(
+            #         wireAddSuffix(getname(ppre), uno)
+            #     )
+            # )
+            q1 = :(
                 $(
                     wireAddSuffix(getname(ppost), dos)
+                ) = $(
+                    smod(string("dout_", getname(ppre)))
+                )
+            )
+            q2 = :(
+                $(
+                    smod(string("din_", getname(ppre)))
                 ) = $(
                     wireAddSuffix(getname(ppre), uno)
                 )
             )
-            push!(qvec, q)
+            push!(qvec, q1, q2)
         end
 
     end
@@ -268,13 +294,16 @@ function layerconnInstantiate_mlay!(v::Vmodule, x::Layergraph)
     alans = Alwayscontent(comb, ifcontent(Expr(:block, qvec...)))
     vpush!(v, alans)
     
+    return mvec
 end
 
 """
     ilconndecl_mlay!(v::Vmodule, x::Layergraph)
 
-Connect valid/update wires, which are generated automatically
+Originally, Connect valid/update wires, which are generated automatically
 when converting `Midlayer` objects into Verilog HDL, between `Midlayer` objects.
+
+Now is needed only for wire declaration.
 """
 function ilconndecl_mlay!(v::Vmodule, x::Layergraph)
     # rvec = Expr[]
@@ -437,7 +466,7 @@ function layer2vmod!(x::Layergraph; name = "Layers")::Vector{Vmodule}
     # as described in Layerconn
     # note that 2 function calls below do not modify 
     # Vmodules in each midlayer objects
-    layerconnInstantiate_mlay!(v, x)
+    dbufs = layerconnInstantiate_mlay!(v, x)
     ilconndecl_mlay!(v, x)
 
     hubs = ilconnect_mlay!(v, x)
@@ -456,7 +485,7 @@ function layer2vmod!(x::Layergraph; name = "Layers")::Vector{Vmodule}
         vpush!(v, vinstnamemod(lay.vmod))
     end
 
-    return [v; [lay.vmod for lay in x.layers]; hubs]
+    return [v; [lay.vmod for lay in x.layers]; dbufs; hubs]
 end
 
 function vpush!(x::Midlayer, items...)
