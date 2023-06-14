@@ -247,22 +247,28 @@ Push data in Layerconn objects into Vmodule in a form of Verilog codes.
 """
 function layerconnInstantiate_mlay!(v::Vmodule, x::Layergraph)
     mvec = Vmodule[]
+    layVisited = Dict{Midlayer, Layerconn}()
     # # generate always_comb that connects ports 
     # # as described in Layerconn
     qvec = Expr[]
     for ((uno::Midlayer, dos::Midlayer), conn) in x.edges 
         # what is needed below: 
         #  function: <connection_name>, <modulename> -> <wirename_in_mother_module>
-        db = ildatabuffer(uno, conn)
-        push!(mvec, db)
+        layVisited[uno] = vmerge(conn, get(layVisited, uno, Layerconn()))
+        # if !(uno in keys(layVisited))
+            db = ildatabuffer(uno, conn)
+            # push!(mvec, db)
 
-        smod = wirenamemodgen(db)
-        vpush!(v, vinstnamemod(db))
-        alil = always(:(
-            $(smod(nametolower(ilupdate))) = $(nametolower(ilupdate, uno));
-            $(smod(nametolower(ilvalid))) = $(nametolower(ilvalid, uno))
-        ))
-        vpush!(v, alil)
+            smod = wirenamemodgen(db)
+            # vpush!(v, vinstnamemod(db))
+            # alil = always(:(
+            #     $(smod(nametolower(ilupdate))) = $(nametolower(ilupdate, uno));
+            #     $(smod(nametolower(ilvalid))) = $(nametolower(ilvalid, uno))
+            # ))
+            # vpush!(v, alil)
+
+            # push!(layVisited, uno)
+        # end
         
         for (ppre, ppost) in conn.ports
             # q = :(
@@ -289,6 +295,19 @@ function layerconnInstantiate_mlay!(v::Vmodule, x::Layergraph)
             push!(qvec, q1, q2)
         end
 
+    end
+
+    for (uno, conn) in layVisited
+        db = ildatabuffer(uno, conn)
+        push!(mvec, db)
+
+        smod = wirenamemodgen(db)
+        vpush!(v, vinstnamemod(db))
+        alil = always(:(
+            $(smod(nametolower(ilupdate))) = $(nametolower(ilupdate, uno));
+            $(smod(nametolower(ilvalid))) = $(nametolower(ilvalid, uno))
+        ))
+        vpush!(v, alil)
     end
 
     alans = Alwayscontent(comb, ifcontent(Expr(:block, qvec...)))
