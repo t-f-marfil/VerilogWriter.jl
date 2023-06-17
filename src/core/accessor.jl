@@ -10,6 +10,10 @@ function getdirec(x::Oneport)
     return x.direc
 end
 
+function getports(x::Vmodule)
+    return x.ports
+end
+
 macro vrenamehelp(x, nn)
     fields = fieldnames(Oneport)
     :name in fields || error("field 'name' no longer exists")

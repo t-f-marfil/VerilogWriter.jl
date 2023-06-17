@@ -282,7 +282,7 @@ function layerconnInstantiate_mlay!(v::Vmodule, x::Layergraph)
                 $(
                     wireAddSuffix(getname(ppost), dos)
                 ) = $(
-                    smod(string("dout_", getname(ppre)))
+                    smod(string("dout_", getname(ppost)))
                 )
             )
             q2 = :(
@@ -299,10 +299,20 @@ function layerconnInstantiate_mlay!(v::Vmodule, x::Layergraph)
 
     for (uno, conn) in layVisited
         db = ildatabuffer(uno, conn)
+        vpush!(db, commonports)
         push!(mvec, db)
 
         smod = wirenamemodgen(db)
-        vpush!(v, vinstnamemod(db))
+        dports = filter(x -> getname(x) != "CLK" && getname(x) != "RST", [i for i in getports(db)])
+        vpush!(v, Vmodinst(
+            getname(db),
+            "uildatabuf_$(getname(uno))",
+            [
+                "CLK" => Wireexpr("CLK"),
+                "RST" => Wireexpr("RST"),
+                [(n = getname(p); n => Wireexpr(smod(n))) for p in dports]...
+            ]
+        ))
         alil = always(:(
             $(smod(nametolower(ilupdate))) = $(nametolower(ilupdate, uno));
             $(smod(nametolower(ilvalid))) = $(nametolower(ilvalid, uno))
