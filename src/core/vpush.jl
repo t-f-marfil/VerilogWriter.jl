@@ -147,3 +147,11 @@ end
 function vpush!(coll::Vmodule)
     return nothing
 end
+
+function vpush!(coll::Vmodule, x::Vmodule...)
+    fields = filter(x -> x != :name, fieldnames(Vmodule))
+    for m in x
+        vpush!.(coll, getfield.(m, fields))
+    end
+    return nothing
+end

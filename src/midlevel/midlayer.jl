@@ -255,34 +255,19 @@ function layerconnInstantiate_mlay!(v::Vmodule, x::Layergraph)
         # what is needed below: 
         #  function: <connection_name>, <modulename> -> <wirename_in_mother_module>
         layVisited[uno] = vmerge(conn, get(layVisited, uno, Layerconn()))
-        # if !(uno in keys(layVisited))
-            db = ildatabuffer(uno, conn)
-            # push!(mvec, db)
+        db = ildatabuffer(uno, conn)
 
-            smod = wirenamemodgen(db)
-            # vpush!(v, vinstnamemod(db))
-            # alil = always(:(
-            #     $(smod(nametolower(ilupdate))) = $(nametolower(ilupdate, uno));
-            #     $(smod(nametolower(ilvalid))) = $(nametolower(ilvalid, uno))
-            # ))
-            # vpush!(v, alil)
-
-            # push!(layVisited, uno)
-        # end
+        smod = wirenamemodgen(db)
         
         for (ppre, ppost) in conn.ports
-            # q = :(
-            #     $(
-            #         wireAddSuffix(getname(ppost), dos)
-            #     ) = $(
-            #         wireAddSuffix(getname(ppre), uno)
-            #     )
-            # )
+            # getname(ppre) is not typo
+            # this is needed to match the name with 
+            # the one generated for Vmodinst ports
             q1 = :(
                 $(
                     wireAddSuffix(getname(ppost), dos)
                 ) = $(
-                    smod(string("dout_", getname(ppost)))
+                    smod(string("dout_", getname(ppre)))
                 )
             )
             q2 = :(
@@ -487,6 +472,13 @@ function connectCommonPorts_mlay!(v::Vmodule, x::Layergraph)
     return nothing
 end
 
+"""
+    layer2vmod!(x::Layergraph; name = "Layers")::Vector{Vmodule}
+
+Generate a list of `Vmodule` objects from `Layergraph`.
+
+`x` may change its content through the evaluation.
+"""
 function layer2vmod!(x::Layergraph; name = "Layers")::Vector{Vmodule}
     # toplevel module 
     v = Vmodule(name)

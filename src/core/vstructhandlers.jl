@@ -352,6 +352,11 @@ function wrappergen(n, x::Vmodule)
     
 end
 
+"""
+    wrappergen(x::Vmodule)
+
+Generate a wrapper module with a default name.
+"""
 function wrappergen(x::Vmodule)
     wrappergen(string(getname(x), "_wrapper"), x)
 end
