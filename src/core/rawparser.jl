@@ -566,8 +566,6 @@ end
 
 Dereference and parse `expr` given by user. Helper function 
 for macro `@oneblock`.
-
-See also [`@oneblock`](@ref).
 """
 function oneblock(expr::Ref{T}) where {T}
     oneblock(expr[])

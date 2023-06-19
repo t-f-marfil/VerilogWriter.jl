@@ -41,7 +41,7 @@ export
 export 
     ifadd!, 
     invport, invports, 
-    declmerge,
+    # declmerge,
     @sym2wire,
     alloutreg, alloutwire, alloutlogic,
     naiveinst,
@@ -57,10 +57,13 @@ export
     wireextract, wireextract!,
     lhsextract, lhsunify, autoreset, autoreset!, isreset,
     defclk, defrst,
-    Vmodenv, autodecl, autodecl_core, mergedeclenv
+    Vmodenv, autodecl, autodecl_core
+    #  mergedeclenv
 
 export 
     FSM, @FSM, fsmconv, transadd!, @tstate, transcond
+
+export showfield
 
 macro listtestonly(args)
     strs = Symbol[]
@@ -77,7 +80,7 @@ macro listtestonly(args)
 end
 
 const testonlyvars = @listtestonly (
-    showfield,
+    # showfield,
     
     oneblock, @oneblock, 
     ralways, @ralways

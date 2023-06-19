@@ -1,4 +1,4 @@
-# Generate Verilog Module
+# Quick Start
 ```@meta 
 CurrentModule = VerilogWriter
 DocTestSetup = quote
@@ -23,7 +23,7 @@ A module named `test` is generated here.
 
 ## Define Ports, Parameters, Localparams, and Wires
 
-Define ports, parameters, localparams, and wire/reg/logics as a Julia type we offer. Details on the types are at [Component Structs](@ref).
+Define ports, parameters, localparams, and wire/reg/logics as a Julia type we offer. Details on the types are at [Basic Types](@ref).
 
 Add them to the module `test` calling [`vpush!`](@ref).
 
@@ -36,7 +36,7 @@ julia> lp = @localparams (A = 1; B = 2; C = A + B);
 
 julia> ds = @decls (@reg dumreg; @wire A+B<<C dumwire);
 
-julia> f(p) = vpush!(m, p); map(f, (pa, po, lp, ds));
+julia> vpush!.(m, (pa, po, lp, ds));
 
 julia> vshow(m);
 module test #(
@@ -64,8 +64,8 @@ Syntaxes for each types (usage of `@ports`, `@decls`, etc.) are at [List of Conv
 Instead of calling `vpush!` you may pass additional information to constructors of `Vmodule`.
 You may also wrap ports, parameters, etc. into type `Vmodenv`.
 
-```julia
-env = Vmodenv(pa, po, lp, ds); Vmodule("test", env);
+```jldoctest t1
+julia> env = Vmodenv(pa, po, lp, ds); Vmodule("test", env);
 ```
 
 would generate the same result.
@@ -82,7 +82,12 @@ always_ff @( unknownedge  ) begin
 end
 type: Alwayscontent
 
-julia> a2 = @always (dumreg = |(dumwire); duminfer = ~dumreg); vshow(a2);
+julia> a2 = @always (
+       dumreg = |(dumwire);
+       duminfer = ~dumreg
+       );
+
+julia> vshow(a2);
 always_comb begin
     dumreg = (|(dumwire));
     duminfer = (~dumreg);

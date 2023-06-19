@@ -6,9 +6,6 @@ DocTestSetup = quote
     using VerilogWriter
 end
 ```
-```@setup top
-using VerilogWriter
-```
 
 We offer some tools to automatically add additional information inferred from a given Verilog-like codes.
 

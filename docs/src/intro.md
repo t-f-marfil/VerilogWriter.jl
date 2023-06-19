@@ -64,48 +64,48 @@ c = always(:(
         reg5 <= 0
     end
 ))
-autoreset!(c)
-env = Vmodenv(Parameters(), ps, Localparams(), ds)
-ad = autodecl(c, env)
 
-vshow(ad)
-vshow(c)
+m = Vmodule("test")
+vpush!.(m, (ps, ds, c))
+vshow(vfinalize(m))
 ```
 
 ###### Out[3]
 
 ```systemverilog
-input b1
-input CLK
-input RST
+module test (
+    input b1,
+    input CLK,
+    input RST
+);
+    reg [7:0] dreg1;
+    logic [7:0] reg1;
+    logic [1:0] reg2;
+    logic reg3;
+    logic [7:0] reg4;
+    logic [31:0] reg5;
 
-reg [7:0] dreg1;
-reg [7:0] reg1;
-reg [1:0] reg2;
-reg reg3;
-reg [7:0] reg4;
-reg [31:0] reg5;
-type: Vmodenv
-always_ff @( posedge CLK ) begin
-    if (RST) begin
-        reg1 <= 0;
-        reg2 <= 0;
-        reg3 <= 0;
-        reg4 <= 0;
-        reg5 <= 0;
-    end else begin
-        reg1 <= dreg1;
-        if (b1) begin
-            reg2 <= reg1[7:6];
-            reg3 <= reg1[0];
-            reg4 <= reg1;
-            reg5 <= 32'd4;
-        end else begin
+    always_ff @( posedge CLK ) begin
+        if (RST) begin
+            reg1 <= 0;
+            reg2 <= 0;
+            reg3 <= 0;
+            reg4 <= 0;
             reg5 <= 0;
+        end else begin
+            reg1 <= dreg1;
+            if (b1) begin
+                reg2 <= reg1[7:6];
+                reg3 <= reg1[0];
+                reg4 <= reg1;
+                reg5 <= 32'd4;
+            end else begin
+                reg5 <= 0;
+            end
         end
     end
-end
-type: Alwayscontent
+endmodule
+type: Vmodule
 ```
 
 (of course this verilog module itself is far from being useful.)
@@ -117,10 +117,6 @@ This package offers a simple method to write on Julia Verilog/SystemVerilog code
 The motivation here is that it would be nice if we could write Verilog/SystemVerilog with the power of the Julia language, with a minimal amount of additional syntaxes (function calls, constructors, etc.). 
 
 As in the examples above, we offer, for instance, simple macros to convert Verilog-like Julia code into certain objects that have proper structure found in Verilog codes.
-
-```@meta 
-CurrentModule = VerilogWriter
-```
 
 ## What is Left to be Done
 

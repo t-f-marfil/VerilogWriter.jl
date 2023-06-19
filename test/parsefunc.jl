@@ -111,8 +111,6 @@ localparam a = 1110;"""
 # wireexprs
 x = @wireexpr a[b+c]
 @test string(x) == "a[(b + c)]"
-@test false
-
 
 # decls 
 x = decls(:(

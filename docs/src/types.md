@@ -1,4 +1,4 @@
-# Component Structs
+# Basic Types
 
 ```@meta 
 CurrentModule = VerilogWriter
@@ -8,7 +8,7 @@ end
 ```
 ## Structs Description
 
-This module offers several structs that contain a structure of Verilog components, major ones of which are listed below. 
+This module offers several types that contain a structure of Verilog components, major ones of which are listed below. 
 
 
 + [Parameters](@ref)
@@ -214,12 +214,12 @@ Vmodenv
 
 ## Converter Functions/Macros
 
-As in previous examples we offer functions and macros to convert Julia syntax into certain structs described above. You may use these instead of calling constructors.
+As in previous examples we offer functions and macros to convert Julia syntax into certain types described above. You may use these instead of calling constructors.
 
 All the functions listed below accept `Expr` object as its argument (e.g. :(x = 10),
-see [Julia Documents](https://docs.julialang.org/en/v1/manual/metaprogramming/#Expressions-and-evaluation) for more information.), and that is why variables inside the argument `Expr` object do not have to be declared anywhere else in the source code. The syntaxes each function requires in a argument `Expr` objects are also described below (or may be easily inferred from the examples here and [Brief Introduction](@ref)).
+see [Julia Documents](https://docs.julialang.org/en/v1/manual/metaprogramming/#Expressions-and-evaluation) for more information.), and that is why variables inside the argument `Expr` object do not have to be declared anywhere else in the source code. The syntaxes each function requires in a argument `Expr` objects are also described below (or may be easily inferred from the examples in this page and [Quick Start](@ref)).
 
-As you see in [Brief Introduction](@ref) there are macros that do the same thing as functions listed below (and both macro and function has the same name). As macros take `Expr` object as its argument, you can write codes in a slightly more simple manner with macros. For example,
+As you see in [Quick Start](@ref) there are macros that do the same thing as functions listed below (and both macro and function has the same name). As macros take `Expr` object as its argument, you can write codes in a slightly more simple manner with macros. For example,
 ```
 always(:(
     @posedge clk; 
@@ -245,16 +245,14 @@ is equivalent to
 (be care full not to foreget `(one space)` between macros and `(`, i.e. `@macro(a,b)` and `@macro (a,b)` are different.)
 
 But sometimes there are things what macros cannot do (for now), an example is having `for` loop inside expressions.
-```Julia
-d = always(:(
-    if b1 
-        $([:($(Symbol("x$i")) = $(Symbol("y$i"))) for i in 1:3]...)
-    end
-))
-vshow(d)
-```
-and this outputs
-```
+```jldoctest
+julia> d = always(:(
+           if b1 
+               $([:($(Symbol("x$i")) = $(Symbol("y$i"))) for i in 1:3]...)
+           end
+       ));
+
+julia> vshow(d);
 always_comb begin
     if (b1) begin
         x1 = y1;
@@ -337,7 +335,6 @@ always(::Expr)
 
 #### oneblock 
 ```@docs
-oneblock(::Expr)
 oneblock(expr::T) where {T <: Union{Alassign, Ifelseblock}}
 ```
 
@@ -401,11 +398,6 @@ vexport
 ### vpush!
 ```@docs
 vpush!
-```
-
-### declmerge
-```@docs
-declmerge
 ```
 
 ### sym2wire

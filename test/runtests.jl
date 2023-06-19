@@ -23,18 +23,22 @@ macro testconduct(tpair)
     end
 end
 
+DocMeta.setdocmeta!(
+    VerilogWriter, 
+    :DocTestSetup, 
+    :(using VerilogWriter); 
+    recursive=true
+)
+
+doctest(VerilogWriter)
+
 # @testset "VerilogWriter.jl" begin
-    for tpair in tpairs 
-        @testconduct tpair
-    end
-    
-    DocMeta.setdocmeta!(
-        VerilogWriter, 
-        :DocTestSetup, 
-        :(using VerilogWriter); 
-        recursive=true
-    )
-    println("start doctest.")
-    doctest(VerilogWriter)
-    println("doctest done.")
-# end
+for tpair in tpairs 
+    @testconduct tpair
+end
+
+
+# println("start doctest.")
+# doctest(VerilogWriter)
+# println("doctest done.")
+# # end

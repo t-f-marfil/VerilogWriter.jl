@@ -650,19 +650,19 @@ function autodecl_core(x)
     autodecl_core(x, Vmodenv())
 end
 
-"""
-    mergedeclenv(d::Decls, env::Vmodenv)
+# """
+#     mergedeclenv(d::Decls, env::Vmodenv)
 
-Merge return value from autodecl_core into a new `Vmodenv` object.
-"""
-function mergedeclenv(d::Decls, env::Vmodenv)
-    Vmodenv(
-        env.prms, 
-        env.prts,
-        env.lprms,
-        declmerge(env.dcls, d)
-    )
-end
+# Merge return value from autodecl_core into a new `Vmodenv` object.
+# """
+# function mergedeclenv(d::Decls, env::Vmodenv)
+#     Vmodenv(
+#         env.prms, 
+#         env.prts,
+#         env.lprms,
+#         declmerge(env.dcls, d)
+#     )
+# end
 
 
 """
@@ -771,7 +771,9 @@ ERROR: Wire width cannot be inferred for the following wires.
 """
 function autodecl(x, env::Vmodenv)::Vmodenv
     d, nenv = autodecl_core(x, env)
-    mergedeclenv(d, nenv)
+    # mergedeclenv(d, nenv)
+    vpush!(nenv.dcls, d)
+    return nenv
 end
 
 """
