@@ -4,16 +4,16 @@ p = @oneparam p1 = 800
 
 
 # Parameters
-p = parameters(:(
+p = @parameters (
     a = 10; b = 11
-))
+)
 @test string(p) == """
 #(
     parameter a = 10,
     parameter b = 11
 )"""
 
-p = parameters(:(c = 1))
+p = @parameters (c = 1)
 @test string(p) == """
 #(
     parameter c = 1
@@ -75,7 +75,7 @@ p = @onelocalparam p1 = 111
 
 
 # Onedecl
-d = decloneline(:(@wire 2 << 1 xy SEN+HYAKU))
+d = @decloneline (@wire 2 << 1 xy SEN+HYAKU)
 @test string(d[]) == """
 wire [(2 << 1)-1:0] xy [(SEN + HYAKU)-1:0];"""
 
@@ -104,22 +104,22 @@ w = @wireexpr b[P-:4]
 @test string(w) == "b[P -: 4]"
 
 # Alassign 
-a = @oneblock x <= y 
+a = oneblock(:( x <= y ))[2] |> eval
 @test string(a) == "x <= y;"
 
-a = @oneblock x[4:0] <= y & z
+a = oneblock(:( x[4:0] <= y & z))[2] |> eval
 @test string(a) == "x[4:0] <= (y & z);"
 
 
 # Ifelseblock
-a = @oneblock (
+a = oneblock(:(
     if b1 && b2 
         x <= y 
     else
         x <= z;
         y <= z
     end
-)
+))[2] |> eval
 @test string(a) == """
 if ((b1 && b2)) begin
     x <= y;
@@ -128,7 +128,7 @@ end else begin
     y <= z;
 end"""
 
-a = @oneblock (
+a = oneblock( :(
     if b1 && b2 
         x <= y+z;
     elseif b3
@@ -142,7 +142,7 @@ a = @oneblock (
             u <= d | e 
         end
     end
-)
+))[2] |> eval
 @test string(a) == """
 if ((b1 && b2)) begin
     x <= (y + z);

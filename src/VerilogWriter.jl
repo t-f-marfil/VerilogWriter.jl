@@ -39,7 +39,7 @@ export
     paramsolve, paramcalc
 
 export 
-    ifadd!, 
+    ifadd!, addatype!,
     invport, invports, 
     # declmerge,
     @sym2wire,

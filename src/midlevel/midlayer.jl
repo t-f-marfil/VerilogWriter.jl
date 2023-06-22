@@ -144,18 +144,18 @@ function nametoupper(st::Interlaysigtype, suffix::Midlayer)
     string(nametoupper(st), "_", getname(suffix))
 end
 
-function lowerportsgen(lowername::String)
-    ports(:(
-        @out @logic $(Symbol(nametolower(lowername, ilvalid)));
-        @in $(Symbol(nametolower(lowername, ilupdate)))
-    ))
-end
-function upperportsgen(uppername::String)
-    ports(:(
-        @in $(Symbol("valid_from_upper_$(uppername)"));
-        @out @logic $(Symbol("update_to_upper_$(uppername)"))
-    ))
-end
+# function lowerportsgen(lowername::String)
+#     ports(:(
+#         @out @logic $(Symbol(nametolower(lowername, ilvalid)));
+#         @in $(Symbol(nametolower(lowername, ilupdate)))
+#     ))
+# end
+# function upperportsgen(uppername::String)
+#     ports(:(
+#         @in $(Symbol("valid_from_upper_$(uppername)"));
+#         @out @logic $(Symbol("update_to_upper_$(uppername)"))
+#     ))
+# end
 
 function lowerportsgen(lowerobj)
     lowerportsgen(getname(lowerobj))

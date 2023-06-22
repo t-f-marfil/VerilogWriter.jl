@@ -1,4 +1,4 @@
-v = ifcontent(:(
+v = @always (
     a <= m;
     c <= 10;
     if b1 
@@ -7,7 +7,7 @@ v = ifcontent(:(
         c <= p
         b[1] <= nn
     end
-))
+)
 
 rr = autoreset(v, rst= @wireexpr ~resetn)
 
@@ -96,10 +96,10 @@ end"""
 
 
 # autoreset with 2d reg
-a = @always(
+a = @always (
     a <= a + 1
 ) 
-d = @decls(
+d = @decls ( 
     @reg 32 a 10
 )
 

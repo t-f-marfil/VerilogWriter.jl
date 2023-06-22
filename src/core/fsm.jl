@@ -318,7 +318,7 @@ function fsmconv(::Type{Localparams}, x::FSM)
     ans = Onelocalparam[]
 
     for i in 1:length(x.states)
-        push!(ans, onelocalparam(:($(Symbol(x.states[i])) = $(i-1))))
+        push!(ans, @onelocalparam ($(Symbol(x.states[i])) = $(i-1)))
     end
 
     Localparams(ans)

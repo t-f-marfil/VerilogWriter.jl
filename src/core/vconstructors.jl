@@ -14,14 +14,22 @@ Oneport(d::Portdirec, n::Ref{Symbol}) = Oneport(d, string(n[]))
 # Oneport(d::Portdirec, w::Int, n::Ref{Symbol}) = Oneport(d, w, string(n[]))
 Oneport(d::Portdirec, w, n::Ref{Symbol}) = Oneport(d, w, string(n[]))
 
-
+"for interpolation in `ports`"
+Ports(args::Ports...) = Ports(vcat([i.val for i in args]...))
 Ports(args::Oneport...) = Ports([args...])
+Ports() = Ports(Oneport[])
 
+"needed when casting everything into Onelocalparam in macro `localparams`"
+Onelocalparam(x::Onelocalparam) = x
+Onelocalparam(x::Oneparam) = convert(Onelocalparam, x)
+# Onelocalparam(x::Localparams) = Onelocalparam.(x)
 
 Onelocalparam(n, val::Int) = Onelocalparam(n, Wireexpr(val))
 
-
+"needed when casting everything into Localparams in macro `localparams`"
+Localparams(x::Localparams...) = Localparams(vcat([i.val for i in x]...))
 Localparams(args::Onelocalparam...) = Localparams([i for i in args])
+Localparams() = Localparams(Onelocalparam[])
 
 
 Onedecl(t::Wiretype, wid::Wireexpr, n::String) = Onedecl(t, wid, n, false, Wireexpr())
@@ -103,8 +111,6 @@ Wireexpr() = Wireexpr("")
 Apply an operation on wires in `v`.
 """
 Wireexpr(op::Wireop, v::Vector{Wireexpr}) = Wireexpr(op, "", v, -1, -1)
-# Wireexpr(op::Wireop, uno::Wireexpr) = Wireexpr(op, [uno])
-# Wireexpr(op::Wireop, uno::Wireexpr, dos::Wireexpr) = Wireexpr(op, [uno, dos])
 """
     Wireexpr(op::Wireop, w::Wireexpr...)
 
@@ -127,6 +133,11 @@ type: Wireexpr
 """
 Wireexpr(op::Wireop, w::Wireexpr...) = Wireexpr(op, [w...])
 
+# for interpolation where wire name is inserted
+# e.g. :($(some_symbol)[1])
+Wireexpr(op::Wireop, uno, dos) = Wireexpr(op, Wireexpr(uno), Wireexpr(dos))
+
+Wireexpr(x::Wireexpr) = x
 
 Alassign(lhs, rhs) = Alassign(lhs, rhs, aunknown)
 

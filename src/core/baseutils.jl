@@ -99,16 +99,54 @@ end
 #     hash(Tuple(map(i -> getfield(x, i), fieldnames(Oneport))), h)
 # end
 
+macro nonIternonBcast(arg)
+    quote
+        function Base.iterate(iter::$arg, ::Nothing)
+            nothing
+        end
+        function Base.iterate(iter::$arg)
+            (iter, nothing)
+        end
+        function Base.broadcastable(b::$arg)
+            Ref(b)
+        end
+    end
+end
+macro valIterBcast(arg)
+    quote
+        function Base.iterate(iter::$arg, state)
+            iterate(iter.val, state)
+        end
+        function Base.iterate(iter::$arg)
+            iterate(iter.val)
+        end
+        function Base.length(iter::$arg)
+            length(iter.val)
+        end
+        function Base.broadcastable(b::$arg)
+            b.val
+        end
+    end
+end
 
-function Base.iterate(iter::Ports)
-    iterate(iter.val)
-end
-function Base.iterate(iter::Ports, state)
-    iterate(iter.val, state)
-end
-function Base.length(iter::Ports)
-    length(iter.val)
-end
+
+# function Base.iterate(iter::Ports)
+#     iterate(iter.val)
+# end
+# function Base.iterate(iter::Ports, state)
+#     iterate(iter.val, state)
+# end
+# function Base.length(iter::Ports)
+#     length(iter.val)
+# end
+@valIterBcast Ports
+
+@nonIternonBcast Onelocalparam
+
+# function Base.broadcastable(b::Localparams)
+#     b.val
+# end
+@valIterBcast Localparams
 
 function Base.iterate(iter::Decls)
     iterate(iter.val)
@@ -130,14 +168,15 @@ function Base.length(iter::Parameters)
     length(iter.val)
 end
 
-function Base.iterate(x::Vmodule)
-    (x, nothing)
-end
+# function Base.iterate(x::Vmodule)
+#     (x, nothing)
+# end
 
-function Base.iterate(x::Vmodule, ::Nothing)
-    nothing
-end
+# function Base.iterate(x::Vmodule, ::Nothing)
+#     nothing
+# end
 
-function Base.broadcastable(x::Vmodule)
-    Ref(x)
-end
+# function Base.broadcastable(x::Vmodule)
+#     Ref(x)
+# end
+@nonIternonBcast Vmodule

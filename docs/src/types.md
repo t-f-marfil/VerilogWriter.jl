@@ -244,24 +244,6 @@ is equivalent to
 
 (be care full not to foreget `(one space)` between macros and `(`, i.e. `@macro(a,b)` and `@macro (a,b)` are different.)
 
-But sometimes there are things what macros cannot do (for now), an example is having `for` loop inside expressions.
-```jldoctest
-julia> d = always(:(
-           if b1 
-               $([:($(Symbol("x$i")) = $(Symbol("y$i"))) for i in 1:3]...)
-           end
-       ));
-
-julia> vshow(d);
-always_comb begin
-    if (b1) begin
-        x1 = y1;
-        x2 = y2;
-        x3 = y3;
-    end
-end
-type: Alwayscontent
-```
 
 ### List of Converter Functions/Macros
 
@@ -355,7 +337,7 @@ Every object (offered in this package) can be embedded almost anywhere it seems 
 ```jldoctest
 julia> a = @portoneline @in clk;
 
-julia> b = ports(:($(a); @out 8 dout)); vshow(b);
+julia> b = @ports ($a; @out 8 dout); vshow(b);
 (
     input clk,
     output [7:0] dout
@@ -364,7 +346,7 @@ type: Ports
 
 julia> a = @ports (@in clk; @out 8 dout);
 
-julia> b = ports(:(@in resetn; $(a))); vshow(b);
+julia> b = @ports (@in resetn; $(a)); vshow(b);
 (
     input resetn,
     input clk,
@@ -374,7 +356,7 @@ type: Ports
 
 julia> a = @wireexpr (x + y) & z;
 
-julia> b = always(:(lhs = $(a) | w)); vshow(b);
+julia> b = @always (lhs = $(a) | w); vshow(b);
 always_comb begin
     lhs = (((x + y) & z) | w);
 end

@@ -1,9 +1,9 @@
 # inference on shift operator
 # e.g. in `w = x << y` width of y is unknown
-c = ifcontent(:(
+c = @ifcontent (
     reg1 = $(Wireexpr(32, 5)) << reg2;
     reg2 = $(Wireexpr(10, 5))
-))
+)
 
 d, _ = autodecl_core(c)
 
@@ -12,10 +12,10 @@ logic [31:0] reg1;
 logic [9:0] reg2;"""
 
 # Bitwise and reduction unary operator
-c = ifcontent(:(
+c = @ifcontent (
     reg1 = ^($(Wireexpr(32, 10)));
     reg2 = ~($(Wireexpr(10, 6)))
-))
+)
 
 d, _ = autodecl_core(c)
 
@@ -46,11 +46,11 @@ logic [(A + B)-1:0] reg3;
 logic [(A + B)-1:0] reg4;"""
 
 # recursive check for '==' and reductions
-c = always(:(
+c = @always (
     if |(a & b) 
         a <= &(b == c)
     end
-))
+)
 d, nenv = autodecl_core(c)
 @test string(d) == """
 logic a;
@@ -58,10 +58,10 @@ logic b;
 logic c;"""
 
 # error message 
-c = always(:(
+c = @always (
     a <= $(Wireexpr(32, 10));
     a <= $(Wireexpr(1, 0))
-))
+)
 
 @test (@strerror autodecl_core(c)) == """
 width inference failure in evaluating a <=> 1'd0.

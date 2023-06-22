@@ -108,7 +108,7 @@ function autoreset(x::Ifcontent; clk=defclk, rst=defrst, edge=posedge, reg2d::Di
                 depthnum = regdepth.value
                 push!(prerstcont, reduce(
                     vcat,
-                    [alassign_ff(:($(Symbol(i.name))[$(ind-1)] <= 0)) for ind in 1:depthnum]
+                    [(@alassign_ff ($(Symbol(i.name))[$(ind-1)] <= 0)) for ind in 1:depthnum]
                 )...)
             else
                 push!(prerstcont, Alassign(i, Wireexpr(0), ff))

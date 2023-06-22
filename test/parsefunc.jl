@@ -1,60 +1,6 @@
 # parameters
-a = @parameters (x = 10; z = 2)
-b = @onelocalparam a = 111
-x = localparams(:(
-    y = 5; $([a, b]...)
-))
-
-@test string(x) == """
-localparam y = 5;
-localparam x = 10;
-localparam z = 2;
-localparam a = 111;"""
-
-a = @localparams (x = 1; z = 20)
-b = @oneparam a = 1111
-x = localparams(:(
-    y = 50; $([a, b]...)
-))
-
-@test string(x) == """
-localparam y = 50;
-localparam x = 1;
-localparam z = 20;
-localparam a = 1111;"""
-
 
 # ports 
-
-# interpolation 
-# vector of ports
-x = ports(:(
-    $([
-        ports(:(@in 6 x, z)), 
-        ports(:(@in y))
-    ]...)
-))
-@test string(x) == """
-(
-    input [5:0] x,
-    input [5:0] z,
-    input y
-);"""
-
-# vector of portoneline return vals
-x = ports(:(
-    $([
-        portoneline(:(@in 6 x, z)), 
-        portoneline(:(@in y))
-    ]...)
-))
-@test string(x) == """
-(
-    input [5:0] x,
-    input [5:0] z,
-    input y
-);"""
-
 ## width with parameters
 x = @ports (
     @in z;
@@ -84,11 +30,11 @@ x = @ports (
 );"""
 
 # localparams 
-a = @localparams (x = 10; z = 2)
-b = @oneparam a = 111
-x = localparams(:(
-    y = 5; $([a, b]...)
-))
+a = @parameters (x = 10; z = 2)
+b = @onelocalparam a = 111
+x = @localparams (
+    y = 5; $([Onelocalparam.(a)..., b]...)
+)
 
 @test string(x) == """
 localparam y = 5;
@@ -96,49 +42,11 @@ localparam x = 10;
 localparam z = 2;
 localparam a = 111;"""
 
-a = @parameters (x = 101; z = 22)
-b = @onelocalparam a = 1110
-x = localparams(:(
-    y = 55; $([a, b]...)
-))
-
-@test string(x) == """
-localparam y = 55;
-localparam x = 101;
-localparam z = 22;
-localparam a = 1110;"""
-
 # wireexprs
 x = @wireexpr a[b+c]
 @test string(x) == "a[(b + c)]"
 
 # decls 
-x = decls(:(
-    $(@decloneline @reg 8 x)
-))
-@test string(x) == "reg [7:0] x;"
-
-x = decls(:(
-    $([
-        (@decloneline @logic a, b),
-        (@decloneline @reg 10 c)
-    ]...)
-))
-@test string(x) == """
-logic a;
-logic b;
-reg [9:0] c;"""
-
-x = decls(:(
-    $(@decls (
-        @logic a;
-        @wire 10 b, c
-    ))
-))
-@test string(x) == """
-logic a;
-wire [9:0] b;
-wire [9:0] c;"""
 
 ## wire width with parameters
 x = @decls (
@@ -157,65 +65,34 @@ reg [((C * D) << 2)-1:0] s;
 reg [((C * D) << 2)-1:0] t;
 reg [((C * D) << 2)-1:0] u;"""
 
+## interpolation
+w1 = @wireexpr A1+A2
+w2 = @wireexpr B1
+x = @decls (
+    @reg $w1 a $w2;
+    @logic $w1 + 2 b, c
+)
+@test string(x) == """
+reg [(A1 + A2)-1:0] a [B1-1:0];
+logic [((A1 + A2) + 2)-1:0] b;
+logic [((A1 + A2) + 2)-1:0] c;"""
+
 # ralways
-# interpolation
-x = ralways(:(
-    x = y;
-    $([
-        (@oneblock a = b),
-        (@oneblock c = d)
-    ]...)
-))
-@test string(x) == """
-always_unknown begin
-    x = y;
-    a = b;
-    c = d;
-end"""
-
-x = ralways(:(
-    $([
-        (@oneblock a = b),
-        (@oneblock c = d)
-    ]...)
-))
-@test string(x) == """
-always_unknown begin
-    a = b;
-    c = d;
-end"""
-
-
-x = ralways(:(
-    $([
-        (@oneblock (
-            if b1 
-                x <= y 
-            else 
-                x <= z 
-            end
-        )),
-        (@oneblock (
-            if b2 
-                a <= b
-                c <= d
-            elseif b3 
-                a <= bbb 
-            end
-        ))
-    ]...)
-))
-@test string(x) == """
-always_unknown begin
-    if (b1) begin
-        x <= y;
-    end else begin
-        x <= z;
+w = @wireexpr x << 2
+x = @ralways (
+    a <= $w;
+    if b
+        a <= $w + 3
+    elseif c
+        a <= $w + 4
     end
-    if (b2) begin
-        a <= b;
-        c <= d;
-    end else if (b3) begin
-        a <= bbb;
+)
+@test string(x) == """
+always_unknown begin
+    a <= (x << 2);
+    if (b) begin
+        a <= ((x << 2) + 3);
+    end else if (c) begin
+        a <= ((x << 2) + 4);
     end
 end"""

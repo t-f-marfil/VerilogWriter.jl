@@ -16,14 +16,14 @@ One parameter.
 ## `<paramname> = <val::Int>`
 
 ```jldoctest
-julia> vshow(oneparam(:(x = 10)));
+julia> vshow(@oneparam x = 10);
 parameter x = 10
 type: Oneparam
 ```
 """
 function oneparam(expr::Expr)
     args = expr.args
-    Oneparam(args[1], wireexpr(args[2]))
+    :(Oneparam($(QuoteNode(args[1])), $(wireexpr(args[2]))))
 end
 
 """
@@ -41,7 +41,7 @@ end
 Macro call.
 """
 macro oneparam(arg)
-    Expr(:call, oneparam, Ref(arg))
+    oneparam(arg)
 end
 
 
@@ -54,15 +54,13 @@ Using `convert` and `localparams` inside.
 
 # Example 
 ```jldoctest
-v = parameters(:(
-    x = 10;
-    y = 20;
-    z = 30
-))
-vshow(v)
+julia> v = @parameters (
+       x = 10;
+       y = 20;
+       z = 30
+       );
 
-# output
-
+julia> vshow(v);
 #(
     parameter x = 10,
     parameter y = 20,
@@ -72,7 +70,7 @@ type: Parameters
 ```
 """
 function parameters(expr::Expr)
-    convert(Parameters, localparams(expr))
+    :(convert(Parameters, $(localparams(expr))))
 end
 
 """
@@ -90,7 +88,7 @@ end
 Macro call.
 """
 macro parameters(arg)
-    Expr(:call, parameters, Ref(arg))
+    parameters(arg)
 end
 
 
@@ -100,24 +98,29 @@ end
 One localparam object. The syntax is the same as `oneparam`.
 # Example 
 ```jldoctest
-julia> vshow(onelocalparam(:(x = 100)))
+julia> vshow(@onelocalparam x = 100)
 localparam x = 100;
 type: Onelocalparam
 ```
 """
 function onelocalparam(expr::Expr)
     args = expr.args
-    Onelocalparam(args[1], wireexpr(args[2]))
+    if args[1] isa Expr && args[1].head == :$
+        uno = :($(esc(args[1].args[])))
+    else
+        uno = string(args[1])
+    end
+    :(Onelocalparam($uno, $(wireexpr(args[2]))))
 end
 
-"""
-    onelocalparam(expr::Ref{T}) where {T}
+# """
+#     onelocalparam(expr::Ref{T}) where {T}
 
-For macro call.
-"""
-function onelocalparam(expr::Ref{T}) where {T}
-    onelocalparam(expr[])
-end
+# For macro call.
+# """
+# function onelocalparam(expr::Ref{T}) where {T}
+#     onelocalparam(expr[])
+# end
 
 """
     @onelocalparam(arg)
@@ -125,7 +128,8 @@ end
 Macro call.
 """
 macro onelocalparam(arg)
-    Expr(:call, onelocalparam, Ref(arg))
+    # Expr(:call, onelocalparam, Ref(arg))
+    onelocalparam(arg)
 end
 
 
@@ -135,20 +139,18 @@ end
 Multiple localparams.
 # Examples
 ```jldoctest
-julia> p = localparams(:(x = 10)); vshow(p);
+julia> p = @localparams x = 10; vshow(p);
 localparam x = 10;
 type: Localparams
 ```
 ```jldoctest
-p = localparams(:(
-    a = 111;
-    b = 222;
-    c = 333
-))
-vshow(p)
+julia> p = @localparams (
+       a = 111;
+       b = 222;
+       c = 333
+       );
 
-# output
-
+julia> vshow(p);
 localparam a = 111;
 localparam b = 222;
 localparam c = 333;
@@ -159,25 +161,38 @@ function localparams(expr::Expr)
     localparams(expr, Val(expr.head))
 end
 
+function localparams(expr::Expr, ::Val{:$})
+    return :(Localparams($(esc(expr.args[]))))
+end
+
 function localparams(expr::Expr, ::Val{:(=)})
-    Localparams(onelocalparam(expr))
+    :(Localparams($(onelocalparam(expr))))
 end
 
 function localparams(expr::Expr, ::Val{:block})
-    ansv = Onelocalparam[]
+    ansv = Expr[]
 
     for item in expr.args
         if item isa LineNumberNode 
         elseif item isa Oneparam || item isa Onelocalparam 
-            push!(ansv, item)
+            push!(ansv, Meta.quot(item))
         elseif item isa Parameters || item isa Localparams 
-            push!(ansv, item.val...)
+            push!(ansv, Meta.quot.(item.val)...)
         else
-            push!(ansv, onelocalparam(item))
+            if item.head == :$
+                # Onelocalparam, Localparams, Oneparam, or Parameters
+                interpolated = :($(esc(item.args[])))
+                bundled = :(Localparams($interpolated))
+                push!(ansv, :($bundled...))
+            else
+                push!(ansv, onelocalparam(item))
+            end
         end
     end
 
-    Localparams(ansv)
+    # Localparams(ansv)
+    :(Localparams($(Expr(:ref, :Onelocalparam, ansv...))))
+    # :(Localparams($(Expr(:ref, :Onelocalparam, [:(Onelocalparam($i)...) for i in ansv]...))))
 end
 
 """
@@ -195,30 +210,10 @@ end
 Macro version.
 """
 macro localparams(arg)
-    Expr(:call, localparams, Ref(arg))
+    localparams(arg)
 end
 
 
-# everything commented out below should be dealt with by `wireexpr`?
-
-# """
-#     oneblock(expr::T) where {T <: Union{Symbol, Int}}
-
-# Convert `expr` to `Wireexpr`. Needed in parsing `block`.
-# """
-# function oneblock(expr::T) where {T <: Union{Symbol, Int}}
-#     return Wireexpr(expr)
-# end
-
-# """
-#     oneblock(expr::Unsigned)
-
-# Unsigned may be given when user writes e.g. 0b10, 0x1f.
-# Used when parsing `block`.
-# """
-# function oneblock(expr::Unsigned)
-#     return Wireexpr(Int(expr))
-# end
 
 """
     oneblock(expr::Expr)
@@ -232,69 +227,37 @@ it is of Verilog, there can be difference in grammatical matters
 between what can be given as the `expr` and real Verilog 
 (e.g. operator precedence of `<=`).
 
-Not necessarily used directly for constructing Verilog-ish structs, 
-in most cases may better use more high level constructors 
-such as [`always`](@ref) and [`@always`](@ref).
-
-Type unstable function.
-
-# Syntax 
-## `<wirename1> = <wireoperation>`
-One blocking assignment. (Note that bit width cannot be 
-specified yet, nor can it be printed.)
-`<wireoperation>` is a expression accepted by [wireexpr](@ref).
-
-## If-else statement
-```
-if <wireoperation>
-    <oneassignment>
-    <oneassignment>
-    ...
-elseif <wireoperation> 
-    <oneassignment>
-    <ifelsestatement>
-    ...
-else
-    <ifelsestatement>
-    ...
-end
-```
-If-else statement written in 'Julia syntax', not in Verilog 
-syntax, can be accepted. `else` block and `elseif` are not mandatory.
-Since `if` `end` are at the top level, no `;` inside if-else statement is needed.
-Nested if-else statement can be also accepted as in usual Julia.
+Returns Expr objects, as this method is supposed to be
+called as a helper method for macro call.
 
 # Examples 
 ```jldoctest oneblock
 julia> @testonlyexport(); # `oneblock` is not usually exported
 
-julia> a1 = oneblock(:(w1 <= w2)); 
+julia> a1 = oneblock(:(w1 <= w2))[2] |> eval; 
 
 julia> vshow(a1);
 w1 <= w2;
 type: Alassign
 
-julia> a2 = oneblock(:(w3 = w4 + ~w2)); vshow(a2);
+julia> a2 = oneblock(:(w3 = w4 + ~w2))[2] |> eval; vshow(a2);
 w3 = (w4 + (~w2));
 type: Alassign
-```
-```jldoctest oneblock
-a3 = oneblock(:(
-    if b1 == b2
-        w5 = ~w6
-        w7 = w8 
-    elseif b2 
-        w9 = w9 + w10
-    else
-        if b3 
-            w11 = w12 
-        end
-    end
-))
-vshow(a3)
 
-# output
+julia> a3 = oneblock(:(
+       if b1 == b2
+           w5 = ~w6
+           w7 = w8 
+       elseif b2 
+           w9 = w9 + w10
+       else
+           if b3 
+               w11 = w12 
+           end
+       end
+       ))[2] |> eval;
 
+julia> vshow(a3);
 if ((b1 == b2)) begin
     w5 = (~w6);
     w7 = w8;
@@ -309,16 +272,14 @@ type: Ifelseblock
 ```
 """
 function oneblock(expr::Expr)
-    # return oneblock_expr(expr, Val(expr.head))
-
     head = expr.head
 
     if head == :if 
-        ifelseblock(expr)
+        Ifelseblock, ifelseblock(expr)
     elseif head == :(=)
-        alassign_comb(expr)
+        Alassign, alassign_comb(expr)
     elseif head == :call && expr.args[1] == :<=
-        alassign_ff(expr)
+        Alassign, alassign_ff(expr)
     elseif head == :block 
         # ifcontent(expr)
         error(":block in oneblock.")
@@ -332,57 +293,28 @@ end
     oneblock(expr::T) where {T <: Union{Alassign, Ifelseblock}}
 
 For interpolation through metaprogramming.
-
-`@oneblock` is a deprecated macro (note that `@oneblock` in macro is not even used
-inside `always`), rather use [`always`](@ref)
-for constructing Verilog-like structs.
-The exmaple below works the same way when `@oneblock` is 
-replaced by `@always`.
-
-# Example 
-```jldoctest
-@testonlyexport() # @oneblock is not exported
-
-a = @oneblock r = s & t
-b = @oneblock (
-    if b 
-        x = y 
-    else
-        x = z
-    end
-)
-c = always(:(
-    p = q;
-    \$(a);
-    \$(b)
-))
-vshow(c)
-
-# output
-
-always_comb begin
-    p = q;
-    r = (s & t);
-    if (b) begin
-        x = y;
-    end else begin
-        x = z;
-    end
-end
-type: Alwayscontent
-```
+deprecated
 """
 function oneblock(expr::T) where {T <: Union{Alassign, Ifelseblock, Case}}
-    expr 
+    T, expr 
 end
 
 function alassign_comb(expr)
-    Alassign(wireexpr.(expr.args)..., comb)
+    # Alassign(wireexpr.(expr.args)..., comb)
+    :(Alassign($(wireexpr.(expr.args)...), comb))
+end
+macro alassign_comb(expr)
+    alassign_comb(expr)
 end
 
 function alassign_ff(expr)
-    Alassign(wireexpr(expr.args[2]), wireexpr(expr.args[3]), ff)
+    # Alassign(wireexpr(expr.args[2]), wireexpr(expr.args[3]), ff)
+    :(Alassign($(wireexpr(expr.args[2])), $(wireexpr(expr.args[3])), ff))
 end
+macro alassign_ff(expr)
+    alassign_ff(expr)
+end
+
 
 function ifelseblock(expr)
 
@@ -397,13 +329,15 @@ function ifelseblock(expr)
             error("unknown expr type.")
         end
     )
-    pcond = wireexpr(cond)::Wireexpr
+    # pcond = wireexpr(cond)::Wireexpr
+    pcond = wireexpr(cond)::Expr
 
     # ifcont = oneblock_expr(expr.args[2], Val(Ifcontent))
     ifcont = ifcontent(expr.args[2])
 
     if length(expr.args) == 2
-        ans = Ifelseblock(pcond, ifcont)
+        # ans = Ifelseblock(pcond, ifcont)
+        ans = :(Ifelseblock($pcond, $ifcont))
     else
         # celse = oneblock_expr(expr.args[3], Val(Ifelseblock))
         tgt = expr.args[3]
@@ -411,19 +345,23 @@ function ifelseblock(expr)
             if tgt.head == :elseif 
                 ifelseblock(tgt)
             else 
-                Ifelseblock([], [ifcontent(tgt)])
+                # Ifelseblock([], [ifcontent(tgt)])
+                :(Ifelseblock([], [$(ifcontent(tgt))]))
             end
         )
-        ifadd!(celse, pcond, ifcont)
-        ans = celse
+        # ifadd!(celse, pcond, ifcont)
+        # ans = celse
+        ans = :(ifadd!($celse, $pcond, $ifcont))
     end
 
-    return ans
+    return ans::Expr
 end
 
 function ifcontent(expr)
-    assignlist = Alassign[]
-    ifblocklist = Ifelseblock[]
+    # assignlist = Alassign[]
+    # ifblocklist = Ifelseblock[]
+    assignlist = Expr[]
+    ifblocklist = Expr[]
     # wirelist = Wireexpr[]
     lineinfo = nothing
 
@@ -432,10 +370,10 @@ function ifcontent(expr)
         # e.g.
         # @ifcontent x = y
         if expr.head != :block 
-            parsed = oneblock(expr)
-            if parsed isa Alassign
+            t, parsed = oneblock(expr)
+            if t == Alassign
                 push!(assignlist, parsed)
-            elseif parsed isa Ifelseblock 
+            elseif t == Ifelseblock 
                 push!(ifblocklist, parsed)
             # elseif parsed isa Wireexpr 
             #     push!(wirelist, parsed)
@@ -455,12 +393,12 @@ function ifcontent(expr)
                 if item isa LineNumberNode
                     lineinfo = item 
                 else
-                    parsed = oneblock(item)
+                    t, parsed = oneblock(item)
                     # push!(anslist, parsed)
                     
-                    if parsed isa Alassign
+                    if t == Alassign
                         push!(assignlist, parsed)
-                    elseif parsed isa Ifelseblock 
+                    elseif t == Ifelseblock 
                         push!(ifblocklist, parsed)
                     # elseif parsed isa Wireexpr 
                     #     push!(wirelist, parsed)
@@ -477,98 +415,9 @@ function ifcontent(expr)
         rethrow()
     end
 
-    return Ifcontent(assignlist, ifblocklist)
+    # return Ifcontent(assignlist, ifblocklist)
+    return :(Ifcontent($(Expr(:ref, :Alassign, assignlist...)), $(Expr(:ref, :Ifelseblock, ifblocklist...))))
     # return blockconv(assignlist, ifblocklist, wirelist, Val(T))
-end
-
-
-# """
-#     blockconv(vas, vif, vwire, ::Val{Ifelseblock})
-
-# Convert lists of `Alassign`, `Ifelseblock`, and `Wireexpr` 
-# to a single `Ifelseblock` (whose `conds` is empty). `Wireexpr` is
-# supposed to be empty.
-# """
-# function blockconv(vas, vif, vwire, ::Val{Ifelseblock})
-#     @assert length(vwire) == 0
-#     return Ifelseblock([], [Ifcontent(vas, vif)])
-# end
-
-# """
-#     blockconv(vas, vif, vwire, ::Val{Ifcontent})
-
-# Convert lists of `Alassign`, `Ifelseblock`, and `Wireexpr` 
-# to a single `Ifcontent`. `Wireexpr` is supposed to be empty.
-# """
-# function blockconv(vas, vif, vwire, ::Val{Ifcontent})
-#     @assert length(vwire) == 0
-#     return Ifcontent(vas, vif)
-# end
-
-# """
-#     blockconv(vas, vif, vwire, ::Val{Wireexpr})
-
-# Convert input to a single Wireexpr. 
-
-# It is expected that both `vas::Vector{Alassign}` and `vif::Vector{Ifelseblock}`
-# are empty, and vwire is of length 1. Only applied to `block` at `elseif.args[1]` 
-# (condition of elseif-clause).
-# """
-# function blockconv(vas, vif, vwire, ::Val{Wireexpr})
-#     @assert length(vas) == 0
-#     @assert length(vif) == 0
-#     @assert length(vwire) == 1
-#     return vwire[1]
-# end
-
-# """
-#     oneblock_expr(expr, ::Val{:elseif})
-
-# Parse `expr` into `Ifelseblock` where `expr` is elseif-clause.
-# """
-# function oneblock_expr(expr, ::Val{:elseif})
-#     @assert expr.head == :elseif 
-
-#     cond = expr.args[1]
-#     @assert cond.head == :block 
-
-#     # block appears in elseif -> cond
-#     pcond = wireexpr(cond.args[2])
-
-#     # block appears in elseif -> if-clause
-#     pelseif = oneblock_expr(expr.args[2], Val(Ifcontent))
-
-#     if length(expr.args) == 3
-#         # block may appear in elseif -> else-clause
-#         # Note that elseif appears instead when more than 
-#         # two elseif clause occurs.
-#         fullblock = oneblock_expr(expr.args[3], Val(Ifelseblock))
-#     else
-#         fullblock = Ifelseblock()
-#     end
-
-#     ifadd!(fullblock, pcond, pelseif)
-#     return fullblock
-# end
-
-"""
-    @oneblock(arg)
-
-Parse `arg` (which is AST) using macro. Uses reference 
-to prevent `arg` being evaluated.
-"""
-macro oneblock(arg)
-    return Expr(:call, oneblock, Ref(arg))
-end
-
-"""
-    oneblock(expr::Ref{T}) where {T}
-
-Dereference and parse `expr` given by user. Helper function 
-for macro `@oneblock`.
-"""
-function oneblock(expr::Ref{T}) where {T}
-    oneblock(expr[])
 end
 
 
@@ -590,12 +439,6 @@ function wireexpr(expr, ::Val{:quote})
     wireexpr(expr.args[1])
 end
 
-function wireexpr(expr, ::Val{:$})
-    arg = expr.args[1]
-    q = Meta.parse("\$(esc($(arg)))")
-    eval(q)
-end
-
 """
     wireexpr(expr, ::Val{:ref})
 
@@ -614,7 +457,8 @@ function wireexpr(expr, ::Val{:ref})
         && rngexpr.head == :call 
         && rngexpr.args[1] == :(:)
     )
-        Wireexpr(slice, body, wireexpr(rngexpr)...)
+        # Wireexpr(slice, body, wireexpr(rngexpr)...)
+        :(Wireexpr(slice, $body, $(wireexpr(rngexpr)...)))
     elseif (
         rngexpr isa Expr 
         && rngexpr.head == :call 
@@ -627,27 +471,52 @@ function wireexpr(expr, ::Val{:ref})
             "$(rngexpr.args[1]) not supported for indexed part select."
         )
 
-        Wireexpr(
-            ipselm, 
-            wirenoname,
-            [
-                body,
-                wireexpr(rngexpr.args[2]), 
-                wireexpr(rngexpr.args[3])
-            ],
-            wirevalinvalid, 
-            wirevalinvalid
-        )
+        # Wireexpr(
+        #     ipselm, 
+        #     wirenoname,
+        #     [
+        #         body,
+        #         wireexpr(rngexpr.args[2]), 
+        #         wireexpr(rngexpr.args[3])
+        #     ],
+        #     wirevalinvalid, 
+        #     wirevalinvalid
+        # )
+        quote
+            Wireexpr(
+                ipselm, 
+                wirenoname,
+                [
+                    $body,
+                    $(wireexpr(rngexpr.args[2])), 
+                    $(wireexpr(rngexpr.args[3]))
+                ],
+                wirevalinvalid, 
+                wirevalinvalid
+            )
+        end
     else
-        Wireexpr(slice, body, wireexpr(rngexpr))
+        # Wireexpr(slice, body, wireexpr(rngexpr))
+        :(Wireexpr(slice, $body, $(wireexpr(rngexpr))))
     end
 end
-function wireexpr(expr::T) where {T <: Union{Symbol, Int, String}}
-    return Wireexpr(expr)
+
+# function wireexpr(expr::T) where {T <: Union{Symbol, Int, String}}
+#     # return Wireexpr(expr)
+#     :($(Wireexpr(expr)))
+# end
+function wireexpr(expr::T) where {T <: Union{Int, String}}
+    # return Wireexpr(expr)
+    :(Wireexpr($expr))
+end
+function wireexpr(expr::Symbol)
+    # return Wireexpr(expr)
+    :(Wireexpr($(Meta.quot(expr))))
 end
 
 function wireexpr(expr::Unsigned)
-    return Wireexpr(Int(expr))
+    # return Wireexpr(Int(expr))
+    :(Wireexpr(Int($expr)))
 end
 """
     wireexpr(expr::Expr)
@@ -696,22 +565,22 @@ In such cases use constructors instead as shown below.
 ```jldoctest
 julia> e = Wireexpr(ipselm, @wireexpr(x), @wireexpr(A), @wireexpr(w)); # Indexed Part SELect with Minus operator 
 
-julia> @testonlyexport; vshow(oneblock(:(\$(e) <= y)));
+julia> @testonlyexport; vshow(oneblock(:(\$(e) <= y))[2] |> eval);
 x[A -: w] <= y;
 type: Alassign
 ```
 
 # Examples 
 ```jldoctest
-julia> wireexpr(:(w)) |> vshow;
+julia> (@wireexpr w) |> vshow;
 w
 type: Wireexpr
 
-julia> wireexpr(:(w1 & &(w2) )) |> vshow;
+julia> (@wireexpr w1 & &(w2)) |> vshow;
 (w1 & (&(w2)))
 type: Wireexpr
 
-julia> wireexpr(:(w[i:0])) |> vshow;
+julia> (@wireexpr w[i:0]) |> vshow;
 w[i:0]
 type: Wireexpr
 
@@ -726,6 +595,16 @@ function wireexpr(expr::Expr)
 end
 
 """
+    wireexpr(expr::Expr, ::Val{:\$})
+
+Handle interpolation on macro call.
+"""
+function wireexpr(expr::Expr, ::Val{:$})
+    # length of expr.args is supposed to be 1
+    return :(Wireexpr($(esc(expr.args[]))))
+end
+
+"""
     wireexpr(expr::Wireexpr)
 
 Insertion through metaprogramming.
@@ -735,13 +614,14 @@ julia> w = @wireexpr x + y;
 
 julia> e = :(a + |(\$(w) & z));
 
-julia> wireexpr(e) |> vshow;
+julia> wireexpr(e) |> eval |> vshow;
 (a + (|(((x + y) & z))))
 type: Wireexpr
 ```
 """
 function wireexpr(expr::Wireexpr)
-    expr 
+    # expr 
+    :($expr)
 end
 
 function wireexpr(expr, ::Val{:call})
@@ -772,7 +652,8 @@ Parse unary operators.
 """
 function wireexpr(expr, ::T, ::Val{:call}) where {T <: unaopvals}
     uno = wireexpr(expr.args[2])
-    return Wireexpr(wunasym2op[T], uno)
+    # return Wireexpr(wunasym2op[T], uno)
+    :(Wireexpr($(wunasym2op[T]), $uno))
 end
 
 """
@@ -784,11 +665,13 @@ function wireexpr(expr, ::T, ::Val{:call}) where {T <: binopvals}
     # length may be > 3, for (+, *) may parsed in adifferent manner
     args = expr.args
     op = wbinsym2op[T]
-    ansnow = Wireexpr(op, wireexpr(args[2]), wireexpr(args[3]))
+    # ansnow = Wireexpr(op, wireexpr(args[2]), wireexpr(args[3]))
+    ansnow = :(Wireexpr($op, $(wireexpr(args[2])), $(wireexpr(args[3]))))
     
     if length(args) > 3
         for w in wireexpr.(args[4:end])
-            ansnow = Wireexpr(op, ansnow, w)
+            # ansnow = Wireexpr(op, ansnow, w)
+            ansnow = :(Wireexpr($op, $ansnow, $w))
         end
     end
 
@@ -804,10 +687,11 @@ unary and binary operators.
 function wireexpr(expr, ::T, ::Val{:call}) where {T <: arityambigVals}
     args = expr.args
     if length(args) == 2
-        return Wireexpr(wunasym2op[T], wireexpr(args[2]))
+        # return Wireexpr(wunasym2op[T], wireexpr(args[2]))
+        return :(Wireexpr($(wunasym2op[T]), $(wireexpr(args[2]))))
     elseif length(args) == 3
         uno, dos = wireexpr(args[2]), wireexpr(args[3])
-        return Wireexpr(wbinsym2op[T], uno, dos)
+        return :(Wireexpr($(wbinsym2op[T]), $uno, $dos))
     end
 end
 
@@ -819,27 +703,42 @@ What is `&(wire)` originally used for in Julia?
 """
 function wireexpr(expr::Expr, ::Val{:&})
     @assert length(expr.args) == 1
-    Wireexpr(redand, wireexpr(expr.args[1]))
+    # Wireexpr(redand, wireexpr(expr.args[1]))
+    :(Wireexpr(redand, $(wireexpr(expr.args[1]))))
 end
 
 function wireexpr(expr::Expr, ::Val{:||})
-    Wireexpr(
-        lor,
-        wireexpr(expr.args[1]),
-        wireexpr(expr.args[2])
-    )
+    # Wireexpr(
+    #     lor,
+    #     wireexpr(expr.args[1]),
+    #     wireexpr(expr.args[2])
+    # )
+    quote
+        Wireexpr(
+            lor,
+            $(wireexpr(expr.args[1])),
+            $(wireexpr(expr.args[2]))
+        )
+    end
 end
 
 function wireexpr(expr::Expr, ::Val{:&&})
-    Wireexpr(
-        land,
-        wireexpr(expr.args[1]),
-        wireexpr(expr.args[2])
-    )
+    # Wireexpr(
+    #     land,
+    #     wireexpr(expr.args[1]),
+    #     wireexpr(expr.args[2])
+    # )
+    quote
+        Wireexpr(
+            land,
+            $(wireexpr(expr.args[1])),
+            $(wireexpr(expr.args[2]))
+        )
+    end
 end
 
 macro wireexpr(arg)
-    Expr(:call, wireexpr, Ref(arg))
+    return wireexpr(arg)
 end
 
 function wireexpr(expr::Ref{T}) where {T}
@@ -856,15 +755,15 @@ Does not infer type of alwaysblock here.
 Dispatches methods here according to `expr.head`.
 """
 function ralways(expr::Expr) 
-    ralways_expr(expr, Val(expr.head))::Alwayscontent
+    ralways_expr(expr, Val(expr.head))::Expr
 end
 
 function ralways(expr::T...) where {T <: Union{Alassign, Ifelseblock, Case}}
-    return Alwayscontent(expr...)
+    return :(Alwayscontent($(expr...)))
 end
 
 function ralways(expr::Alwayscontent)
-    expr 
+    :($expr)
 end
 
 """
@@ -874,7 +773,9 @@ The case where `expr.head` is not `block`, which means
 `expr` is one assignment (inside always-block) or an if-else block.
 """
 function ralways_expr(expr::Expr, ::T) where {T <: Val}
-    return Alwayscontent(oneblock(expr))
+    # return Alwayscontent(oneblock(expr))
+    _, parsed = oneblock(expr)
+    return :(Alwayscontent($parsed))
 end
 
 """
@@ -893,10 +794,11 @@ function ralwayswithSensitivity(expr)
 
     # alblock.edge = edge 
     # alblock.sensitive = sens 
-    ss = Sensitivity(edge, sens)
-    alblock.sens = ss
+    ss = :(Sensitivity($edge, $sens))
+    # alblock.sens = ss
 
-    return alblock 
+    # return alblock 
+    return :(alblock = $alblock; alblock.sens = $ss; alblock)
 end
 
 """
@@ -911,6 +813,7 @@ function ralways_expr(expr::Expr, ::Val{:block})
 
     assignlist = Alassign[]
     ifblocklist = Ifelseblock[]
+    exprassignlist, exprifblocklist = Expr[], Expr[]
     caselist = Case[]
 
     lineinfo = LineNumberNode(0, "noinfo")
@@ -928,12 +831,12 @@ function ralways_expr(expr::Expr, ::Val{:block})
                 push!(ifblocklist, item.content.ifelseblocks...)
                 push!(caselist, item.content.cases...)
             else
-                parsed = oneblock(item)
+                t, parsed = oneblock(item)
 
-                if parsed isa Alassign
-                    push!(assignlist, parsed)
-                elseif parsed isa Ifelseblock 
-                    push!(ifblocklist, parsed)
+                if t == Alassign
+                    push!(exprassignlist, parsed)
+                elseif t == Ifelseblock 
+                    push!(exprifblocklist, parsed)
                 else
                     @show parsed, typeof(parsed)
                     error("undefind behavior detected in ralways.")
@@ -945,7 +848,11 @@ function ralways_expr(expr::Expr, ::Val{:block})
         rethrow()
     end
 
-    return Alwayscontent(assignlist, ifblocklist, caselist)
+    return :(Alwayscontent(
+        [$assignlist; $(Expr(:ref, :Alassign, exprassignlist...))],
+        [$ifblocklist; $(Expr(:ref, :Ifelseblock, exprifblocklist...))],
+        $caselist
+    ))
 end
 
 """
@@ -957,7 +864,7 @@ Not supposed to be used in most cases,
 [`@always`](@ref) and [`always`](@ref) are often better.
 """
 macro ralways(arg)
-    return Expr(:call, ralways, Ref(arg))
+    return ralways(arg)
 end
 
 """
@@ -968,41 +875,6 @@ For macro call.
 function ralways(expr::Ref{T}) where {T}
     ralways(expr[])
 end
-
-
-# """
-#     ifcontent(x::Expr)
-
-# Convert into `Ifcontent` what is convertible to `Alwayscontent`.
-
-# # Example
-# ```jldoctest
-# x = @ifcontent (
-#     a = b;
-#     if b 
-#         x = c
-#     else
-#         x = d 
-#     end
-# )
-# vshow(x)
-
-# # output
-
-# a = b;
-# if (b) begin
-#     x = c;
-# end else begin
-#     x = d;
-# end
-# type: Ifcontent
-# ```
-# """
-# function ifcontent(x::Expr)
-#     al::Alwayscontent = ralways(x)
-#     # Ifcontent(al.assigns, al.ifelseblocks)
-#     al.content
-# end
 
 """
     ifcontent(x::Ref{T}) where {T}
@@ -1016,10 +888,10 @@ end
 """
     @ifcontent(arg)
 
-Macro call.
+Macro call. deprecated
 """
 macro ifcontent(arg)
-    Expr(:call, ifcontent, Ref(arg))
+    ifcontent(arg)
 end
 
 
@@ -1043,13 +915,13 @@ Port declaration with wiretypes [of width `<width>`].
 
 # Examples
 ```jldoctest
-julia> p1 = portoneline(:(@in din));
+julia> p1 = @portoneline @in din;
 
 julia> vshow(p1);
 input din
 type: Oneport
 
-julia> p2 = portoneline(:(@out din1, din2, din3)); vshow(p2);
+julia> p2 = (@portoneline @out din1, din2, din3); vshow(p2);
 output din1
 type: Oneport
 output din2
@@ -1057,15 +929,15 @@ type: Oneport
 output din3
 type: Oneport
 
-julia> p3 = portoneline(:(@in 8 din)); vshow(p3);
+julia> p3 = (@portoneline @in 8 din); vshow(p3);
 input [7:0] din
 type: Oneport
 
-julia> p4 = portoneline(:(@out @reg 8 dout)); vshow(p4);
+julia> p4 = (@portoneline @out @reg 8 dout); vshow(p4);
 output reg [7:0] dout
 type: Oneport
 
-julia> p5 = portoneline(:(@out (A+B)<<2 x, y)); vshow(p5); # width with parameter
+julia> p5 = (@portoneline @out (A+B)<<2 x, y); vshow(p5); # width with parameter
 output [((A + B) << 2)-1:0] x
 type: Oneport
 output [((A + B) << 2)-1:0] y
@@ -1083,7 +955,7 @@ function portoneline(expr::Expr)
         pdecls = decloneline(:(@wire $(targs[2:end]...)))
     end
 
-    [Oneport(pdirec, d.wtype, d.width, d.name) for d in pdecls]
+    [:((t = $d;Oneport($pdirec, t.wtype, t.width, t.name))) for d in pdecls]
 end
 
 """
@@ -1115,7 +987,7 @@ end
 Macro version of `portoneline`.
 """
 macro portoneline(arg)
-    Expr(:call, :portoneline, Ref(arg))
+    Expr(:ref, :Oneport, portoneline(arg)...)
 end
 
 """
@@ -1144,7 +1016,7 @@ end
 Macro version of `oneport`.
 """
 macro oneport(arg)
-    Expr(:call, :oneport, Ref(arg))
+    oneport(arg)
 end
 
 """
@@ -1159,16 +1031,13 @@ separated by `;` can be accepted.
 
 # Example 
 ```jldoctest
-pp = ports(:(
-    @in p1;
-    @in @wire 8 p2, p3, p4;
-    @out @reg 2 p5, p6
-))
+julia> pp = @ports (
+       @in p1;
+       @in @wire 8 p2, p3, p4;
+       @out @reg 2 p5, p6
+       );
 
-vshow(pp)
-
-# output
-
+julia> vshow(pp);
 (
     input p1,
     input [7:0] p2,
@@ -1190,16 +1059,15 @@ end
 Insertion through metaprogramming.
 # Example 
 ```jldoctest
-a = @portoneline @in 8 d1, d2, d3
-b = ports(:(
-    @in d0;
-    \$(a);
-    @out @reg 8 dout
-))
-vshow(b)
+julia> a = @portoneline @in 8 d1, d2, d3;
 
-# output
+julia> b = @ports (
+       @in d0;
+       \$a;
+       @out @reg 8 dout
+       );
 
+julia> vshow(b);
 (
     input d0,
     input [7:0] d1,
@@ -1211,7 +1079,7 @@ type: Ports
 ```
 """
 function ports(expr::Vector{Oneport})
-    Ports(expr)
+    :(Ports($expr))
 end
 
 """
@@ -1221,11 +1089,11 @@ Interpolation of one Vector{Ports}, nothing else given.
 e.g. ports(:(\$([ports(:(@in 6 x)), ports(:(@in y))]...)))
 """
 function ports(expr::Ports...)
-    Ports(reduce(vcat, [e.val for e in expr]))
+    :(Ports(reduce(vcat, [e.val for e in $expr])))
 end
 
 function ports(expr::Vector{Oneport}...)
-    Ports(reduce(vcat, expr))
+    :(Ports(reduce(vcat, $expr)))
 end
 
 """
@@ -1234,7 +1102,7 @@ end
 Contain only single line declaration.
 """
 function ports(expr::Expr, ::Val{:macrocall})
-    return Ports(portoneline(expr))
+    return :(Ports($(Expr(:ref, :Oneport, portoneline(expr)...))))
 end
 
 """
@@ -1244,23 +1112,31 @@ Contain multiple lines of port declaration.
 """
 function ports(expr::Expr, ::Val{:block})
     @assert expr.head == :block 
-    anslist = Oneport[]
+    anslist = Expr[]
 
     lineinfo = LineNumberNode(0, "noinfo")
     for item in expr.args 
         if item isa LineNumberNode 
             lineinfo = item
         # for interpolation through metaprogramming
-        elseif item isa Vector{Oneport}
-            push!(anslist, item...)
-        elseif item isa Ports 
-            push!(anslist, item.val...)
+        # 
+        # interpolation no longer occurs here
+        # elseif item isa Vector{Oneport}
+        #     push!(anslist, Meta.quot.(item)...)
+        # elseif item isa Ports 
+        #     push!(anslist, Meta.quot.(item.val)...)
         else
-            push!(anslist, portoneline(item)...)
+            if item.head == :$
+                interpolated = :($(esc(item.args[])))
+                bundled = :(Ports($interpolated))
+                push!(anslist, :($bundled...))
+            else
+                push!(anslist, portoneline(item)...)
+            end
         end
     end
 
-    return Ports(anslist)
+    return :(Ports($(Expr(:ref, :Oneport, anslist...))))
 end
 
 """
@@ -1278,7 +1154,7 @@ end
 Macro version of `ports`.
 """
 macro ports(arg)
-    return Expr(:call, :ports, Ref(arg))
+    ports(arg)
 end
 
 
@@ -1297,11 +1173,11 @@ Similar to that of [portoneline](@ref).
 
 # Examples 
 ```jldoctest
-julia> d = decloneline(:(@reg 10 d1)); vshow(d);
+julia> d = (@decloneline @reg 10 d1); vshow(d);
 reg [9:0] d1;
 type: Onedecl
 
-julia> d = decloneline(:(@logic 8 d1,d2,d3)); vshow(d);
+julia> d = (@decloneline @logic 8 d1,d2,d3); vshow(d);
 logic [7:0] d1;
 type: Onedecl
 logic [7:0] d2;
@@ -1309,7 +1185,7 @@ type: Onedecl
 logic [7:0] d3;
 type: Onedecl
 
-julia> d = decloneline(:(@wire A >> 2 w1, w2)); vshow(d);
+julia> d = (@decloneline @wire A >> 2 w1, w2); vshow(d);
 wire [(A >> 2)-1:0] w1;
 type: Onedecl
 wire [(A >> 2)-1:0] w2;
@@ -1327,11 +1203,11 @@ function decloneline(expr::Expr)
 
     if length(targs) == 2
         # implicit wire width 1
-        decloneline_inner(wt, Wireexpr(1), targs[2])
+        decloneline_inner(wt, Meta.quot(Wireexpr(1)), targs[2])
     elseif length(targs) == 4 
         # 2d reg declaration
         targs[3] isa Symbol || error("only a symbol is allowed for 2d array declaration, given $(targs[3]).")
-        [Onedecl(wt, wireexpr(targs[2]), targs[3], true, wireexpr(targs[4]))]
+        [:(Onedecl($wt, $(wireexpr(targs[2])), $(Meta.quot(targs[3])), true, $(wireexpr(targs[4]))))]
     else 
         length(targs) == 3 || error("$(length(targs)) arguments for 'decloneline'.")
         decloneline_inner(wt, wireexpr(targs[2]), targs[3])
@@ -1356,30 +1232,30 @@ function wtypesym(wt::Symbol)
 end
 
 """
-    decloneline_inner(wt, wid::Wireexpr, var::Symbol)
+    decloneline_inner(wt, wid::Expr, var::Symbol)
 
 Declaration of a single wire (e.g. `wire [1:0] d1`, `reg clk`).
 """
-function decloneline_inner(wt, wid::Wireexpr, var::Symbol)
-    [Onedecl(wt, wid, string(var))]
+function decloneline_inner(wt, wid::Expr, var::Symbol)
+    [:(Onedecl($wt, $wid, $(string(var))))]
 end
-function decloneline_inner(wt, wid::Wireexpr, var::String)
-    [Onedecl(wt, wid, var)]
+function decloneline_inner(wt, wid::Expr, var::String)
+   [:(Onedecl($wt, $wid, $var))]
 end
 
 """
-    decloneline_inner(wt, wid::Wireexpr, vars::Expr)
+    decloneline_inner(wt, wid::Expr, vars::Expr)
 
 Declaration of multiple wires (e.g. `logic x, y, z`).
 """
-function decloneline_inner(wt, wid::Wireexpr, vars::Expr)
+function decloneline_inner(wt, wid::Expr, vars::Expr)
     vars.head == :tuple || error("vars.head should be tuple, got $(vars.head).")
     # [Onedecl(wt, wid, string(v)) for v in vars.args]
-    ans = Vector{Onedecl}(undef, length(vars.args))
+    ans = Vector{Expr}(undef, length(vars.args))
     for (i, v) in enumerate(vars.args)
         s = string(v)
         !(' ' in s) || error("space included in name $(s)")
-        ans[i] = Onedecl(wt, wid, s)
+        ans[i] = :(Onedecl($wt, $wid, $s))
     end
 
     ans
@@ -1391,7 +1267,7 @@ end
 Macro version of `decloneline`.
 """
 macro decloneline(arg)
-    Expr(:call, :decloneline, Ref(arg))
+    Expr(:ref, :Onedecl, decloneline(arg)...)
 end
 
 """
@@ -1416,15 +1292,13 @@ by `;` can be accepted.
 
 # Example 
 ```jldoctest
-d = decls(:(
-    @wire w1;
-    @reg 8 w2,w3,w4;
-    @logic 32 w5
-))
-vshow(d)
+julia> d = @decls (
+       @wire w1;
+       @reg 8 w2,w3,w4;
+       @logic 32 w5
+       );
 
-# output
-
+julia> vshow(d)
 wire w1;
 reg [7:0] w2;
 reg [7:0] w3;
@@ -1443,7 +1317,7 @@ end
 For interpolation of a single vector.
 """
 function decls(expr::Vector{Onedecl}...)
-    Decls(reduce(vcat, expr))
+    :(Decls(reduce(vcat, $expr)))
 end
 
 """
@@ -1452,7 +1326,7 @@ end
 For interpolation of `Decls` objects.
 """
 function decls(expr::Decls...)
-    Decls(reduce(vcat, (i.val for i in expr)))
+    :(Decls(reduce(vcat, (i.val for i in $expr))))
 end
 
 """
@@ -1461,15 +1335,14 @@ end
 For interpolation with metaprogramming.
 # Example
 ```jldoctest
-a = @decloneline @reg 8 x1, x2
-b = decls(:(
-    \$(a);
-    @wire y1, y2
-))
-vshow(b)
+julia> a = @decloneline @reg 8 x1, x2;
 
-# output
+julia> b = decls(:(
+       \$(a);
+       @wire y1, y2
+       )) |> eval;
 
+julia> vshow(b);
 reg [7:0] x1;
 reg [7:0] x2;
 wire y1;
@@ -1478,7 +1351,7 @@ type: Decls
 ```
 """
 function decls(expr::Vector{Onedecl})
-    Decls(expr)
+    Meta.quot(Decls(expr))
 end
 
 """
@@ -1487,7 +1360,7 @@ end
 Parse single line of declaration.
 """
 function decls(expr::Expr, ::Val{:macrocall})
-    return Decls(decloneline(expr))
+    return :(Decls($(Expr(:ref, :Onedecl, decloneline(expr)...))))
 end
 
 """
@@ -1497,7 +1370,7 @@ Multiple lines of wire declarations.
 """
 function decls(expr::Expr, ::Val{:block})
     @assert expr.head == :block 
-    anslist = Onedecl[]
+    anslist = Expr[]
 
     lineinfo = LineNumberNode(0, "noinfo")
     for item in expr.args 
@@ -1505,15 +1378,15 @@ function decls(expr::Expr, ::Val{:block})
             lineinfo = item
         # for interpolation with metaprogramming
         elseif item isa Vector{Onedecl}
-            push!(anslist, item...)
+            push!(anslist, Meta.quot.(item)...)
         elseif item isa Decls 
-            push!(anslist, item.val...)
+            push!(anslist, Meta.quot.(item.val)...)
         else
             push!(anslist, decloneline(item)...)
         end
     end
 
-    return Decls(anslist)
+    return :(Decls($(Expr(:ref, :Onedecl, anslist...))))
 end
 
 """
@@ -1531,7 +1404,7 @@ end
 Macro version of `decls`.
 """
 macro decls(arg)
-    return Expr(:call, :decls, Ref(arg))
+    decls(arg)
 end
 
 """

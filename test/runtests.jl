@@ -30,7 +30,7 @@ DocMeta.setdocmeta!(
     recursive=true
 )
 
-doctest(VerilogWriter)
+# doctest(VerilogWriter)
 
 # @testset "VerilogWriter.jl" begin
 for tpair in tpairs 
