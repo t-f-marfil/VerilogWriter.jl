@@ -212,6 +212,14 @@ function outerportnamegen(portname::String, mlay::Midlayer)
     wirenamemodgen(mlay)(portname)
 end
 
+function portmatch_uc(a::Oneport, b::Oneport)
+    directest = getdirec(a) == getdirec(b)
+    widthtest = isequal(getwidth(a), getwidth(b)) # comparing wireexpr
+    nametest = getname(a) == getname(b)
+
+    return directest & widthtest & nametest
+end
+
 """
     unconnectedports_mlay(x::Layergraph)
 
@@ -229,10 +237,16 @@ function unconnectedports_mlay(x::Layergraph)
     for ((uno::Midlayer, dos::Midlayer), conn) in x.edges 
         for (ppre, ppost) in conn.ports
             # update pconnected
-            ppre in keys(pconnected[uno]) || error("$(string(ppre)) not in module $(getname(uno))")
-            pconnected[uno][ppre] = true
-            ppost in keys(pconnected[dos]) || error("$(string(ppost)) not in module $(getname(dos))")
-            pconnected[dos][ppost] = true
+            # ppre in keys(pconnected[uno])
+            prefil = [filter(p -> portmatch_uc(ppre, p[1]), pconnected[uno])...]
+            (length(prefil) > 0 && getdirec(ppre) == pout) || error("$(string(ppre)) not in module $(getname(uno)) and should be output with the same width")
+            # should be length 1
+            pconnected[uno][prefil[][1]] = true
+
+            # ppost in keys(pconnected[dos])
+            postfil = [filter(p -> portmatch_uc(ppost, p[1]), pconnected[dos])...]
+            (length(postfil) > 0 && getdirec(ppost) == pin) || error("$(string(ppost)) not in module $(getname(dos)) and should be input with the same width")
+            pconnected[dos][postfil[][1]] = true
 
         end
     end
@@ -325,8 +339,8 @@ function ilconndecl_mlay!(v::Vmodule, x::Layergraph)
     # rvec = Expr[]
     # dvec = Expr[]
     dvec = Onedecl[]
-    rregistered = Dict([lay => false for lay in x.layers])
-    lregistered = Dict([lay => false for lay in x.layers])
+    rregistered = Dict([lay => [false, false] for lay in x.layers])
+    lregistered = Dict([lay => [false, false] for lay in x.layers])
 
     for ((uno::Midlayer, dos::Midlayer), _) in x.edges 
         for ilattr in instances(Interlaysigtype)
@@ -347,11 +361,10 @@ function ilconndecl_mlay!(v::Vmodule, x::Layergraph)
             # push!(rvec, r)
             # # push!(dvec, :(@logic $(rrhs), $(rlhs)))
 
+            rregistered[uno][Int(ilattr) + 1] || push!(dvec, (@decloneline (@logic $rrhs))...)
+            lregistered[dos][Int(ilattr) + 1] || push!(dvec, (@decloneline (@logic $(rlhs)))...)
 
-            rregistered[uno] || push!(dvec, (@decloneline (@logic $rrhs))...)
-            lregistered[dos] || push!(dvec, (@decloneline (@logic $(rlhs)))...)
-
-            rregistered[uno] = lregistered[dos] = true
+            rregistered[uno][Int(ilattr) + 1] = lregistered[dos][Int(ilattr) + 1] = true
         end
 
     end

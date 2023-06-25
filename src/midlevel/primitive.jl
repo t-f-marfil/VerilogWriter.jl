@@ -20,6 +20,9 @@ end
     fifogen(depth=8, width=32; name="")
 
 Generate FIFO whose depth is `depth` and width is `width`, with its name `name`.
+
+Supposed to be used inside Midlayer object, or 
+it lacks ports `valid_to_lower`, etc.
 """
 function fifogen(depth=8, width=32; name="")
     depth > 1 || error("depth for this FIFO should be more than one.")
@@ -59,6 +62,14 @@ function fifogen(depth=8, width=32; name="")
         end
     )
 
+    ilconn = @always (
+        $(nametolower(ilvalid)) = ~empty;
+        rincr = $(nametolower(ilupdate));
+
+        $(nametoupper(ilupdate)) = ~full;
+        wincr = $(nametoupper(ilvalid))
+    )
+
     # vshow.((bufram, flags, ptrlogic))
     nn = length(name) == 0 ? "fifo_$(width)_$(depth)" : name
     mod = Vmodule(nn)
@@ -67,8 +78,8 @@ function fifogen(depth=8, width=32; name="")
         @in -1 din;
         @out @reg -1 dout;
 
-        @out @reg full, empty;
-        @in wincr, rincr
+        # @out @reg full, empty;
+        # @in wincr, rincr
     ))
     vpush!(mod, prts)
     vpush!.(Ref(mod), (bufram, flags, ptrlogic, dout, din))
