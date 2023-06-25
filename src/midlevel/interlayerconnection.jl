@@ -19,10 +19,10 @@ function ilconnectSUML(parent::Midlayer, children::Midlayer...)::Vmodule
     updateParent = nametolower(ilupdate)
     updateParentRhs = Wireexpr(1, 1)
 
-    prts = ports(:(
-        @in $(validParent);
-        @out @logic $(updateParent)
-    ))
+    prts = @ports (
+        @in $validParent;
+        @out @logic $updateParent
+    )
     vpush!(m, prts)
 
     outvalidvec = Vector{Wireexpr}(undef, length(children))
@@ -42,36 +42,28 @@ function ilconnectSUML(parent::Midlayer, children::Midlayer...)::Vmodule
         outvalidvec[ind] = validChildNow
         inupdatevec[ind] = updateChildNow
 
-        acceptedComb = always(:(
-            $(acceptedwire) = $(
-                validChildNow
-            ) & $(
-                updateChildNow
-            )
-        ))
-        acceptedFf = always(:(
+        acceptedComb = @always (
+            $acceptedwire = $validChildNow & $updateChildNow
+        )
+        acceptedFf = @always (
             if $acceptedAll
                 $acceptedreg <= 0
             else 
                 $acceptedreg <= $acceptedwire | $acceptedreg;
             end
-        ))
+        )
 
         phaseLocal = Wireexpr("transphase_local_child$(ind)")
-        phaseFf = always(:(
-            if $(accepted)
+        phaseFf = @always (
+            if $accepted
                 $phaseLocal <= ~$phaseGlobal
             end
-        ))
+        )
 
         acceptedThisPhase = ~(phaseLocal == phaseGlobal)
-        validChiComb = always(:(
-            $(
-                validChildNow
-            ) = $(
-                validParent
-            ) & ~$acceptedThisPhase
-        ))
+        validChiComb = @always (
+            $validChildNow = $validParent & ~$acceptedThisPhase
+        )
 
         push!(alvec, acceptedComb, acceptedFf, phaseFf, validChiComb)
     end
@@ -80,34 +72,38 @@ function ilconnectSUML(parent::Midlayer, children::Midlayer...)::Vmodule
     bundlevalid = nametoupper(ilvalid)
     bundleupdate = nametoupper(ilupdate)
 
-    childprts = ports(:(
-        @out @logic $(length(children)) $(bundlevalid);
-        @in $(length(children)) $(bundleupdate)
-    ))
+    childprts = @ports (
+        @out @logic $(length(children)) $bundlevalid;
+        @in $(length(children)) $bundleupdate
+    )
 
     vpush!(m, childprts)
     # assign valid_to_lower[i] = valid_to_lower_i
 
     if length(children) > 1
-        vpush!(m, always(Expr(:block, [Alassign(w, wireexpr(:($(bundleupdate)[$(i-1)])), comb) for (i, w) in enumerate(inupdatevec)]...)))
-        vpush!(m, always(Expr(:block, [Alassign(wireexpr(:($(bundlevalid)[$(i-1)])), w, comb) for (i, w) in enumerate(outvalidvec)]...)))
+        # vpush!(m, always(Expr(:block, [Alassign(w, (@wireexpr ($(bundleupdate)[$(i-1)])), comb) for (i, w) in enumerate(inupdatevec)]...)))
+        vpush!(m, Alwayscontent(comb, [Alassign(w, (@wireexpr ($(bundleupdate)[$(i-1)])), comb) for (i, w) in enumerate(inupdatevec)]))
+        # vpush!(m, always(Expr(:block, [Alassign((@wireexpr ($(bundlevalid)[$(i-1)])), w, comb) for (i, w) in enumerate(outvalidvec)]...)))
+        vpush!(m, Alwayscontent(comb, [Alassign((@wireexpr ($(bundlevalid)[$(i-1)])), w, comb) for (i, w) in enumerate(outvalidvec)]))
     else
-        vpush!(m, always(Expr(:block, Alassign(inupdatevec[], wireexpr(:($(bundleupdate))), comb))))
-        vpush!(m, always(Expr(:block, Alassign(wireexpr(:($(bundlevalid))), outvalidvec[], comb))))
+        # vpush!(m, always(Expr(:block, Alassign(inupdatevec[], wireexpr(:($(bundleupdate))), comb))))
+        # vpush!(m, always(Expr(:block, Alassign(wireexpr(:($(bundlevalid))), outvalidvec[], comb))))
+        vpush!(m, Alwayscontent(comb, [Alassign(inupdatevec[], (@wireexpr $bundleupdate), comb)]))
+        vpush!(m, Alwayscontent(comb, [Alassign((@wireexpr $bundlevalid), outvalidvec[], comb)]))
     end
 
-    phaseAllFf = always(:(
+    phaseAllFf = @always (
         if $acceptedAll
             $phaseGlobal <= ~$phaseGlobal
         end
-    ))
-    acceptedAllComb = always(:(
+    )
+    acceptedAllComb = @always (
         $acceptedAll = $acceptedAllrhs
-    ))
+    )
     
-    parentUpdateComb = always(:(
+    parentUpdateComb = @always (
         $updateParent = $updateParentRhs
-    ))
+    )
 
     push!(alvec, phaseAllFf, acceptedAllComb, parentUpdateComb)
 
@@ -123,20 +119,20 @@ function ilconnectMUSL(child::Midlayer, parents::Midlayer...)
     vmodname = "ilMUSL_$(getname(child))_from_$(reduce((x, y)->string(x,"_and_",y), [getname(p) for p in parents]))"
     m = Vmodule(vmodname)
 
-    chiports = ports(:(
+    chiports = @ports (
         @in $(nametoupper(ilupdate));
         @out @logic $(nametoupper(ilvalid))
-    ))
-    parports = ports(:(
+    )
+    parports = @ports (
         @in $(length(parents)) $(nametolower(ilvalid));
         @out @logic $(length(parents)) $(nametolower(ilupdate))
-    ))
+    )
     vpush!(m, chiports, parports)
 
     pupdateassigns = Vector{Alassign}(undef, length(parents))
     upperallvalid = Wireexpr(redand, Wireexpr(nametolower(ilvalid)))
     for (ind, lay) in enumerate(parents)
-        wlhs = length(parents) > 1 ? wireexpr(:($(nametolower(ilupdate))[$(ind-1)])) : wireexpr(:($(nametolower(ilupdate))))
+        wlhs = length(parents) > 1 ? (@wireexpr ($(nametolower(ilupdate))[$(ind-1)])) : @wireexpr ($(nametolower(ilupdate)))
         pupdateassigns[ind] = Alassign(
             wlhs,
             Wireexpr(nametoupper(ilupdate)) & upperallvalid,
@@ -144,7 +140,7 @@ function ilconnectMUSL(child::Midlayer, parents::Midlayer...)
         )
     end
     vpush!(m, Alwayscontent(comb, Ifcontent(pupdateassigns)))
-    vpush!(m, always(:($(nametoupper(ilvalid)) = $upperallvalid)))
+    vpush!(m, @always ($(nametoupper(ilvalid)) = $upperallvalid))
 
     return m
 end
@@ -200,7 +196,7 @@ function generateSUML(suml::D) where {D <: AbstractDict{Midlayer, Vector{Midlaye
 
         bundlevalid = Wireexpr("bundle_valid_SUML_from_$(getname(upper))")
         bundleupdate = Wireexpr("bundle_update_SUML_from_$(getname(upper))")
-        dcls = decls(:(@logic $(length(lowers)) $bundlevalid, $bundleupdate))
+        dcls = @decls (@logic $(length(lowers)) $(getname(bundlevalid)), $(getname(bundleupdate)))
 
         hubinst = Vmodinst(
             getname(hub),
@@ -215,23 +211,28 @@ function generateSUML(suml::D) where {D <: AbstractDict{Midlayer, Vector{Midlaye
             ]
         )
 
-        valids = Vector{Expr}(undef, length(lowers))
-        updates = Vector{Expr}(undef, length(lowers))
+        valids = Vector{Alassign}(undef, length(lowers))
+        updates = Vector{Alassign}(undef, length(lowers))
+        # valids = Vector{Expr}(undef, length(lowers))
+        # updates = Vector{Expr}(undef, length(lowers))
 
         for (ind, low) in enumerate(lowers)
             valnow = Wireexpr(wirenameSumlToMusl(ilvalid, upper, low))
             updnow = Wireexpr(wirenameSumlToMusl(ilupdate, upper, low))
 
             if length(lowers) > 1
-                valids[ind] = :($valnow = $(bundlevalid)[$(ind-1)])
-                updates[ind] = :($(bundleupdate)[$(ind-1)] = $updnow)
+                # valids[ind] = :($valnow = $(bundlevalid)[$(ind-1)])
+                # updates[ind] = :($(bundleupdate)[$(ind-1)] = $updnow)
+                valids[ind] = @alassign_comb $valnow = $bundlevalid[$(ind-1)]
+                updates[ind] = @alassign_comb ($(bundleupdate)[$(ind-1)] = $updnow)
             else
-                valids[ind] = :($valnow = $(bundlevalid))
-                updates[ind] = :($(bundleupdate) = $updnow)
+                valids[ind] = @alassign_comb ($valnow = $(bundlevalid))
+                updates[ind] = @alassign_comb ($(bundleupdate) = $updnow)
             end
         end
 
-        alcomb = always(Expr(:block, valids..., updates...))
+        # alcomb = always(Expr(:block, valids..., updates...))
+        alcomb = Alwayscontent(comb, [valids; updates])
     
         hublist[i] = hub
         addinfolist[i] = tuple(dcls, hubinst, alcomb)
@@ -249,7 +250,7 @@ function generateMUSL(musl::D) where {D <: AbstractDict{Midlayer, Vector{Midlaye
 
         bundlevalid = Wireexpr("bundle_valid_MUSL_from_$(getname(lower))")
         bundleupdate = Wireexpr("bundle_update_MUSL_from_$(getname(lower))")
-        dcls = decls(:(@logic $(length(uppers)) $bundlevalid, $bundleupdate))
+        dcls = @decls (@logic $(length(uppers)) $(getname(bundlevalid)), $(getname(bundleupdate)))
 
         hubinst = Vmodinst(
             getname(hub),
@@ -264,23 +265,30 @@ function generateMUSL(musl::D) where {D <: AbstractDict{Midlayer, Vector{Midlaye
             ]
         )
 
-        valids = Vector{Expr}(undef, length(uppers))
-        updates = Vector{Expr}(undef, length(uppers))
+        # valids = Vector{Expr}(undef, length(uppers))
+        # updates = Vector{Expr}(undef, length(uppers))
+        valids = Vector{Alassign}(undef, length(uppers))
+        updates = Vector{Alassign}(undef, length(uppers))
 
         for (ind, upp) in enumerate(uppers)
             valnow = Wireexpr(wirenameSumlToMusl(ilvalid, upp, lower))
             updnow = Wireexpr(wirenameSumlToMusl(ilupdate, upp, lower))
 
             if length(uppers) > 1
-                valids[ind] = :($(bundlevalid)[$(ind-1)] = $valnow)
-                updates[ind] = :($updnow = $(bundleupdate)[$(ind-1)])
+                # valids[ind] = :($(bundlevalid)[$(ind-1)] = $valnow)
+                # updates[ind] = :($updnow = $(bundleupdate)[$(ind-1)])
+                valids[ind] = @alassign_comb ($(bundlevalid)[$(ind-1)] = $valnow)
+                updates[ind] = @alassign_comb ($updnow = $(bundleupdate)[$(ind-1)])
             else
-                valids[ind] = :($(bundlevalid) = $valnow)
-                updates[ind] = :($updnow = $(bundleupdate))
+                # valids[ind] = :($(bundlevalid) = $valnow)
+                # updates[ind] = :($updnow = $(bundleupdate))
+                valids[ind] = @alassign_comb ($(bundlevalid) = $valnow)
+                updates[ind] = @alassign_comb ($updnow = $(bundleupdate))
             end
         end
 
-        alcomb = always(Expr(:block, valids..., updates...))
+        # alcomb = always(Expr(:block, valids..., updates...))
+        alcomb = Alwayscontent(comb, [valids; updates])
     
         hublist[i] = hub
         addinfolist[i] = tuple(dcls, hubinst, alcomb)
@@ -299,9 +307,9 @@ end
 function ildatabuffer(lay::Midlayer, conn::Layerconn)
     m = Vmodule("ildatabuf_$(getname(lay))")
     prts = Ports([p for (p, _) in conn.ports])
-    ilprts = ports(:(
+    ilprts = @ports (
         @in $(nametolower(ilvalid)), $(nametolower(ilupdate))
-    ))
+    )
     trans = Wireexpr(nametolower(ilvalid)) & Wireexpr(nametolower(ilupdate))
 
     for prt in prts
@@ -309,18 +317,18 @@ function ildatabuffer(lay::Midlayer, conn::Layerconn)
         din = string("din_", nm)
         dout = string("dout_", nm)
         dbuf = string("dbuf_", nm)
-        alff = always(:(
+        alff = @always (
             if $trans
                 $dbuf <= $din
             end
-        ))
-        alcomb = always(:(
+        )
+        alcomb = @always (
             if $trans
                 $dout = $din
             else
                 $dout = $dbuf
             end
-        ))
+        )
 
         vpush!.(m, (alff, alcomb))
     end

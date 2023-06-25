@@ -1249,12 +1249,22 @@ end
 Declaration of multiple wires (e.g. `logic x, y, z`).
 """
 function decloneline_inner(wt, wid::Expr, vars::Expr)
+    if vars isa Expr && vars.head == :$
+        # only one declaration
+        # e.g. @logic A x,y is not supported yet
+        return [:(Onedecl($wt, $wid, $(esc(vars.args[]))))]
+    end
     vars.head == :tuple || error("vars.head should be tuple, got $(vars.head).")
     # [Onedecl(wt, wid, string(v)) for v in vars.args]
     ans = Vector{Expr}(undef, length(vars.args))
     for (i, v) in enumerate(vars.args)
-        s = string(v)
-        !(' ' in s) || error("space included in name $(s)")
+        if v isa Expr
+            v.head == :$ || error("unknown expr in decloneline_inner.\n$(dump(v))")
+            s = :($(esc(v.args[])))
+        else
+            !(' ' in string(v)) || error("space included in name $(s)")
+            s = Meta.quot(string(v))
+        end
         ans[i] = :(Onedecl($wt, $wid, $s))
     end
 

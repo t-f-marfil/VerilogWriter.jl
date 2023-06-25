@@ -30,17 +30,17 @@ function fifogen(depth=8, width=32; name="")
     # wptr == entry to write next 
     # rptr == entry to read next
 
-    bufram = decls(:(
+    bufram = @decls (
         @reg $(width) ram $(depth)
-    ))
+    )
 
     
     ptrincr = Wireexpr(ptrwid, 1)
-    flags = always(:(
+    flags = @always (
         empty = wptr == rptr;
         full = wptr + $(ptrincr) == rptr
-    ))
-    ptrlogic = always(:(
+    )
+    ptrlogic = @always (
         if wincr && ~full
             wptr <= wptr + $(ptrincr)
         end;
@@ -48,7 +48,7 @@ function fifogen(depth=8, width=32; name="")
         if rincr && ~empty 
             rptr <= rptr + $(ptrincr)
         end
-    ))
+    )
 
     dout = @always(
         dout = ram[rptr]

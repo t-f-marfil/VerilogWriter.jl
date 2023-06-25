@@ -250,7 +250,8 @@ function layerconnInstantiate_mlay!(v::Vmodule, x::Layergraph)
     layVisited = Dict{Midlayer, Layerconn}()
     # # generate always_comb that connects ports 
     # # as described in Layerconn
-    qvec = Expr[]
+    # qvec = Expr[]
+    qvec = Alassign[]
     for ((uno::Midlayer, dos::Midlayer), conn) in x.edges 
         # what is needed below: 
         #  function: <connection_name>, <modulename> -> <wirename_in_mother_module>
@@ -263,14 +264,14 @@ function layerconnInstantiate_mlay!(v::Vmodule, x::Layergraph)
             # getname(ppre) is not typo
             # this is needed to match the name with 
             # the one generated for Vmodinst ports
-            q1 = :(
+            q1 = @alassign_comb (
                 $(
                     wireAddSuffix(getname(ppost), dos)
                 ) = $(
                     smod(string("dout_", getname(ppre)))
                 )
             )
-            q2 = :(
+            q2 = @alassign_comb (
                 $(
                     smod(string("din_", getname(ppre)))
                 ) = $(
@@ -298,14 +299,15 @@ function layerconnInstantiate_mlay!(v::Vmodule, x::Layergraph)
                 [(n = getname(p); n => Wireexpr(smod(n))) for p in dports]...
             ]
         ))
-        alil = always(:(
+        alil = @always (
             $(smod(nametolower(ilupdate))) = $(nametolower(ilupdate, uno));
             $(smod(nametolower(ilvalid))) = $(nametolower(ilvalid, uno))
-        ))
+        )
         vpush!(v, alil)
     end
 
-    alans = Alwayscontent(comb, ifcontent(Expr(:block, qvec...)))
+    # alans = Alwayscontent(comb, ifcontent(Expr(:block, qvec...)))
+    alans = Alwayscontent(comb, qvec)
     vpush!(v, alans)
     
     return mvec
@@ -321,7 +323,8 @@ Now is needed only for wire declaration.
 """
 function ilconndecl_mlay!(v::Vmodule, x::Layergraph)
     # rvec = Expr[]
-    dvec = Expr[]
+    # dvec = Expr[]
+    dvec = Onedecl[]
     rregistered = Dict([lay => false for lay in x.layers])
     lregistered = Dict([lay => false for lay in x.layers])
 
@@ -345,8 +348,8 @@ function ilconndecl_mlay!(v::Vmodule, x::Layergraph)
             # # push!(dvec, :(@logic $(rrhs), $(rlhs)))
 
 
-            rregistered[uno] || push!(dvec, :(@logic $(rrhs)))
-            lregistered[dos] || push!(dvec, :(@logic $(rlhs)))
+            rregistered[uno] || push!(dvec, (@decloneline (@logic $rrhs))...)
+            lregistered[dos] || push!(dvec, (@decloneline (@logic $(rlhs)))...)
 
             rregistered[uno] = lregistered[dos] = true
         end
@@ -354,7 +357,8 @@ function ilconndecl_mlay!(v::Vmodule, x::Layergraph)
     end
 
     # vpush!(v, always(Expr(:block, rvec...)))
-    vpush!(v, decls(Expr(:block, dvec...)))
+    # vpush!(v, decls(Expr(:block, dvec...)))
+    vpush!(v, Decls(dvec))
 
     return nothing
 end
@@ -383,24 +387,28 @@ function ilconnect_mlay!(v::Vmodule, lay::Layergraph)
     addsumlinfo!(v, addinfolist2)
 
     # Connection between upstream layer and SUML hub
-    qs = Vector{Expr}(undef, length(suml)*2)
+    # qs = Vector{Expr}(undef, length(suml)*2)
+    qs = Vector{Alassign}(undef, length(suml)*2)
     for (ind, (upper, _)) in enumerate(suml)
-        qupdate = :($(nametolower(ilupdate, upper)) = $(wirenameMlayToSuml(ilupdate, upper)))
-        qvalid = :($(wirenameMlayToSuml(ilvalid, upper)) = $(nametolower(ilvalid, upper)))
+        qupdate = @alassign_comb ($(nametolower(ilupdate, upper)) = $(wirenameMlayToSuml(ilupdate, upper)))
+        qvalid = @alassign_comb ($(wirenameMlayToSuml(ilvalid, upper)) = $(nametolower(ilvalid, upper)))
         qs[2ind-1] = qupdate
         qs[2ind] = qvalid
     end
-    vpush!(v, always(Expr(:block, qs...)))
+    # vpush!(v, always(Expr(:block, qs...)))
+    vpush!(v, Alwayscontent(comb, qs))
 
     # Connection between downstream layer and MUSL hub
-    qs = Vector{Expr}(undef, length(musl)*2)
+    # qs = Vector{Expr}(undef, length(musl)*2)
+    qs = Vector{Alassign}(undef, length(musl)*2)
     for (ind, (lower, _)) in enumerate(musl)
-        qupdate = :($(wirenameMuslToMlay(ilupdate, lower)) = $(nametoupper(ilupdate, lower)))
-        qvalid = :($(nametoupper(ilvalid, lower)) = $(wirenameMuslToMlay(ilvalid, lower)))
+        qupdate = @alassign_comb ($(wirenameMuslToMlay(ilupdate, lower)) = $(nametoupper(ilupdate, lower)))
+        qvalid = @alassign_comb ($(nametoupper(ilvalid, lower)) = $(wirenameMuslToMlay(ilvalid, lower)))
         qs[2ind-1] = qupdate
         qs[2ind] = qvalid
     end
-    vpush!(v, always(Expr(:block, qs...)))
+    # vpush!(v, always(Expr(:block, qs...)))
+    vpush!(v, Alwayscontent(comb, qs))
 
     vpush!.(hublist1, Ref(@ports @in CLK, RST))
     vpush!.(hublist2, Ref(@ports @in CLK, RST))
@@ -451,10 +459,11 @@ function connectCommonPorts_mlay!(v::Vmodule, x::Layergraph)
     vpush!(v, commonports...)
 
     for lay in x.layers 
-        qvec = Vector{Expr}(undef, length(commonports))
+        # qvec = Vector{Expr}(undef, length(commonports))
+        qvec = Vector{Alassign}(undef, length(commonports))
         for (ind, prt::Oneport) in enumerate(commonports)
             f = wirenamemodgen(lay)
-            q = :(
+            q = @alassign_comb (
                 $(
                     Symbol(f(getname(prt)))
                 ) = $(
@@ -466,7 +475,8 @@ function connectCommonPorts_mlay!(v::Vmodule, x::Layergraph)
             # vpush!(v, al)
         end
 
-        vpush!(v, always(Expr(:block, qvec...)))
+        # vpush!(v, always(Expr(:block, qvec...)))
+        vpush!(v, Alwayscontent(comb, qvec))
     end
 
     return nothing

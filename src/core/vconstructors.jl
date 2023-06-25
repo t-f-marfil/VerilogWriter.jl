@@ -167,6 +167,7 @@ Alwayscontent(ifblock::Ifelseblock...) = Alwayscontent(Alassign[], [i for i in i
 Alwayscontent(case::Case...) = Alwayscontent(Alassign[], Ifelseblock[], [case...])
 
 Alwayscontent() = Alwayscontent(aunknown)
+Alwayscontent(atype::Atype, assigns::Vector{Alassign}) = Alwayscontent(atype, Sensitivity(), Ifcontent(assigns))
 
 
 Vmodinst(vname, iname, pts, wild::Bool=false) = Vmodinst(vname, iname, Pair{String, Wireexpr}[], pts, wild)

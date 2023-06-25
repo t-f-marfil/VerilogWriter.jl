@@ -43,7 +43,7 @@ function uartRecv(baudrate, clkfreq; name="UARTRecv")
     alnextbyte = @always (
         nextbyte = rx == 0
     )
-    alcounters = always(:(
+    alcounters = @always (
         if (recvstate == sstop) && (cyclecount == $cycleperstop)
             cyclecount <= 0;
         elseif cyclecount == $cycleperbit
@@ -57,17 +57,17 @@ function uartRecv(baudrate, clkfreq; name="UARTRecv")
         if $countfull & (recvstate == sdata)
             bitcount <= bitcount + 1
         end
-    ))
-    aldout = always(:(
+    )
+    aldout = @always (
         if $counthalf & (recvstate == sdata)
             dout[bitcount] <= rx
         elseif $counthalf & (recvstate == sstart)
             dout <= 0
         end
-    ))
-    alil = always(:(
+    )
+    alil = @always (
         $(nametolower(ilvalid)) = (recvstate == sstop) & $counthalf
-    ))
+    )
 
     vpush!.(m, (rxprts, rxfsm, alnextbyte, alcounters, aldout, alil))
 
@@ -80,10 +80,10 @@ function uartSend(baudrate, clkfreq; name="UARTSend")
     cycleperbit = Int(round(cycleperbitRaw)) - 1
     cycleperbit > 0 || error("cycleperbit should be positive")
 
-    txprts = ports(:(
+    txprts = @ports (
         @in 8 din;
         @out @logic tx
-    ))
+    )
 
     @sym2wire acceptNext, bitcount, cyclecount
     countfull = cyclecount == Wireexpr(32, cycleperbit)
@@ -97,7 +97,7 @@ function uartSend(baudrate, clkfreq; name="UARTSend")
         (countfull & ~acceptNext, @tstate sstop => sidle)
     ])
 
-    alcounters = always(:(
+    alcounters = @always (
         if cyclecount == $cycleperbit
             cyclecount <= 0
         else
@@ -109,8 +109,8 @@ function uartSend(baudrate, clkfreq; name="UARTSend")
         if $countfull & (sendstate == sdata)
             bitcount <= bitcount + 1
         end
-    ))
-    alaccept = always(:(
+    )
+    alaccept = @always (
         acceptNext = 0;
         if $(nametoupper(ilvalid))
             if sendstate == sidle
@@ -119,26 +119,26 @@ function uartSend(baudrate, clkfreq; name="UARTSend")
                 acceptNext = 1
             end
         end
-    ))
-    albuf = always(:(
+    )
+    albuf = @always (
         if acceptNext
             dbuf <= din
         end
-    ))
-    altx = always(:(
+    )
+    altx = @always (
         tx = 1;
         if sendstate == sstart
             tx = 0
         elseif sendstate == sdata
             tx = dbuf[bitcount]
         end
-    ))
-    alupdate = always(:(
+    )
+    alupdate = @always (
         $(nametoupper(ilupdate)) = (
             ((sendstate == sstop) && (cyclecount == $cycleperbit))
             || sendstate == sidle
         )
-    ))
+    )
 
     m = Vmodule(name)
     vpush!.(m, (txprts, txfsm, alcounters, alaccept, albuf, altx, alupdate))

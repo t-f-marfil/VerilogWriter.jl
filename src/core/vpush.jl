@@ -144,7 +144,10 @@ function vpush!(coll::Vmodule, x::Vector{T}...) where {T}
     end
 end
 
-function vpush!(coll::Vmodule)
+function vpush!(::Vmodule)
+    return nothing
+end
+function vpush!(::Decls)
     return nothing
 end
 
