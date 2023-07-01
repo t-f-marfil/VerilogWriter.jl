@@ -59,7 +59,7 @@ endmodule
 type: Vmodule
 ```
 
-Syntaxes for each types (usage of `@ports`, `@decls`, etc.) are at [List of Converter Functions/Macros](@ref).
+Syntaxes for each types (usage of `@ports`, `@decls`, etc.) are at [List of Converter Macros](@ref).
 
 Instead of calling `vpush!` you may pass additional information to constructors of `Vmodule`.
 You may also wrap ports, parameters, etc. into type `Vmodenv`.

@@ -33,6 +33,7 @@ Localparams() = Localparams(Onelocalparam[])
 
 
 Onedecl(t::Wiretype, wid::Wireexpr, n::String) = Onedecl(t, wid, n, false, Wireexpr())
+Onedecl(t::Wiretype, wid::Wireexpr, n::Wireexpr) = Onedecl(t, wid, getname(n))
 
 function Onedecl(t::Wiretype, wid::Int, w::Wireexpr)
     w.operation == id || error("cannot convert Wireexpr $(string(w)) with non-id wiretype into Onedecl")

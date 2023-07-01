@@ -1159,7 +1159,7 @@ end
 
 
 """
-    decloneline(expr::Expr)
+    decloneline(expr::Expr)::Vector{Expr}
 
 Parse Julia AST into wire declaration as Vector{[Onedecl](@ref)}.
 
@@ -1192,7 +1192,7 @@ wire [(A >> 2)-1:0] w2;
 type: Onedecl
 ```
 """
-function decloneline(expr::Expr)
+function decloneline(expr::Expr)::Vector{Expr}
     # @assert expr.head == :macrocall
     expr.head == :macrocall || error("unknown head $(expr.head).")
     args = expr.args

@@ -266,6 +266,7 @@ function layerconnInstantiate_mlay!(v::Vmodule, x::Layergraph)
     # # as described in Layerconn
     # qvec = Expr[]
     qvec = Alassign[]
+    dclsvec = Onedecl[]
     for ((uno::Midlayer, dos::Midlayer), conn) in x.edges 
         # what is needed below: 
         #  function: <connection_name>, <modulename> -> <wirename_in_mother_module>
@@ -278,47 +279,64 @@ function layerconnInstantiate_mlay!(v::Vmodule, x::Layergraph)
             # getname(ppre) is not typo
             # this is needed to match the name with 
             # the one generated for Vmodinst ports
-            q1 = @alassign_comb (
-                $(
-                    wireAddSuffix(getname(ppost), dos)
-                ) = $(
-                    smod(string("dout_", getname(ppre)))
-                )
-            )
-            q2 = @alassign_comb (
-                $(
-                    smod(string("din_", getname(ppre)))
-                ) = $(
-                    wireAddSuffix(getname(ppre), uno)
-                )
-            )
-            push!(qvec, q1, q2)
+
+            # q1 = @alassign_comb (
+            #     $(
+            #         wireAddSuffix(getname(ppost), dos)
+            #     ) = $(
+            #         smod(string("dout_", getname(ppre)))
+            #     )
+            # )
+            # q2 = @alassign_comb (
+            #     $(
+            #         smod(string("din_", getname(ppre)))
+            #     ) = $(
+            #         wireAddSuffix(getname(ppre), uno)
+            #     )
+            # )
+            # push!(qvec, q1, q2)
+
+            # below means
+            # always_comb begin
+            #   <ppost_name>_<dos_name> = <ppre_name>_<uno_name>
+            # end
+            # at the top level module
+            postwire = wireAddSuffix(getname(ppost), dos)
+            prewire = wireAddSuffix(getname(ppre), uno)
+            q = @alassign_comb $postwire = $prewire
+            push!(qvec, q)
+
+            # same pre may be connected to multiple ports, thus to avoid 
+            # duplicate, not added here
+            dcl = @decls @logic $(getwidth(ppost)) $(postwire)
+            vpush!(v, dcl) 
         end
 
     end
 
-    for (uno, conn) in layVisited
-        db = ildatabuffer(uno, conn)
-        vpush!(db, commonports)
-        push!(mvec, db)
+    # ilbuf not needed now
+    # for (uno, conn) in layVisited
+    #     db = ildatabuffer(uno, conn)
+    #     vpush!(db, commonports)
+    #     push!(mvec, db)
 
-        smod = wirenamemodgen(db)
-        dports = filter(x -> getname(x) != "CLK" && getname(x) != "RST", [i for i in getports(db)])
-        vpush!(v, Vmodinst(
-            getname(db),
-            "uildatabuf_$(getname(uno))",
-            [
-                "CLK" => Wireexpr("CLK"),
-                "RST" => Wireexpr("RST"),
-                [(n = getname(p); n => Wireexpr(smod(n))) for p in dports]...
-            ]
-        ))
-        alil = @always (
-            $(smod(nametolower(ilupdate))) = $(nametolower(ilupdate, uno));
-            $(smod(nametolower(ilvalid))) = $(nametolower(ilvalid, uno))
-        )
-        vpush!(v, alil)
-    end
+    #     smod = wirenamemodgen(db)
+    #     dports = filter(x -> getname(x) != "CLK" && getname(x) != "RST", [i for i in getports(db)])
+    #     vpush!(v, Vmodinst(
+    #         getname(db),
+    #         "uildatabuf_$(getname(uno))",
+    #         [
+    #             "CLK" => Wireexpr("CLK"),
+    #             "RST" => Wireexpr("RST"),
+    #             [(n = getname(p); n => Wireexpr(smod(n))) for p in dports]...
+    #         ]
+    #     ))
+    #     alil = @always (
+    #         $(smod(nametolower(ilupdate))) = $(nametolower(ilupdate, uno));
+    #         $(smod(nametolower(ilvalid))) = $(nametolower(ilvalid, uno))
+    #     )
+    #     vpush!(v, alil)
+    # end
 
     # alans = Alwayscontent(comb, ifcontent(Expr(:block, qvec...)))
     alans = Alwayscontent(comb, qvec)
@@ -548,3 +566,10 @@ macro layerconn(arg)
     Layerconn(OrderedSet(v))
 end
 
+function ilacceptedLower()
+    @wireexpr $(nametolower(ilvalid)) & $(nametolower(ilupdate))
+end
+
+function ilacceptedUpper()
+    @wireexpr $(nametoupper(ilvalid)) & $(nametoupper(ilupdate))
+end

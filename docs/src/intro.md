@@ -1,10 +1,18 @@
-# VerilogWriter.jl Document
+# VerilogWriter.jl
 ```@meta 
 CurrentModule = VerilogWriter
 ```
 ```@setup top
 using VerilogWriter
 ```
+
+
+A package to generate Verilog/SystemVerilog codes (primarily targeted on FPGAs) and offer an introductory HLS (high level synthesis) on Julia.
+
+You may:
++ Convert Verilog-like Julia code into objects
++ Automatically infer wire width in always-blocks
++ Construct Finite State Machines in a simple method
 ## Brief Introduction 
 
 If you have IJulia locally, execute
@@ -117,6 +125,22 @@ This package offers a simple method to write on Julia Verilog/SystemVerilog code
 The motivation here is that it would be nice if we could write Verilog/SystemVerilog with the power of the Julia language, with a minimal amount of additional syntaxes (function calls, constructors, etc.). 
 
 As in the examples above, we offer, for instance, simple macros to convert Verilog-like Julia code into certain objects that have proper structure found in Verilog codes.
+
+## Usage 
+
+This module is not yet registered, so
+```Julia
+using Pkg
+Pkg.add(PackageSpec(url="https://github.com/t-f-marfil/VerilogWriter.jl"))
+```
+would work. Or simply 
+```
+git clone "https://github.com/t-f-marfil/VerilogWriter.jl"
+```
+and try `tutorial.ipynb` in `/src`.
+
+Dockerfile to build environment with julia and this module is also available in this repository.
+
 
 ## What is Left to be Done
 

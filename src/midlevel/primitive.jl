@@ -74,16 +74,17 @@ function fifogen(depth=8, width=32; name="")
     nn = length(name) == 0 ? "fifo_$(width)_$(depth)" : name
     mod = Vmodule(nn)
     prts = @ports((
-        @in CLK, RST;
-        @in -1 din;
-        @out @reg -1 dout;
+        # @in CLK, RST;
+        @in $width din;
+        @out @reg $width dout;
 
         # @out @reg full, empty;
         # @in wincr, rincr
     ))
     vpush!(mod, prts)
-    vpush!.(Ref(mod), (bufram, flags, ptrlogic, dout, din))
+    vpush!.(Ref(mod), (bufram, flags, ptrlogic, dout, din, ilconn))
     # (mod = vfinalize(mod)) |> vshow
 
-    vfinalize(mod)
+    # vfinalize(mod)
+    return mod
 end

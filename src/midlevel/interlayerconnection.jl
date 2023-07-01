@@ -304,6 +304,16 @@ function addsumlinfo!(m::Vmodule, lst::Vector{InfotypeSuml})
     return nothing
 end
 
+"""
+    ildatabuffer(lay::Midlayer, conn::Layerconn)
+
+Intended to hold data from upstream midlayer object,
+even if other upstream object is not yet valid in the same MUSL.
+
+However, it is not needed now since MUSL waits all upstreams for until their
+valid signals are all asserted.
+May be needed when MUSL behavior is modified.
+"""
 function ildatabuffer(lay::Midlayer, conn::Layerconn)
     m = Vmodule("ildatabuf_$(getname(lay))")
     prts = Ports([p for (p, _) in conn.ports])

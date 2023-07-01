@@ -245,7 +245,7 @@ is equivalent to
 (be care full not to foreget `(one space)` between macros and `(`, i.e. `@macro(a,b)` and `@macro (a,b)` are different.)
 
 
-### List of Converter Functions/Macros
+### List of Converter Macros
 
 Written inside parentheses are the types of objects the functions return.
 
