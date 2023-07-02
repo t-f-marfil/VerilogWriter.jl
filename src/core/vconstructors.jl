@@ -115,19 +115,19 @@ Wireexpr(op::Wireop, v::Vector{Wireexpr}) = Wireexpr(op, "", v, -1, -1)
 """
     Wireexpr(op::Wireop, w::Wireexpr...)
 
-Apply an operation of `w` wires.
+Apply an operation on `w` wires.
 
 # Examples 
 ```jldoctest
 julia> a = @wireexpr a; b = @wireexpr b;
 
-julia> c = Wireexpr(add, a, b); # equivalent to wireexpr(:(\$(a) + \$(b)))
+julia> c = Wireexpr(add, a, b); # equivalent to @wireexpr \$a + \$b
 
 julia> vshow(c);
 (a + b)
 type: Wireexpr
 
-julia> d = Wireexpr(redor, a); vshow(d); # wireexpr(:(|(\$(a))))
+julia> d = Wireexpr(redor, a); vshow(d); # @wireexpr |(\$a)
 (|(a))
 type: Wireexpr
 ```
@@ -138,7 +138,6 @@ Wireexpr(op::Wireop, w::Wireexpr...) = Wireexpr(op, [w...])
 # e.g. :($(some_symbol)[1])
 Wireexpr(op::Wireop, uno, dos) = Wireexpr(op, Wireexpr(uno), Wireexpr(dos))
 
-Wireexpr(x::Wireexpr) = x
 
 Alassign(lhs, rhs) = Alassign(lhs, rhs, aunknown)
 

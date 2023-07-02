@@ -8,7 +8,7 @@ end
 ```
 ## Structs Description
 
-This module offers several types that contain a structure of Verilog components, major ones of which are listed below. 
+This module offers several types that contain a structure of Verilog components, major parts of which are listed below. 
 
 
 + [Parameters](@ref)
@@ -212,37 +212,17 @@ println(showfield(Vmodenv)) # hide
 Vmodenv
 ```
 
-## Converter Functions/Macros
+## Converter Macros
 
-As in previous examples we offer functions and macros to convert Julia syntax into certain types described above. You may use these instead of calling constructors.
+As in previous examples we offer macros to convert Julia syntax into certain types described above. You may use these instead of calling constructors.
 
-All the functions listed below accept `Expr` object as its argument (e.g. :(x = 10),
-see [Julia Documents](https://docs.julialang.org/en/v1/manual/metaprogramming/#Expressions-and-evaluation) for more information.), and that is why variables inside the argument `Expr` object do not have to be declared anywhere else in the source code. The syntaxes each function requires in a argument `Expr` objects are also described below (or may be easily inferred from the examples in this page and [Quick Start](@ref)).
+!!! note
+    Note that conveter functions are now deprecated, everything should be handled with the macros.
 
-As you see in [Quick Start](@ref) there are macros that do the same thing as functions listed below (and both macro and function has the same name). As macros take `Expr` object as its argument, you can write codes in a slightly more simple manner with macros. For example,
-```
-always(:(
-    @posedge clk; 
+All the macros listed below accept `Expr` object as its argument (e.g. `@mac x = 10` internally takes `:(x = 10)` as its argument,
+see [Julia Documents](https://docs.julialang.org/en/v1/manual/metaprogramming/#man-macros) for more information.), and that is why variables inside the argument do not have to be declared anywhere else in the source code. The syntaxes each function requires in an argument are also described below (or may be easily inferred from the examples in this page and [Quick Start](@ref)).
 
-    w1 <= w2;
-    if b1 == b2 
-        w3 <= w4
-    end
-))
-```
-is equivalent to 
-```
-@always (
-    @posedge clk; 
-
-    w1 <= w2;
-    if b1 == b2 
-        w3 <= w4
-    end
-)
-```
-
-(be care full not to foreget `(one space)` between macros and `(`, i.e. `@macro(a,b)` and `@macro (a,b)` are different.)
+(be care full not to foreget `(one space)` between macros and `(`, i.e. `@macro(a,b)` and `@macro (a,b)` are different, and the latter is used here.)
 
 
 ### List of Converter Macros
@@ -257,10 +237,8 @@ Written inside parentheses are the types of objects the functions return.
 + [localparams](@ref) ([Localparams](@ref))
   + [onelocalparam](@ref) ([Onelocalparam](@ref))
 + [decls](@ref) ([Decls](@ref))
-  + [decloneline](@ref) ([Onedecl](@ref))
+  + [decloneline](@ref) (Vector{[Onedecl](@ref)})
 + [always](@ref) ([Alwayscontent](@ref))
-  + [oneblock](@ref)  ([Ifelseblock](@ref),[Alassign](@ref))
-    + [ifcontent](@ref)
 
 ### parameters
 ```@docs
@@ -315,19 +293,9 @@ decloneline(::Expr)
 always(::Expr)
 ```
 
-#### oneblock 
-```@docs
-oneblock(expr::T) where {T <: Union{Alassign, Ifelseblock}}
-```
-
-#### ifcontent
-```@docs
-ifcontent(x::Expr)
-```
-
 ## Embed Objects
 
-You can embed generated objects back into Verilog-like codes. Note that because we ask you to make use of metaprogramming ([`interpolation`](https://docs.julialang.org/en/v1/manual/metaprogramming/#man-expression-interpolation) in particular), macros cannot be used for the purpose. 
+You can embed generated objects back into Verilog-like codes. The synatx is almost the same as those of [interpolation](https://docs.julialang.org/en/v1/manual/metaprogramming/#man-expression-interpolation).
 
 By embedding objects as Julia AST, you can construct new objects that contain the information of embedded objects.
 

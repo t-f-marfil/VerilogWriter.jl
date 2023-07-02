@@ -5,6 +5,12 @@ DocTestSetup = quote
     using VerilogWriter
 end
 ```
+
+Here we show an example of fully building a verilog module using `VerilogWriter.jl`.
+
+!!! note
+    semicolons at the end of each line in the code blocks below is needed only for formatting this document, and thus not needed in actual codes. However, semicolons inside macro arguments (e.g. `@ports (@in A`**`";"`**`@in B)`) are strictly required to indicate that it is a series of expressions.
+
 ## Define the Name of a Module
 
 We offer an type `Vmodule`, which imitates Verilog modules. Instantiate it defining its name.
@@ -30,11 +36,22 @@ Add them to the module `test` calling [`vpush!`](@ref).
 ```jldoctest t1
 julia> pa = @parameters (dummy = 10 << 2);
 
-julia> po = @ports (@in CLK, RST; @in 8 din; @out @reg -1 dout);
+julia> po = @ports (
+       @in CLK, RST; 
+       @in 8 din; 
+       @out @reg -1 dout
+       );
 
-julia> lp = @localparams (A = 1; B = 2; C = A + B);
+julia> lp = @localparams (
+       A = 1; 
+       B = 2; 
+       C = A + B
+       );
 
-julia> ds = @decls (@reg dumreg; @wire A+B<<C dumwire);
+julia> ds = @decls (
+       @reg dumreg; 
+       @wire A+B<<C dumwire
+       );
 
 julia> vpush!.(m, (pa, po, lp, ds));
 
@@ -73,7 +90,7 @@ would generate the same result.
 
 ## Define Combinational/Sequential Logics
 
-You may write always blocks in Julia syntax, and add them to `test` module. Details at [List of Converter Functions/Macros](@ref).
+You may write always blocks in Julia syntax, and add them to `test` module. Details at [List of Converter Macros](@ref).
 
 ```jldoctest t1
 julia> a1 = @always (dout <= din[3:0]); vshow(a1)

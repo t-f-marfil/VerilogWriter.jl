@@ -2,7 +2,7 @@ iter(f, n) = n <= 1 ? f : x -> f(iter(f, n-1)(x))
 
 function main()
 
-    lines = readlines("intro.md")
+    lines = readlines(joinpath(@__DIR__, "index.md"))
     ci = "[![CI](https://github.com/t-f-marfil/VerilogWriter.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/t-f-marfil/VerilogWriter.jl/actions/workflows/CI.yml)"
     doclink = "Examples and full documents are available [here](https://t-f-marfil.github.io/VerilogWriter.jl/)."
     

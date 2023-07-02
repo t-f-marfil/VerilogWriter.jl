@@ -106,7 +106,7 @@ type: Wireexpr
 
 julia> w3 = @wireexpr x;
 
-julia> w4 = @wireexpr y && z; # && is available inside `@wireexpr` and `wireexpr` methods.
+julia> w4 = @wireexpr y && z; # && is available inside `@wireexpr`.
 
 julia> vshow(w3 | w4)
 (x | (y && z))
