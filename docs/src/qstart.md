@@ -9,7 +9,7 @@ end
 Here we show an example of fully building a verilog module using `VerilogWriter.jl`.
 
 !!! note
-    semicolons at the end of each line in the code blocks below is needed only for formatting this document, and thus not needed in actual codes. However, semicolons inside macro arguments (e.g. `@ports (@in A`**`";"`**`@in B)`) are strictly required to indicate that it is a series of expressions.
+    Semicolons at the end of each line in the code blocks below is needed only for formatting this document, and thus not needed in actual codes. However, semicolons inside macro arguments (e.g. `@ports (@in A`**`";"`**`@in B)`) are strictly required to indicate that the argument is a series of expressions.
 
 ## Define the Name of a Module
 

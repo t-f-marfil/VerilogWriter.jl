@@ -541,7 +541,7 @@ function layer2vmod!(x::Layergraph; name = "Layers")::Vector{Vmodule}
     # reflect data in layerconn to Vmodule objects
     addPortEachLayer(x)
 
-    # execute below after connecting modules
+    # execute below after connecting modules.
     # instantiate every layer
     for lay in x.layers 
         vpush!(v, vinstnamemod(lay.vmod))

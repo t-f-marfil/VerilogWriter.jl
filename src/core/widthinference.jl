@@ -423,30 +423,33 @@ function unifycore_widunify!(items::Vector{T}, envdicts, reg2d, ansset, widvars,
                 end
             end
         else 
+            # argmax should not be applied to length-zero vector
+            if length(eqwids) > 0
             # concrete width value is not determined, do unify only
-            newwid = argmax(
-                (
-                    x -> length(
-                        get(widvars, x, String[])
-                    )
-                ),
-                eqwids
-            )
+                newwid = argmax(
+                    (
+                        x -> length(
+                            get(widvars, x, String[])
+                        )
+                    ),
+                    eqwids
+                )
 
 
-            lst = get(widvars, newwid, nothing)
-            if lst != nothing
-                for ww in eqwids
-                    if ww != newwid 
-                        removing = pop!(widvars, ww, String[])
-                        push!(lst, removing...)
+                lst = get(widvars, newwid, nothing)
+                if lst != nothing
+                    for ww in eqwids
+                        if ww != newwid 
+                            removing = pop!(widvars, ww, String[])
+                            push!(lst, removing...)
 
-                        for item in removing 
-                            ansset[item] = newwid
+                            for item in removing 
+                                ansset[item] = newwid
+                            end
                         end
                     end
-                end
-            end 
+                end 
+            end
 
         end
 

@@ -100,3 +100,12 @@ c = @always (
 
 @test (@strerror autodecl_core(c, Vmodenv(d))) == """
 2d reg b is sliced at [(W << 2):0]."""
+
+# empty equality lists
+alempty = @always (
+    if 1
+        a <= $(Wireexpr(1, 1))
+    end
+)
+dempty = autodecl(alempty)
+@test string(dempty) == "logic a;"

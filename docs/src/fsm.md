@@ -2,13 +2,13 @@
 
 We offer here an easy way to construct a Finite State Machine (FSM). 
 
-Finite State Machine is a common structure used in a hardware design. Offering a simple method to construct a FSM may be useful.
+Finite State Machine is a common structure used in a hardware design. Offering a simple method to construct an FSM may be useful.
 
-## Procedure of Designing a FSM
+## Procedure of Designing an FSM
 
-### Construct a FSM
+### Construct an FSM
 
-First construct a FSM defining name of states and the machine itself.
+First construct an FSM defining name of states and the machine itself.
 
 ```@docs
 @FSM
