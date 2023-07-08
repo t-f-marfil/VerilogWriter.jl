@@ -4,13 +4,15 @@
 Add new connection between Midlayers.
 """
 function (cls::Layergraph)(p::Pair{Midlayer, Midlayer}, conn::Layerconn)
-    push!(cls.edges, p => conn)
+    dfp, ufp = Midport(getpid(conn), p[1]), Midport(getpid(conn), p[2])
+    push!(cls.edges, (dfp => ufp) => conn)
 
     push!(cls.layers, p[1])
     push!(cls.layers, p[2])
 end
-function (cls::Layergraph)(p::Pair{Midlayer, Midlayer})
-    cls(p, Layerconn())
+function (cls::Layergraph)(p::Pair{Midlayer, Midlayer}, arg...)
+    # include the case where nothing given as arg
+    cls(p, Layerconn(arg...))
 end
 
 @basehashgen(
@@ -39,12 +41,13 @@ function pushhelp_dotgen!(lay::Midlayer, randset::Set{Midlayer}, regset::Set{Mid
 end
 
 """
-    edgepush_dotgen!(iobuf::IOBuffer, edges::D) where {D <: AbstractDict{Pair{Midlayer, Midlayer}, Layerconn}}
+    edgepush_dotgen!(iobuf::IOBuffer, edges::D) where {D <: AbstractDict{Pair{Midport, Midport}, Layerconn}}
 
 Helper function for `dotgen`.
 """
-function edgepush_dotgen!(iobuf::IOBuffer, edges::D) where {D <: AbstractDict{Pair{Midlayer, Midlayer}, Layerconn}}
-    for ((n1, n2), ninfo) in edges 
+function edgepush_dotgen!(iobuf::IOBuffer, edges::D) where {D <: AbstractDict{Pair{Midport, Midport}, Layerconn}}
+    for ((_n1, _n2), ninfo) in edges 
+        n1, n2 = getmmod.((_n1, _n2))
         write(iobuf, "$(getname(n1)) -> $(getname(n2));\n")
     end
     return 
@@ -60,7 +63,8 @@ function dotgen(lay::Layergraph; dpi=96)
     randset = Set{Midlayer}()
     fifoset = Set{Midlayer}()
 
-    for (uno, dos) in keys(lay.edges)
+    for (dfp, ufp) in keys(lay.edges)
+        uno, dos = getmmod.((dfp, ufp))
         pushhelp_dotgen!(uno, randset, regset, fifoset)
         pushhelp_dotgen!(dos, randset, regset, fifoset)
     end
@@ -131,17 +135,30 @@ const portdir4ilst_upper = Dict([
 ])
 
 function nametolower(st::Interlaysigtype)
-    "$(string(st)[3:end])_$(prep4ilst_lower[st])_lower"
+    nametolower(st, defaultMidPid)
 end
 function nametoupper(st::Interlaysigtype)
-    "$(string(st)[3:end])_$(prep4ilst_upper[st])_upper"
+    nametoupper(st, defaultMidPid)
+end
+function nametolower(st::Interlaysigtype, pid::Int)
+    "$(string(st)[3:end])_$(prep4ilst_lower[st])_lower_port$pid"
+end
+function nametoupper(st::Interlaysigtype, pid::Int)
+    "$(string(st)[3:end])_$(prep4ilst_upper[st])_upper_port$pid"
 end
 
-function nametolower(st::Interlaysigtype, suffix::Midlayer)
-    string(nametolower(st), "_", getname(suffix))
+# function nametolower(st::Interlaysigtype, suffix::Midlayer)
+#     string(nametolower(st), "_", getname(suffix))
+# end
+# function nametoupper(st::Interlaysigtype, suffix::Midlayer)
+#     string(nametoupper(st), "_", getname(suffix))
+# end
+
+function nametolower(st::Interlaysigtype, suffix::Midport)
+    string(nametolower(st, getpid(suffix)), "_", getname(getmmod(suffix)))
 end
-function nametoupper(st::Interlaysigtype, suffix::Midlayer)
-    string(nametoupper(st), "_", getname(suffix))
+function nametoupper(st::Interlaysigtype, suffix::Midport)
+    string(nametoupper(st, getpid(suffix)), "_", getname(getmmod(suffix)))
 end
 
 # function lowerportsgen(lowername::String)
@@ -175,18 +192,18 @@ function addCommonPortEachLayer(x::Layergraph)
 end
 
 function addIlPortEachLayer(x::Layergraph)
-    preadded = Dict([lay => false for lay in x.layers])
-    postadded = Dict([lay => false for lay in x.layers])
+    preadded = Dict([lay => Dict{Int, Bool}() for lay in x.layers])
+    postadded = Dict([lay => Dict{Int, Bool}() for lay in x.layers])
 
-    for ((pre::Midlayer, post::Midlayer), conninfo) in x.edges
-        vpre, vpost = pre.vmod, post.vmod
+    for ((pre::Midport, post::Midport), _) in x.edges
+        vpre, vpost = getmmod(pre).vmod, getmmod(post).vmod
 
         for ilattr in instances(Interlaysigtype)
-            preadded[pre] || vpush!(vpre, Oneport(portdir4ilst_lower[ilattr], logic, nametolower(ilattr)))
-            postadded[post] || vpush!(vpost, Oneport(portdir4ilst_upper[ilattr], logic, nametoupper(ilattr)))
+            get(preadded[getmmod(pre)], getpid(pre), false) || vpush!(vpre, Oneport(portdir4ilst_lower[ilattr], logic, nametolower(ilattr, getpid(pre))))
+            get(postadded[getmmod(post)], getpid(post), false) || vpush!(vpost, Oneport(portdir4ilst_upper[ilattr], logic, nametoupper(ilattr, getpid(post))))
         end
 
-        preadded[pre] = postadded[post] = true
+        preadded[getmmod(pre)][getpid(pre)] = postadded[getmmod(post)][getpid(post)] = true
     end
 
     return nothing
@@ -234,19 +251,19 @@ function unconnectedports_mlay(x::Layergraph)
         for lay in x.layers
     ])
 
-    for ((uno::Midlayer, dos::Midlayer), conn) in x.edges 
+    for ((dfp::Midport, ufp::Midport), conn) in x.edges 
         for (ppre, ppost) in conn.ports
             # update pconnected
             # ppre in keys(pconnected[uno])
-            prefil = [filter(p -> portmatch_uc(ppre, p[1]), pconnected[uno])...]
-            (length(prefil) > 0 && getdirec(ppre) == pout) || error("$(string(ppre)) not in module $(getname(uno)) and should be output with the same width")
+            prefil = [filter(p -> portmatch_uc(ppre, p[1]), pconnected[getmmod(dfp)])...]
+            (length(prefil) > 0 && getdirec(ppre) == pout) || error("$(string(ppre)) not in port $(getname(dfp)) and should be output with the same width")
             # should be length 1
-            pconnected[uno][prefil[][1]] = true
+            pconnected[getmmod(dfp)][prefil[][1]] = true
 
             # ppost in keys(pconnected[dos])
-            postfil = [filter(p -> portmatch_uc(ppost, p[1]), pconnected[dos])...]
-            (length(postfil) > 0 && getdirec(ppost) == pin) || error("$(string(ppost)) not in module $(getname(dos)) and should be input with the same width")
-            pconnected[dos][postfil[][1]] = true
+            postfil = [filter(p -> portmatch_uc(ppost, p[1]), pconnected[getmmod(ufp)])...]
+            (length(postfil) > 0 && getdirec(ppost) == pin) || error("$(string(ppost)) not in port $(getname(ufp)) and should be input with the same width")
+            pconnected[getmmod(ufp)][postfil[][1]] = true
 
         end
     end
@@ -267,7 +284,8 @@ function layerconnInstantiate_mlay!(v::Vmodule, x::Layergraph)
     # qvec = Expr[]
     qvec = Alassign[]
     dclsvec = Onedecl[]
-    for ((uno::Midlayer, dos::Midlayer), conn) in x.edges 
+    for ((_uno::Midport, _dos::Midport), conn) in x.edges 
+        uno, dos = getmmod.((_uno, _dos))
         # what is needed below: 
         #  function: <connection_name>, <modulename> -> <wirename_in_mother_module>
         layVisited[uno] = vmerge(conn, get(layVisited, uno, Layerconn()))
@@ -357,32 +375,52 @@ function ilconndecl_mlay!(v::Vmodule, x::Layergraph)
     # rvec = Expr[]
     # dvec = Expr[]
     dvec = Onedecl[]
-    rregistered = Dict([lay => [false, false] for lay in x.layers])
-    lregistered = Dict([lay => [false, false] for lay in x.layers])
+    # rregistered = Dict([lay::Midlayer => [false, false] for lay in x.layers])
+    # lregistered = Dict([lay::Midlayer => [false, false] for lay in x.layers])
+    ufpregistered = Dict([lay::Midlayer => Dict{Int, Vector{Bool}}() for lay in x.layers])
+    dfpregistered = Dict([lay::Midlayer => Dict{Int, Vector{Bool}}() for lay in x.layers])
 
-    for ((uno::Midlayer, dos::Midlayer), _) in x.edges 
+    for ((dfp::Midport, ufp::Midport), _) in x.edges 
         for ilattr in instances(Interlaysigtype)
-            rlhs = nametoupper(ilattr, dos)
-            rrhs = nametolower(ilattr, uno)
+            # rlhs = nametoupper(ilattr, dos)
+            # rrhs = nametolower(ilattr, uno)
+            rufp = nametoupper(ilattr, ufp)
+            rdfp = nametolower(ilattr, dfp)
+            # rlhs, rrhs = rufp, rdfp
             # # set appropiate lhs <=> rhs
-            if portdir4ilst_upper[ilattr] == pout
-                rlhs, rrhs = rrhs, rlhs
-                uno, dos = dos, uno
+            # if portdir4ilst_upper[ilattr] == pout
+            #     rlhs, rrhs = rrhs, rlhs
+            #     uno, dos = dos, uno
+            # end
+            ddfp = dfpregistered[getmmod(dfp)]
+            if getpid(dfp) in keys(ddfp)
+                # port id specified
+                if !ddfp[getpid(dfp)][Int(ilattr) + 1]
+                    push!(dvec, (@decloneline (@logic $rdfp))...)
+                    ddfp[getpid(dfp)][Int(ilattr) + 1] = true
+                end
+            else
+                ddfp[getpid(dfp)] = [false, false]
+                push!(dvec, (@decloneline (@logic $rdfp))...)
+                ddfp[getpid(dfp)][Int(ilattr) + 1] = true
             end
-            # r = :(
-            #     $(
-            #         rlhs
-            #     ) = $(
-            #         rrhs
-            #     )
-            # )
-            # push!(rvec, r)
-            # # push!(dvec, :(@logic $(rrhs), $(rlhs)))
+            
+            dufp = ufpregistered[getmmod(ufp)]
+            if getpid(ufp) in keys(dufp)
+                # port id specified
+                if !dufp[getpid(ufp)][Int(ilattr) + 1]
+                    push!(dvec, (@decloneline (@logic $rufp))...)
+                    dufp[getpid(ufp)][Int(ilattr) + 1] = true
+                end
+            else
+                dufp[getpid(ufp)] = [false, false]
+                push!(dvec, (@decloneline (@logic $rufp))...)
+                dufp[getpid(ufp)][Int(ilattr) + 1] = true
+            end
+            # rregistered[uno][Int(ilattr) + 1] || push!(dvec, (@decloneline (@logic $rrhs))...)
+            # lregistered[dos][Int(ilattr) + 1] || push!(dvec, (@decloneline (@logic $(rlhs)))...)
 
-            rregistered[uno][Int(ilattr) + 1] || push!(dvec, (@decloneline (@logic $rrhs))...)
-            lregistered[dos][Int(ilattr) + 1] || push!(dvec, (@decloneline (@logic $(rlhs)))...)
-
-            rregistered[uno][Int(ilattr) + 1] = lregistered[dos][Int(ilattr) + 1] = true
+            # rregistered[uno][Int(ilattr) + 1] = lregistered[dos][Int(ilattr) + 1] = true
         end
 
     end
@@ -566,10 +604,10 @@ macro layerconn(arg)
     Layerconn(OrderedSet(v))
 end
 
-function ilacceptedLower()
-    @wireexpr $(nametolower(ilvalid)) & $(nametolower(ilupdate))
+function ilacceptedLower(pid=defaultMidPid)
+    @wireexpr $(nametolower(ilvalid, pid)) & $(nametolower(ilupdate, pid))
 end
 
-function ilacceptedUpper()
-    @wireexpr $(nametoupper(ilvalid)) & $(nametoupper(ilupdate))
+function ilacceptedUpper(pid=defaultMidPid)
+    @wireexpr $(nametoupper(ilvalid, pid)) & $(nametoupper(ilupdate, pid))
 end

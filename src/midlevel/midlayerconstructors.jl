@@ -8,8 +8,9 @@ Midlayer(n::String, t::Midlayertype, v::Vmodule) = Midlayer(n, t, defaultlports,
 Midlayer(t::Midlayertype, v::Vmodule) = Midlayer(t, defaultlports, v)
 Midlayer(t::Midlayertype, s) = Midlayer(t, Vmodule(s))
 
-Layerconn(x::Pair{Oneport, Oneport}) = Layerconn(Set([x]))
+Layerconn(x) = Layerconn(0, x)
 Layerconn() = Layerconn(Set{Pair{Oneport, Oneport}}())
-Layerconn(x::T) where {T <: AbstractArray} = Layerconn(Set(x))
+Layerconn(pid::Int, x::Pair{Oneport, Oneport}) = Layerconn(pid, Set([x]))
+Layerconn(pid::Int, x::T) where {T <: AbstractArray} = Layerconn(pid, Set(x))
 
 Layergraph() = Layergraph(Dict{Pair{Midlayer, Midlayer}, Layerconn}(), Set{Midlayer}())

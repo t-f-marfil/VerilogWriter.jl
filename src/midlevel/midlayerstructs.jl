@@ -10,13 +10,20 @@ end
 
 "struct to contain connection info."
 struct Layerconn
+    pid::Int
     # port names as wireexpr
     ports::OrderedSet{Pair{Oneport, Oneport}}
 end
 
+struct Midport
+    pid::Int
+    mmod::Midlayer
+end
+const defaultMidPid = 0
+
 "struct to store and connect Layerconn objects."
 struct Layergraph
-    edges::OrderedDict{Pair{Midlayer, Midlayer}, Layerconn}
+    edges::OrderedDict{Pair{Midport, Midport}, Layerconn}
     layers::OrderedSet{Midlayer}
 end
 
