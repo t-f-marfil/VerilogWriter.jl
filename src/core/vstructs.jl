@@ -265,7 +265,8 @@ Case(cnd, [
 """
 struct Case 
     condwire::Wireexpr
-    conds::Vector{Pair{Wireexpr,
+    conds::Vector{Pair{
+        Wireexpr,
         Ifcontent_inner{
             Ifelseblock_inner{Case}, 
             Case

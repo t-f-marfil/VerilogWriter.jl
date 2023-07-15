@@ -877,6 +877,86 @@ function ralways(expr::Ref{T}) where {T}
 end
 
 """
+    combffsplit(al::Alwayscontent)
+
+Separate blocking and non-blocking assigments to 
+two `Alwayscontent` objects.
+"""
+function combffsplit(al::Alwayscontent)
+    combcont, ffcont = combffsplit(getifcont(al))
+    alcomb = Alwayscontent(comb, Sensitivity(), combcont)
+    alff = Alwayscontent(ff, getsensitivity(al), ffcont)
+
+    return alcomb, alff
+end
+function combffsplit(cont::Ifcontent)
+    combas, ffas = combffsplit(cont.assigns)
+    combbl, ffbl = combffsplit(cont.ifelseblocks)
+    combcs, ffcs = combffsplit(cont.cases)
+
+    return Ifcontent(combas, combbl, combcs), Ifcontent(ffas, ffbl, ffcs)
+end
+function combffsplit(v::Vector{Alassign})
+    ccount, fcount = 0, 0
+    for i in v
+        atype = i.atype
+        if atype == comb
+            ccount += 1
+        elseif atype == ff
+            fcount += 1
+        end
+    end
+    cvec = Vector{Alassign}(undef, ccount)
+    fvec = Vector{Alassign}(undef, fcount)
+    cind, find = 0, 0
+    for i in v
+        atype = i.atype
+        if atype == comb
+            cvec[cind+=1] = i
+        elseif atype == ff
+            fvec[find+=1] = i
+        end
+    end
+    return cvec, fvec
+end
+function combffsplit(v::Vector{T}) where {T}
+    totalvec = [combffsplit(i) for i in v]
+    combvec, ffvec = Vector{T}(undef, length(v)), Vector{T}(undef, length(v))
+
+    for (i, (c, f)) in enumerate(totalvec)
+        combvec[i] = c
+        ffvec[i] = f
+    end
+    return combvec, ffvec
+end
+function combffsplit(bl::Ifelseblock)
+    ccomb::Vector{Ifcontent}, cff = combffsplit(bl.contents)
+    return Ifelseblock(bl.conds, ccomb), Ifelseblock(bl.conds, cff)
+end
+function combffsplit(cs::Case)
+    cconds = Vector{Pair{Wireexpr, Ifcontent}}(undef, length(cs.conds))
+    fconds = Vector{Pair{Wireexpr, Ifcontent}}(undef, length(cs.conds))
+    for (ind, (w, ifc)) in enumerate(cs.conds)
+        cifc, fifc = combffsplit(ifc)
+        cconds[ind] = w => cifc
+        fconds[ind] = w => fifc
+    end
+    return cconds, fconds
+end
+
+"""
+    @cpalways(arg)
+
+Compound always, automatically separate blocking and non-blocking
+assignments to two different `Alwayscontent` objects.
+"""
+macro cpalways(arg)
+    quote
+        combffsplit(@ralways $arg)
+    end
+end
+
+"""
     ifcontent(x::Ref{T}) where {T}
 
 For macro call.

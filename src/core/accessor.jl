@@ -6,6 +6,14 @@ function getwidth(x::T) where {T <: Union{Oneport}}
     return x.width
 end
 
+function getsensitivity(x::Alwayscontent)
+    return x.sens
+end
+
+function getifcont(x::Alwayscontent)
+    return x.content
+end
+
 function getdirec(x::Oneport)
     return x.direc
 end
