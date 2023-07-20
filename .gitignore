@@ -15,3 +15,5 @@ notes.md
 *.txt
 *.sv
 *.v
+!samples/**.sv
+!samples/**.v

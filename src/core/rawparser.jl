@@ -275,15 +275,16 @@ function oneblock(expr::Expr)
     head = expr.head
 
     if head == :if 
-        Ifelseblock, ifelseblock(expr)
+        return Ifelseblock, ifelseblock(expr)
     elseif head == :(=)
-        Alassign, alassign_comb(expr)
+        return Alassign, alassign_comb(expr)
     elseif head == :call && expr.args[1] == :<=
-        Alassign, alassign_ff(expr)
+        return Alassign, alassign_ff(expr)
     elseif head == :block 
         # ifcontent(expr)
         error(":block in oneblock.")
     else
+        # interpolation
         error("unknown head $(head).")
     end
 
@@ -357,6 +358,10 @@ function ifelseblock(expr)
     return ans::Expr
 end
 
+macro ifelseblock(arg)
+    ifelseblock(arg)
+end
+
 function ifcontent(expr)
     # assignlist = Alassign[]
     # ifblocklist = Ifelseblock[]
@@ -416,7 +421,9 @@ function ifcontent(expr)
     end
 
     # return Ifcontent(assignlist, ifblocklist)
-    return :(Ifcontent($(Expr(:ref, :Alassign, assignlist...)), $(Expr(:ref, :Ifelseblock, ifblocklist...))))
+    return :(Ifcontent(
+        $(Expr(:ref, :Alassign, assignlist...)), $(Expr(:ref, :Ifelseblock, ifblocklist...))
+    ))
     # return blockconv(assignlist, ifblocklist, wirelist, Val(T))
 end
 
@@ -951,9 +958,10 @@ Compound always, automatically separate blocking and non-blocking
 assignments to two different `Alwayscontent` objects.
 """
 macro cpalways(arg)
-    quote
+    q = quote
         combffsplit(@ralways $arg)
     end
+    return esc(q)
 end
 
 """
