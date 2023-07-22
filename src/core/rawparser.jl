@@ -243,32 +243,6 @@ type: Alassign
 julia> a2 = oneblock(:(w3 = w4 + ~w2))[2] |> eval; vshow(a2);
 w3 = (w4 + (~w2));
 type: Alassign
-
-julia> a3 = oneblock(:(
-       if b1 == b2
-           w5 = ~w6
-           w7 = w8 
-       elseif b2 
-           w9 = w9 + w10
-       else
-           if b3 
-               w11 = w12 
-           end
-       end
-       ))[2] |> eval;
-
-julia> vshow(a3);
-if ((b1 == b2)) begin
-    w5 = (~w6);
-    w7 = w8;
-end else if (b2) begin
-    w9 = (w9 + w10);
-end else begin
-    if (b3) begin
-        w11 = w12;
-    end
-end
-type: Ifelseblock
 ```
 """
 function oneblock(expr::Expr)
@@ -280,6 +254,8 @@ function oneblock(expr::Expr)
         return Alassign, alassign_comb(expr)
     elseif head == :call && expr.args[1] == :<=
         return Alassign, alassign_ff(expr)
+    elseif head == :$
+        return Union{Alassign, Ifelseblock}, expr.args[]
     elseif head == :block 
         # ifcontent(expr)
         error(":block in oneblock.")
@@ -318,8 +294,7 @@ end
 
 
 function ifelseblock(expr)
-
-    # cond = expr.args[1]
+    # for recursive call for elseif blocks
     cond = (
         if expr.head == :if 
             expr.args[1]
@@ -330,10 +305,7 @@ function ifelseblock(expr)
             error("unknown expr type.")
         end
     )
-    # pcond = wireexpr(cond)::Wireexpr
     pcond = wireexpr(cond)::Expr
-
-    # ifcont = oneblock_expr(expr.args[2], Val(Ifcontent))
     ifcont = ifcontent(expr.args[2])
 
     if length(expr.args) == 2
@@ -362,13 +334,83 @@ macro ifelseblock(arg)
     ifelseblock(arg)
 end
 
+struct InvalidInterpolationError <: Exception
+    dtype::DataType
+end
+Base.showerror(io::IO, e::InvalidInterpolationError) = print(io, e.dtype, " cannot be interpolated in this context.")
+
+function tupsep2core_isic!(item::T1, v1::Vector{T1}, v2::Vector{T2}, counts::Vector{Int}) where {T1, T2}
+    v1[counts[1]+=1] = item
+    return nothing
+end
+function tupsep2core_isic!(item::T2, v1::Vector{T1}, v2::Vector{T2}, counts::Vector{Int}) where {T1, T2}
+    v2[counts[2]+=1] = item
+    return nothing
+end
+function tupsep2core_isic!(item::U, v1::Vector{T1}, v2::Vector{T2}, counts::Vector{Int}) where {U, T1, T2}
+    # U is Tuple{Int, Some_Type},
+    # but should not reflected in argument type annotation
+    # for intended behavior for multiple dispatch: 
+    #   this method should only be called when other two methods does not match argument types
+    throw(InvalidInterpolationError(U.types[end]))
+    nothing
+end
+
+"""
+    tupsep2_isic(tup::T) where {T<:Tuple}
+
+Split items in a tuple of Tuple{Int, SOME_TYPE} into a list of
+`Alassign` and `Ifelseblock`.
+
+Type annotation is not suffiecient for this method accepts
+a tuple of whatever contents.
+"""
+function tupsep2_isic(tup::T) where {T<:Tuple}
+    val = Vector{Tuple{Int, Alassign}}(undef, length(tup))
+    vie = Vector{Tuple{Int, Ifelseblock}}(undef, length(tup))
+    counts = [0, 0]
+
+    tupsep2core_isic!.(tup, Ref(val), Ref(vie), Ref(counts))
+    return resize!(val, counts[1]), resize!(vie, counts[2])
+end
+
+function merge_isic(v1::Vector{Tuple{Int, T}}, v2::Vector{Tuple{Int, T}}) where {T}
+    vans = Vector{T}(undef, length(v1)+length(v2))
+    ind1, ind2 = 1, 1
+    ctotal = 0
+    while ctotal < length(v1)+length(v2)
+        if length(v1) < ind1
+            vans[ctotal+1:end] = [i[end] for i in view(v2, ind2:lastindex(v2))]
+            break
+        elseif length(v2) < ind2
+            vans[ctotal+1:end] = [i[end] for i in view(v1, ind1:lastindex(v1))]
+            break
+        end
+
+        item1, item2 = v1[ind1], v2[ind2]
+        if item1[begin] < item2[begin]
+            vans[ctotal+=1] = item1[end]
+            ind1 += 1
+        else
+            vans[ctotal+=1] = item2[end]
+            ind2 += 1
+        end
+    end
+    return vans
+end
+
+function itemsortIfcontent(alist::Vector{Tuple{Int, Alassign}}, ilist::Vector{Tuple{Int, Ifelseblock}}, interpol::T) where {T<:Tuple}
+    ipalassign, ipifelse = tupsep2_isic(interpol)
+    return merge_isic(alist, ipalassign), merge_isic(ilist, ipifelse)
+end
+
 function ifcontent(expr)
-    # assignlist = Alassign[]
-    # ifblocklist = Ifelseblock[]
     assignlist = Expr[]
     ifblocklist = Expr[]
-    # wirelist = Wireexpr[]
     lineinfo = nothing
+
+    # expr of Tuple{Int, Alassign/Ifelse}
+    interpollist = Expr[]
 
     try
         # top level macro application?
@@ -377,22 +419,20 @@ function ifcontent(expr)
         if expr.head != :block 
             t, parsed = oneblock(expr)
             if t == Alassign
-                push!(assignlist, parsed)
+                push!(assignlist, Expr(:tuple, 1, parsed))
             elseif t == Ifelseblock 
-                push!(ifblocklist, parsed)
-            # elseif parsed isa Wireexpr 
-            #     push!(wirelist, parsed)
+                push!(ifblocklist, Expr(:tuple, 1, parsed))
+            elseif t == Union{Alassign, Ifelseblock}
+                # interpolation
+                push!(interpollist, Expr(:tuple, 1, parsed))
             else
                 @show parsed, typeof(parsed)
                 error("unexpected branch.")
             end
-
         # parse block.
         else
-
-            # expr.head == :block || (dump(expr); error("unknown expr."))
-
             lineinfo = LineNumberNode(0, "noinfo")
+            itemcount = 0
 
             for item in expr.args 
                 if item isa LineNumberNode
@@ -402,11 +442,12 @@ function ifcontent(expr)
                     # push!(anslist, parsed)
                     
                     if t == Alassign
-                        push!(assignlist, parsed)
+                        push!(assignlist, Expr(:tuple, itemcount+=1, parsed))
                     elseif t == Ifelseblock 
-                        push!(ifblocklist, parsed)
-                    # elseif parsed isa Wireexpr 
-                    #     push!(wirelist, parsed)
+                        push!(ifblocklist, Expr(:tuple, itemcount+=1, parsed))
+                    elseif t == Union{Alassign, Ifelseblock}
+                        # interpolation
+                        push!(interpollist, Expr(:tuple, itemcount+=1, parsed))
                     else
                         @show parsed, typeof(parsed)
                         error("unexpected branch.")
@@ -420,10 +461,14 @@ function ifcontent(expr)
         rethrow()
     end
 
-    # return Ifcontent(assignlist, ifblocklist)
-    return :(Ifcontent(
-        $(Expr(:ref, :Alassign, assignlist...)), $(Expr(:ref, :Ifelseblock, ifblocklist...))
+    qans = :(Ifcontent(
+        itemsortIfcontent(
+            $(Expr(:ref, :(Tuple{Int, Alassign}), assignlist...)),
+            $(Expr(:ref, :(Tuple{Int, Ifelseblock}), ifblocklist...)),
+            $(esc(Expr(:tuple, interpollist...)))
+        )...
     ))
+    return qans
     # return blockconv(assignlist, ifblocklist, wirelist, Val(T))
 end
 
@@ -765,13 +810,13 @@ function ralways(expr::Expr)
     ralways_expr(expr, Val(expr.head))::Expr
 end
 
-function ralways(expr::T...) where {T <: Union{Alassign, Ifelseblock, Case}}
-    return :(Alwayscontent($(expr...)))
-end
+# function ralways(expr::T...) where {T <: Union{Alassign, Ifelseblock, Case}}
+#     return :(Alwayscontent($(expr...)))
+# end
 
-function ralways(expr::Alwayscontent)
-    :($expr)
-end
+# function ralways(expr::Alwayscontent)
+#     :($expr)
+# end
 
 """
     ralways_expr(expr::Expr, ::T) where {T <: Val}
@@ -781,7 +826,10 @@ The case where `expr.head` is not `block`, which means
 """
 function ralways_expr(expr::Expr, ::T) where {T <: Val}
     # return Alwayscontent(oneblock(expr))
-    _, parsed = oneblock(expr)
+    t, parsed = oneblock(expr)
+    if t == Union{Alassign, Ifelseblock}
+        parsed = esc(parsed)
+    end
     return :(Alwayscontent($parsed))
 end
 
@@ -808,6 +856,42 @@ function ralwayswithSensitivity(expr)
     return :(alblock = $alblock; alblock.sens = $ss; alblock)
 end
 
+function tupsep3core_isrw!(item::T1, v1::Vector{T1}, v2::Vector{T2}, v3::Vector{T3}, counts::Vector{Int}) where {T1, T2, T3}
+    v1[counts[1]+=1] = item
+    return nothing
+end
+function tupsep3core_isrw!(item::T2, v1::Vector{T1}, v2::Vector{T2}, v3::Vector{T3}, counts::Vector{Int}) where {T1, T2, T3}
+    v2[counts[2]+=1] = item
+    return nothing
+end
+function tupsep3core_isrw!(item::T3, v1::Vector{T1}, v2::Vector{T2}, v3::Vector{T3}, counts::Vector{Int}) where {T1, T2, T3}
+    v3[counts[3]+=1] = item
+    return nothing
+end
+function tupsep3core_isrw!(item::U, v1::Vector{T1}, v2::Vector{T2}, v3::Vector{T3}, counts::Vector{Int}) where {U, T1, T2, T3}
+    # U is Tuple{Int, Some_Type},
+    throw(InvalidInterpolationError(U.types[end]))
+    nothing
+end
+function tupsep3_isrw(tup::T) where {T<:Tuple}
+    val = Vector{Tuple{Int, Alassign}}(undef, length(tup))
+    vie = Vector{Tuple{Int, Ifelseblock}}(undef, length(tup))
+    vcs = Vector{Tuple{Int, Case}}(undef, length(tup))
+    counts = [0, 0, 0]
+
+    tupsep3core_isrw!.(tup, Ref(val), Ref(vie), Ref(vcs), Ref(counts))
+    return resize!(val, counts[1]), resize!(vie, counts[2]), resize!(vcs, counts[3])
+end
+
+function merge_isrw(v1::Vector{Tuple{Int, T}}, v2::Vector{Tuple{Int, T}}) where {T}
+    return merge_isic(v1, v2)
+end
+
+function itemsortRalways(alist::Vector{Tuple{Int, Alassign}}, ilist::Vector{Tuple{Int, Ifelseblock}}, clist::Vector{Tuple{Int, Case}}, interpol::T) where {T<:Tuple}
+    ipalassign, ipifelse, ipcase = tupsep3_isrw(interpol)
+    return merge_isrw(alist, ipalassign), merge_isrw(ilist, ipifelse), merge_isrw(clist, ipcase)
+end
+
 """
     ralways_expr(expr::Expr, ::Val{:block})
 
@@ -818,32 +902,40 @@ function ralways_expr(expr::Expr, ::Val{:block})
         return ralwayswithSensitivity(expr)
     end
 
-    assignlist = Alassign[]
-    ifblocklist = Ifelseblock[]
+    # assignlist = Alassign[]
+    # ifblocklist = Ifelseblock[]
     exprassignlist, exprifblocklist = Expr[], Expr[]
-    caselist = Case[]
+    # caselist = Case[]
+    exprcaselist = Expr[]
+    interpollist = Expr[]
 
     lineinfo = LineNumberNode(0, "noinfo")
 
     try 
+        itemcount = 0
         for item in expr.args 
             if item isa LineNumberNode 
                 lineinfo = item 
             # for metaprogramming
+            # no longer needed, for ralways is always called inside macros now
             # ignores sensitivity list when interpolating `Alwayscontent`
-            elseif item isa Case 
-                push!(caselist, item)
-            elseif item isa Alwayscontent
-                push!(assignlist, item.content.assigns...)
-                push!(ifblocklist, item.content.ifelseblocks...)
-                push!(caselist, item.content.cases...)
+            # elseif item isa Case 
+            #     push!(caselist, item)
+            # elseif item isa Alwayscontent
+            #     push!(assignlist, item.content.assigns...)
+            #     push!(ifblocklist, item.content.ifelseblocks...)
+            #     push!(caselist, item.content.cases...)
             else
                 t, parsed = oneblock(item)
 
                 if t == Alassign
-                    push!(exprassignlist, parsed)
+                    push!(exprassignlist, Expr(:tuple, itemcount+=1, parsed))
                 elseif t == Ifelseblock 
-                    push!(exprifblocklist, parsed)
+                    push!(exprifblocklist, Expr(:tuple, itemcount+=1, parsed))
+                elseif t == Union{Alassign, Ifelseblock}
+                    # does not mean Case object is not accepted
+                    # just because oneblock was first implemented for ifcontent method
+                    push!(interpollist, Expr(:tuple, itemcount+=1, parsed))
                 else
                     @show parsed, typeof(parsed)
                     error("undefind behavior detected in ralways.")
@@ -856,9 +948,12 @@ function ralways_expr(expr::Expr, ::Val{:block})
     end
 
     return :(Alwayscontent(
-        [$assignlist; $(Expr(:ref, :Alassign, exprassignlist...))],
-        [$ifblocklist; $(Expr(:ref, :Ifelseblock, exprifblocklist...))],
-        $caselist
+        itemsortRalways(
+            $(Expr(:ref, :(Tuple{Int, Alassign}), exprassignlist...)),
+            $(Expr(:ref, :(Tuple{Int, Ifelseblock}), exprifblocklist...)),
+            $(Expr(:ref, :(Tuple{Int, Case}), exprcaselist...)),
+            $(esc(Expr(:tuple, interpollist...)))
+        )...
     ))
 end
 

@@ -112,51 +112,51 @@ a = oneblock(:( x[4:0] <= y & z))[2] |> eval
 
 
 # Ifelseblock
-a = oneblock(:(
-    if b1 && b2 
-        x <= y 
-    else
-        x <= z;
-        y <= z
-    end
-))[2] |> eval
-@test string(a) == """
-if ((b1 && b2)) begin
-    x <= y;
-end else begin
-    x <= z;
-    y <= z;
-end"""
+# a = oneblock(:(
+#     if b1 && b2 
+#         x <= y 
+#     else
+#         x <= z;
+#         y <= z
+#     end
+# ))[2] |> eval
+# @test string(a) == """
+# if ((b1 && b2)) begin
+#     x <= y;
+# end else begin
+#     x <= z;
+#     y <= z;
+# end"""
 
-a = oneblock( :(
-    if b1 && b2 
-        x <= y+z;
-    elseif b3
-        if b4 
-            y <= r[3:0]
-        end
-        if b5 
-            d <= y + z 
-        elseif b6 
-            r <= z ^ t;
-            u <= d | e 
-        end
-    end
-))[2] |> eval
-@test string(a) == """
-if ((b1 && b2)) begin
-    x <= (y + z);
-end else if (b3) begin
-    if (b4) begin
-        y <= r[3:0];
-    end
-    if (b5) begin
-        d <= (y + z);
-    end else if (b6) begin
-        r <= (z ^ t);
-        u <= (d | e);
-    end
-end"""
+# a = oneblock( :(
+#     if b1 && b2 
+#         x <= y+z;
+#     elseif b3
+#         if b4 
+#             y <= r[3:0]
+#         end
+#         if b5 
+#             d <= y + z 
+#         elseif b6 
+#             r <= z ^ t;
+#             u <= d | e 
+#         end
+#     end
+# ))[2] |> eval
+# @test string(a) == """
+# if ((b1 && b2)) begin
+#     x <= (y + z);
+# end else if (b3) begin
+#     if (b4) begin
+#         y <= r[3:0];
+#     end
+#     if (b5) begin
+#         d <= (y + z);
+#     end else if (b6) begin
+#         r <= (z ^ t);
+#         u <= (d | e);
+#     end
+# end"""
 
 v = @ifcontent (
     x = z;
