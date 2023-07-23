@@ -1,5 +1,5 @@
 # VerilogWriter.jl
-[![CI](https://github.com/t-f-marfil/VerilogWriter.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/t-f-marfil/VerilogWriter.jl/actions/workflows/CI.yml)
+[![CI](https://github.com/t-f-marfil/VerilogWriter.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/t-f-marfil/VerilogWriter.jl/actions/workflows/CI.yml)[![codecov](https://codecov.io/gh/t-f-marfil/VerilogWriter.jl/branch/master/graph/badge.svg?token=2JM0REZRDK)](https://codecov.io/gh/t-f-marfil/VerilogWriter.jl)
 
 A package to generate Verilog/SystemVerilog codes (primarily targeted on FPGAs) and offer an introductory HLS (high level synthesis) on Julia.
 
