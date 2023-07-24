@@ -1,3 +1,3 @@
-function Base.broadcastable(x::Midlayer)
+function Base.broadcastable(x::Midmodule)
     return Ref(x)
 end

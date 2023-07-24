@@ -1,11 +1,11 @@
 """
-    ilconnectSUML(parent::Midport, children::Midport...)::Vmoudle
+    imconnectSUML(parent::Midport, children::Midport...)::Vmoudle
 
 Properly connect valid and update signals from a single parent (upper stream) module 
 to multiple child (lower stream) modules.
 """
-function ilconnectSUML(parent::Midport, children::Midport...)::Vmodule
-    vmodname = "ilSUML_$(getname(parent))_to_$(reduce((x, y)->string(x,"_and_",y), [getname(c) for c in children]))"
+function imconnectSUML(parent::Midport, children::Midport...)::Vmodule
+    vmodname = "imSUML_$(getname(parent))_to_$(reduce((x, y)->string(x,"_and_",y), [getname(c) for c in children]))"
     m = Vmodule(vmodname)
 
     alvec = Alwayscontent[]
@@ -15,8 +15,8 @@ function ilconnectSUML(parent::Midport, children::Midport...)::Vmodule
     acceptedAllrhs = Wireexpr(1, 1)
     phaseGlobal = Wireexpr("transphase_global")
 
-    validParent = nametolower(ilvalid, defaultMidPid)
-    updateParent = nametolower(ilupdate, defaultMidPid)
+    validParent = nametolower(imvalid, defaultMidPid)
+    updateParent = nametolower(imupdate, defaultMidPid)
     updateParentRhs = Wireexpr(1, 1)
 
     prts = @ports (
@@ -34,8 +34,8 @@ function ilconnectSUML(parent::Midport, children::Midport...)::Vmodule
         accepted = acceptedwire | acceptedreg
         acceptedAllrhs &= accepted
 
-        validChildNow = Wireexpr(string(nametoupper(ilvalid, defaultMidPid), "_", ind))
-        updateChildNow = Wireexpr(string(nametoupper(ilupdate, defaultMidPid), "_", ind))
+        validChildNow = Wireexpr(string(nametoupper(imvalid, defaultMidPid), "_", ind))
+        updateChildNow = Wireexpr(string(nametoupper(imupdate, defaultMidPid), "_", ind))
         
         updateParentRhs &= accepted | updateChildNow
         
@@ -69,8 +69,8 @@ function ilconnectSUML(parent::Midport, children::Midport...)::Vmodule
     end
 
     
-    bundlevalid = nametoupper(ilvalid, defaultMidPid)
-    bundleupdate = nametoupper(ilupdate, defaultMidPid)
+    bundlevalid = nametoupper(imvalid, defaultMidPid)
+    bundleupdate = nametoupper(imupdate, defaultMidPid)
 
     childprts = @ports (
         @out @logic $(length(children)) $bundlevalid;
@@ -114,33 +114,33 @@ function ilconnectSUML(parent::Midport, children::Midport...)::Vmodule
     return m
 end
 
-function ilconnectMUSL(child::Midport, parents::Midport...)
+function imconnectMUSL(child::Midport, parents::Midport...)
     length(parents) > 0 || error("number of upper Midports should be more than zero.")
-    vmodname = "ilMUSL_$(getname(child))_from_$(reduce((x, y)->string(x,"_and_",y), [getname(p) for p in parents]))"
+    vmodname = "imMUSL_$(getname(child))_from_$(reduce((x, y)->string(x,"_and_",y), [getname(p) for p in parents]))"
     m = Vmodule(vmodname)
 
     chiports = @ports (
-        @in $(nametoupper(ilupdate, defaultMidPid));
-        @out @logic $(nametoupper(ilvalid, defaultMidPid))
+        @in $(nametoupper(imupdate, defaultMidPid));
+        @out @logic $(nametoupper(imvalid, defaultMidPid))
     )
     parports = @ports (
-        @in $(length(parents)) $(nametolower(ilvalid, defaultMidPid));
-        @out @logic $(length(parents)) $(nametolower(ilupdate, defaultMidPid))
+        @in $(length(parents)) $(nametolower(imvalid, defaultMidPid));
+        @out @logic $(length(parents)) $(nametolower(imupdate, defaultMidPid))
     )
     vpush!(m, chiports, parports)
 
     pupdateassigns = Vector{Alassign}(undef, length(parents))
-    upperallvalid = Wireexpr(redand, Wireexpr(nametolower(ilvalid, defaultMidPid)))
+    upperallvalid = Wireexpr(redand, Wireexpr(nametolower(imvalid, defaultMidPid)))
     for (ind, lay) in enumerate(parents)
-        wlhs = length(parents) > 1 ? (@wireexpr ($(nametolower(ilupdate, defaultMidPid))[$(ind-1)])) : @wireexpr ($(nametolower(ilupdate, defaultMidPid)))
+        wlhs = length(parents) > 1 ? (@wireexpr ($(nametolower(imupdate, defaultMidPid))[$(ind-1)])) : @wireexpr ($(nametolower(imupdate, defaultMidPid)))
         pupdateassigns[ind] = Alassign(
             wlhs,
-            Wireexpr(nametoupper(ilupdate, defaultMidPid)) & upperallvalid,
+            Wireexpr(nametoupper(imupdate, defaultMidPid)) & upperallvalid,
             comb
         )
     end
     vpush!(m, Alwayscontent(comb, Ifcontent(pupdateassigns)))
-    vpush!(m, @always ($(nametoupper(ilvalid, defaultMidPid)) = $upperallvalid))
+    vpush!(m, @always ($(nametoupper(imvalid, defaultMidPid)) = $upperallvalid))
 
     return m
 end
@@ -157,10 +157,10 @@ function graph2adlist(lay::Layergraph)
 
     for ((uno, dos), _) in lay.edges
         if !(uno in keys(suml))
-            suml[uno] = Midlayer[]
+            suml[uno] = Midmodule[]
         end
         if !(dos in keys(musl))
-            musl[dos] = Midlayer[]
+            musl[dos] = Midmodule[]
         end
 
         push!(suml[uno], dos)
@@ -170,13 +170,13 @@ function graph2adlist(lay::Layergraph)
     return suml, musl
 end
 
-function wirenameMlayToSuml(il::Interlaysigtype, upper::Midport)
+function wirenameMlayToSuml(il::IntermmodSigtype, upper::Midport)
     "$(string(il)[3:end])_mlay2suml_from_$(getname(upper))"
 end
-function wirenameMuslToMlay(il::Interlaysigtype, lower::Midport)
+function wirenameMuslToMlay(il::IntermmodSigtype, lower::Midport)
     "$(string(il)[3:end])_musl2mlay_to_$(getname(lower))"
 end
-function wirenameSumlToMusl(il::Interlaysigtype, upper::Midport, lower::Midport)
+function wirenameSumlToMusl(il::IntermmodSigtype, upper::Midport, lower::Midport)
     "$(string(il)[3:end])_suml2musl_$(getname(upper))_to_$(getname(lower))"
 end
 
@@ -185,14 +185,14 @@ const InfotypeSuml = Tuple{Decls, Vmodinst, Alwayscontent}
 """
     generateSUML(suml::D) where {D <: AbstractDict{Midport, Vector{Midport}}}
 
-instantiate all `ilconnectSUML` verilog modules from
+instantiate all `imconnectSUML` verilog modules from
 an adjacency list.
 """
 function generateSUML(suml::D) where {D <: AbstractDict{Midport, Vector{Midport}}}
     hublist = Vector{Vmodule}(undef, length(suml))
     addinfolist = Vector{InfotypeSuml}(undef, length(suml))
     for (i, (upper, lowers)) in enumerate(suml)
-        hub = ilconnectSUML(upper, lowers...)
+        hub = imconnectSUML(upper, lowers...)
 
         bundlevalid = Wireexpr("bundle_valid_SUML_from_$(getname(upper))")
         bundleupdate = Wireexpr("bundle_update_SUML_from_$(getname(upper))")
@@ -204,10 +204,10 @@ function generateSUML(suml::D) where {D <: AbstractDict{Midport, Vector{Midport}
             [
                 "CLK" => Wireexpr("CLK"),
                 "RST" => Wireexpr("RST"),
-                nametolower(ilvalid, defaultMidPid) => Wireexpr(wirenameMlayToSuml(ilvalid, upper)),
-                nametolower(ilupdate, defaultMidPid) => Wireexpr(wirenameMlayToSuml(ilupdate, upper)),
-                nametoupper(ilvalid, defaultMidPid) => bundlevalid,
-                nametoupper(ilupdate, defaultMidPid) => bundleupdate
+                nametolower(imvalid, defaultMidPid) => Wireexpr(wirenameMlayToSuml(imvalid, upper)),
+                nametolower(imupdate, defaultMidPid) => Wireexpr(wirenameMlayToSuml(imupdate, upper)),
+                nametoupper(imvalid, defaultMidPid) => bundlevalid,
+                nametoupper(imupdate, defaultMidPid) => bundleupdate
             ]
         )
 
@@ -217,8 +217,8 @@ function generateSUML(suml::D) where {D <: AbstractDict{Midport, Vector{Midport}
         # updates = Vector{Expr}(undef, length(lowers))
 
         for (ind, low) in enumerate(lowers)
-            valnow = Wireexpr(wirenameSumlToMusl(ilvalid, upper, low))
-            updnow = Wireexpr(wirenameSumlToMusl(ilupdate, upper, low))
+            valnow = Wireexpr(wirenameSumlToMusl(imvalid, upper, low))
+            updnow = Wireexpr(wirenameSumlToMusl(imupdate, upper, low))
 
             if length(lowers) > 1
                 # valids[ind] = :($valnow = $(bundlevalid)[$(ind-1)])
@@ -246,7 +246,7 @@ function generateMUSL(musl::D) where {D <: AbstractDict{Midport, Vector{Midport}
     hublist = Vector{Vmodule}(undef, length(musl))
     addinfolist = Vector{InfotypeSuml}(undef, length(musl))
     for (i, (lower, uppers)) in enumerate(musl)
-        hub = ilconnectMUSL(lower, uppers...)
+        hub = imconnectMUSL(lower, uppers...)
 
         bundlevalid = Wireexpr("bundle_valid_MUSL_from_$(getname(lower))")
         bundleupdate = Wireexpr("bundle_update_MUSL_from_$(getname(lower))")
@@ -258,10 +258,10 @@ function generateMUSL(musl::D) where {D <: AbstractDict{Midport, Vector{Midport}
             [
                 "CLK" => Wireexpr("CLK"),
                 "RST" => Wireexpr("RST"),
-                nametolower(ilvalid, defaultMidPid) => bundlevalid,
-                nametolower(ilupdate, defaultMidPid) => bundleupdate,
-                nametoupper(ilvalid, defaultMidPid) => Wireexpr(wirenameMuslToMlay(ilvalid, lower)),
-                nametoupper(ilupdate, defaultMidPid) => Wireexpr(wirenameMuslToMlay(ilupdate, lower))
+                nametolower(imvalid, defaultMidPid) => bundlevalid,
+                nametolower(imupdate, defaultMidPid) => bundleupdate,
+                nametoupper(imvalid, defaultMidPid) => Wireexpr(wirenameMuslToMlay(imvalid, lower)),
+                nametoupper(imupdate, defaultMidPid) => Wireexpr(wirenameMuslToMlay(imupdate, lower))
             ]
         )
 
@@ -271,8 +271,8 @@ function generateMUSL(musl::D) where {D <: AbstractDict{Midport, Vector{Midport}
         updates = Vector{Alassign}(undef, length(uppers))
 
         for (ind, upp) in enumerate(uppers)
-            valnow = Wireexpr(wirenameSumlToMusl(ilvalid, upp, lower))
-            updnow = Wireexpr(wirenameSumlToMusl(ilupdate, upp, lower))
+            valnow = Wireexpr(wirenameSumlToMusl(imvalid, upp, lower))
+            updnow = Wireexpr(wirenameSumlToMusl(imupdate, upp, lower))
 
             if length(uppers) > 1
                 # valids[ind] = :($(bundlevalid)[$(ind-1)] = $valnow)
@@ -305,7 +305,7 @@ function addsumlinfo!(m::Vmodule, lst::Vector{InfotypeSuml})
 end
 
 """
-    ildatabuffer(lay::Midlayer, conn::Layerconn)
+    ildatabuffer(lay::Midmodule, conn::Layerconn)
 
 Intended to hold data from upstream midlayer object,
 even if other upstream object is not yet valid in the same MUSL.
@@ -314,13 +314,13 @@ However, it is not needed now since MUSL waits all upstreams for until their
 valid signals are all asserted.
 May be needed when MUSL behavior is modified.
 """
-function ildatabuffer(lay::Midlayer, conn::Layerconn)
+function ildatabuffer(lay::Midmodule, conn::Layerconn)
     m = Vmodule("ildatabuf_$(getname(lay))")
     prts = Ports([p for (p, _) in conn.ports])
     ilprts = @ports (
-        @in $(nametolower(ilvalid, defaultMidPid)), $(nametolower(ilupdate, defaultMidPid))
+        @in $(nametolower(imvalid, defaultMidPid)), $(nametolower(imupdate, defaultMidPid))
     )
-    trans = Wireexpr(nametolower(ilvalid, defaultMidPid)) & Wireexpr(nametolower(ilupdate, defaultMidPid))
+    trans = Wireexpr(nametolower(imvalid, defaultMidPid)) & Wireexpr(nametolower(imupdate, defaultMidPid))
 
     for prt in prts
         nm = getname(prt)

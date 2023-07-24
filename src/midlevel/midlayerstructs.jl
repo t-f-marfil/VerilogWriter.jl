@@ -1,30 +1,30 @@
-@enum Midlayertype lrand lreg lfifo
+@enum Midmoduletype lrand lreg lfifo
 
-struct Midlayer
+struct Midmodule
     name::String
-    type::Midlayertype
-    # ports declared by Midlayer-related operations
+    type::Midmoduletype
+    # ports declared by Midmodule-related operations
     lports::Vector{Oneport}
     vmod::Vmodule
 end
 
 "struct to contain connection info."
 struct Layerconn
-    pid::Int
+    # pid::Int
     # port names as wireexpr
     ports::OrderedSet{Pair{Oneport, Oneport}}
 end
 
 struct Midport
     pid::Int
-    mmod::Midlayer
+    mmod::Midmodule
 end
 const defaultMidPid = 0
 
 "struct to store and connect Layerconn objects."
 struct Layergraph
     edges::OrderedDict{Pair{Midport, Midport}, Layerconn}
-    layers::OrderedSet{Midlayer}
+    layers::OrderedSet{Midmodule}
 end
 
-@enum Interlaysigtype ilvalid ilupdate
+@enum IntermmodSigtype imvalid imupdate

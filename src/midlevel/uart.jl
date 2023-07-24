@@ -5,7 +5,7 @@ const STOPBIT_MARGIN = 0.9
 
 Generate UART Rx module. 
 
-Supposed to be used inside `Midlayer` objects, otherwise 
+Supposed to be used inside `Midmodule` objects, otherwise 
 `valid_to_lower` signal is not visible from outside the module.
 
 `clkfreq` should be given as Hz value (not MHz).
@@ -66,13 +66,13 @@ function uartRecv(baudrate, clkfreq; name="UARTRecv")
         end
     )
     alil = @always (
-        $(nametolower(ilvalid)) = (recvstate == sstop) & $counthalf
+        $(nametolower(imvalid)) = (recvstate == sstop) & $counthalf
     )
 
     vpush!.(m, (rxprts, rxfsm, alnextbyte, alcounters, aldout, alil))
 
     # return m
-    return Midlayer(name, lrand, m)
+    return Midmodule(name, lrand, m)
 end
 
 function uartSend(baudrate, clkfreq; name="UARTSend")
@@ -90,7 +90,7 @@ function uartSend(baudrate, clkfreq; name="UARTSend")
 
     txfsm = @FSM sendstate sidle, sstart, sdata, sstop
     transadd!(txfsm, [
-        (Wireexpr(nametoupper(ilvalid)), @tstate sidle => sstart),
+        (Wireexpr(nametoupper(imvalid)), @tstate sidle => sstart),
         (countfull, @tstate sstart => sdata),
         (countfull & (bitcount == Wireexpr(3, 7)), @tstate sdata => sstop),
         (countfull & acceptNext, @tstate sstop => sstart),
@@ -112,7 +112,7 @@ function uartSend(baudrate, clkfreq; name="UARTSend")
     )
     alaccept = @always (
         acceptNext = 0;
-        if $(nametoupper(ilvalid))
+        if $(nametoupper(imvalid))
             if sendstate == sidle
                 acceptNext = 1
             elseif (sendstate == sstop) && (cyclecount == $cycleperbit)
@@ -134,7 +134,7 @@ function uartSend(baudrate, clkfreq; name="UARTSend")
         end
     )
     alupdate = @always (
-        $(nametoupper(ilupdate)) = (
+        $(nametoupper(imupdate)) = (
             ((sendstate == sstop) && (cyclecount == $cycleperbit))
             || sendstate == sidle
         )
@@ -142,7 +142,7 @@ function uartSend(baudrate, clkfreq; name="UARTSend")
 
     m = Vmodule(name)
     vpush!.(m, (txprts, txfsm, alcounters, alaccept, albuf, altx, alupdate))
-    send = Midlayer(name, lrand, m)
+    send = Midmodule(name, lrand, m)
 
     return send
 end

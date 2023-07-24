@@ -1,31 +1,40 @@
 """
-    function (cls::Layergraph)(p::Pair{Midlayer, Midlayer}, conn::Layerconn)
+    (cls::Layergraph)(p::Pair{Midport, Midport}, conn::Layerconn)
 
-Add new connection between Midlayers.
+Add new connection between Midmodules.
 """
-function (cls::Layergraph)(p::Pair{Midlayer, Midlayer}, conn::Layerconn)
-    dfp, ufp = Midport(getpid(conn), p[1]), Midport(getpid(conn), p[2])
-    push!(cls.edges, (dfp => ufp) => conn)
+function (cls::Layergraph)(p::Pair{Midport, Midport}, args...)
+    dfp, ufp = p
+    push!(cls.edges, (dfp => ufp) => Layerconn(args...))
 
-    push!(cls.layers, p[1])
-    push!(cls.layers, p[2])
+    push!(cls.layers, getmmod(dfp))
+    push!(cls.layers, getmmod(ufp))
 end
-function (cls::Layergraph)(p::Pair{Midlayer, Midlayer}, arg...)
+"""
+    (cls::Layergraph)(p::Pair{Midmodule, Midmodule}, pid::Int, conn::Layerconn)
+
+Case where port id is the same between both dfp and ufp
+"""
+function (cls::Layergraph)(p::Pair{Midmodule, Midmodule}, pid::Int, args...)
+    dfp, ufp = Midport(pid, p[1]), Midport(pid, p[2])
+    cls(dfp => ufp, args...)
+end
+function (cls::Layergraph)(p::Pair{Midmodule, Midmodule}, args...)
     # include the case where nothing given as arg
-    cls(p, Layerconn(arg...))
+    cls(p, defaultMidPid, Layerconn(arg...))
 end
 
 @basehashgen(
-    Midlayer,
+    Midmodule,
     Layerconn
 )
 
 """
-    function pushhelp_dotgen!(lay::Midlayer, randset::Set{Midlayer}, regset::Set{Midlayer}, fifoset::Set{Midlayer})
+    function pushhelp_dotgen!(lay::Midmodule, randset::Set{Midmodule}, regset::Set{Midmodule}, fifoset::Set{Midmodule})
 
 Helper function for `dotgen`.
 """
-function pushhelp_dotgen!(lay::Midlayer, randset::Set{Midlayer}, regset::Set{Midlayer}, fifoset::Set{Midlayer})
+function pushhelp_dotgen!(lay::Midmodule, randset::Set{Midmodule}, regset::Set{Midmodule}, fifoset::Set{Midmodule})
     t = lay.type
     if t == lrand
         push!(randset, lay)
@@ -59,9 +68,9 @@ end
 Convert `Layergraph` object to a graph written in DOT language.
 """
 function dotgen(lay::Layergraph; dpi=96)
-    regset = Set{Midlayer}()
-    randset = Set{Midlayer}()
-    fifoset = Set{Midlayer}()
+    regset = Set{Midmodule}()
+    randset = Set{Midmodule}()
+    fifoset = Set{Midmodule}()
 
     for (dfp, ufp) in keys(lay.edges)
         uno, dos = getmmod.((dfp, ufp))
@@ -98,10 +107,10 @@ function dotgen(lay::Layergraph; dpi=96)
 end
 
 
-Reglayer(arg) = Midlayer(lreg, arg)
-Randlayer(arg) = Midlayer(lrand, arg)
-FIFOlayer(arg) = Midlayer(lfifo, arg)
-FIFOlayer(arg, dep, wid) = Midlayer(lfifo, fifogen(dep, wid, name=arg))
+Reglayer(arg) = Midmodule(lreg, arg)
+Randlayer(arg) = Midmodule(lrand, arg)
+FIFOlayer(arg) = Midmodule(lfifo, arg)
+FIFOlayer(arg, dep, wid) = Midmodule(lfifo, fifogen(dep, wid, name=arg))
 
 
 function layermacro(arg, n::String, others...)
@@ -118,8 +127,8 @@ end
 
 "Chose proper preposition."
 const prep4ilst_lower = Dict([
-    ilvalid => "to"
-    ilupdate => "from"
+    imvalid => "to"
+    imupdate => "from"
 ])
 const prep4ilst_upper = Dict([
     (k => (v == "to" ? "from" : "to")) for (k, v) in prep4ilst_lower
@@ -127,44 +136,44 @@ const prep4ilst_upper = Dict([
 
 
 const portdir4ilst_lower = Dict([
-    ilvalid => pout
-    ilupdate => pin
+    imvalid => pout
+    imupdate => pin
 ])
 const portdir4ilst_upper = Dict([
     (k => (v == pin ? pout : pin)) for (k, v) in portdir4ilst_lower
 ])
 
-function nametolower(st::Interlaysigtype)
+function nametolower(st::IntermmodSigtype)
     nametolower(st, defaultMidPid)
 end
-function nametoupper(st::Interlaysigtype)
+function nametoupper(st::IntermmodSigtype)
     nametoupper(st, defaultMidPid)
 end
-function nametolower(st::Interlaysigtype, pid::Int)
+function nametolower(st::IntermmodSigtype, pid::Int)
     "$(string(st)[3:end])_$(prep4ilst_lower[st])_lower_port$pid"
 end
-function nametoupper(st::Interlaysigtype, pid::Int)
+function nametoupper(st::IntermmodSigtype, pid::Int)
     "$(string(st)[3:end])_$(prep4ilst_upper[st])_upper_port$pid"
 end
 
-# function nametolower(st::Interlaysigtype, suffix::Midlayer)
+# function nametolower(st::IntermmodSigtype, suffix::Midmodule)
 #     string(nametolower(st), "_", getname(suffix))
 # end
-# function nametoupper(st::Interlaysigtype, suffix::Midlayer)
+# function nametoupper(st::IntermmodSigtype, suffix::Midmodule)
 #     string(nametoupper(st), "_", getname(suffix))
 # end
 
-function nametolower(st::Interlaysigtype, suffix::Midport)
+function nametolower(st::IntermmodSigtype, suffix::Midport)
     string(nametolower(st, getpid(suffix)), "_", getname(getmmod(suffix)))
 end
-function nametoupper(st::Interlaysigtype, suffix::Midport)
+function nametoupper(st::IntermmodSigtype, suffix::Midport)
     string(nametoupper(st, getpid(suffix)), "_", getname(getmmod(suffix)))
 end
 
 # function lowerportsgen(lowername::String)
 #     ports(:(
-#         @out @logic $(Symbol(nametolower(lowername, ilvalid)));
-#         @in $(Symbol(nametolower(lowername, ilupdate)))
+#         @out @logic $(Symbol(nametolower(lowername, imvalid)));
+#         @in $(Symbol(nametolower(lowername, imupdate)))
 #     ))
 # end
 # function upperportsgen(uppername::String)
@@ -198,7 +207,7 @@ function addIlPortEachLayer(x::Layergraph)
     for ((pre::Midport, post::Midport), _) in x.edges
         vpre, vpost = getmmod(pre).vmod, getmmod(post).vmod
 
-        for ilattr in instances(Interlaysigtype)
+        for ilattr in instances(IntermmodSigtype)
             get(preadded[getmmod(pre)], getpid(pre), false) || vpush!(vpre, Oneport(portdir4ilst_lower[ilattr], logic, nametolower(ilattr, getpid(pre))))
             get(postadded[getmmod(post)], getpid(post), false) || vpush!(vpost, Oneport(portdir4ilst_upper[ilattr], logic, nametoupper(ilattr, getpid(post))))
         end
@@ -214,18 +223,18 @@ function addPortEachLayer(x::Layergraph)
     addIlPortEachLayer(x)
 end
 
-function wireAddSuffix(wirename::String, lsuffix::Midlayer)
+function wireAddSuffix(wirename::String, lsuffix::Midmodule)
     # Wireexpr(wirenamemodgen(lsuffix)(wirename))
     Wireexpr(string(wirename, "_", getname(lsuffix)))
 end
 
 """
-    outerportnamegen(portname::String, mlay::Midlayer)
+    outerportnamegen(portname::String, mlay::Midmodule)
 
 Given the name of a port and the vmodule object the port belongs to,
 return the name of a wire which is connected to the port at the top module.
 """
-function outerportnamegen(portname::String, mlay::Midlayer)
+function outerportnamegen(portname::String, mlay::Midmodule)
     wirenamemodgen(mlay)(portname)
 end
 
@@ -246,7 +255,7 @@ in submodules.
 function unconnectedports_mlay(x::Layergraph)
 
     # try detecting unconnected ports 
-    pconnected = OrderedDict{Midlayer, OrderedDict{Oneport, Bool}}([
+    pconnected = OrderedDict{Midmodule, OrderedDict{Oneport, Bool}}([
         lay => OrderedDict([p => false for p in lay.vmod.ports]) 
         for lay in x.layers
     ])
@@ -278,7 +287,7 @@ Push data in Layerconn objects into Vmodule in a form of Verilog codes.
 """
 function layerconnInstantiate_mlay!(v::Vmodule, x::Layergraph)
     mvec = Vmodule[]
-    layVisited = Dict{Midlayer, Layerconn}()
+    layVisited = Dict{Midmodule, Layerconn}()
     # # generate always_comb that connects ports 
     # # as described in Layerconn
     # qvec = Expr[]
@@ -350,8 +359,8 @@ function layerconnInstantiate_mlay!(v::Vmodule, x::Layergraph)
     #         ]
     #     ))
     #     alil = @always (
-    #         $(smod(nametolower(ilupdate))) = $(nametolower(ilupdate, uno));
-    #         $(smod(nametolower(ilvalid))) = $(nametolower(ilvalid, uno))
+    #         $(smod(nametolower(imupdate))) = $(nametolower(imupdate, uno));
+    #         $(smod(nametolower(imvalid))) = $(nametolower(imvalid, uno))
     #     )
     #     vpush!(v, alil)
     # end
@@ -367,7 +376,7 @@ end
     ilconndecl_mlay!(v::Vmodule, x::Layergraph)
 
 Originally, Connect valid/update wires, which are generated automatically
-when converting `Midlayer` objects into Verilog HDL, between `Midlayer` objects.
+when converting `Midmodule` objects into Verilog HDL, between `Midmodule` objects.
 
 Now is needed only for wire declaration.
 """
@@ -375,13 +384,13 @@ function ilconndecl_mlay!(v::Vmodule, x::Layergraph)
     # rvec = Expr[]
     # dvec = Expr[]
     dvec = Onedecl[]
-    # rregistered = Dict([lay::Midlayer => [false, false] for lay in x.layers])
-    # lregistered = Dict([lay::Midlayer => [false, false] for lay in x.layers])
-    ufpregistered = Dict([lay::Midlayer => Dict{Int, Vector{Bool}}() for lay in x.layers])
-    dfpregistered = Dict([lay::Midlayer => Dict{Int, Vector{Bool}}() for lay in x.layers])
+    # rregistered = Dict([lay::Midmodule => [false, false] for lay in x.layers])
+    # lregistered = Dict([lay::Midmodule => [false, false] for lay in x.layers])
+    ufpregistered = Dict([lay::Midmodule => Dict{Int, Vector{Bool}}() for lay in x.layers])
+    dfpregistered = Dict([lay::Midmodule => Dict{Int, Vector{Bool}}() for lay in x.layers])
 
     for ((dfp::Midport, ufp::Midport), _) in x.edges 
-        for ilattr in instances(Interlaysigtype)
+        for ilattr in instances(IntermmodSigtype)
             # rlhs = nametoupper(ilattr, dos)
             # rrhs = nametolower(ilattr, uno)
             rufp = nametoupper(ilattr, ufp)
@@ -433,21 +442,21 @@ function ilconndecl_mlay!(v::Vmodule, x::Layergraph)
 end
 
 """
-    ilconnect_mlay(v::Vmodule, lay::Layergraph)
+    imconnect_mlay(v::Vmodule, lay::Layergraph)
 
-Connect valid and update signals of `Midlayer` objects with each other.
+Connect valid and update signals of `Midmodule` objects with each other.
 
 ## Overview
-+ Upper_Layer -> ilSUML -> ilMUSL -> Lower_Layer
++ Upper_Layer -> imSUML -> imMUSL -> Lower_Layer
 
 Currently all this connections are placed at the top module.
 May better create one verilog module other than top module and push these
 wires there.
 """
-function ilconnect_mlay!(v::Vmodule, lay::Layergraph)
+function imconnect_mlay!(v::Vmodule, lay::Layergraph)
     suml, musl = graph2adlist(lay)
 
-    # hublist: list of ilconnect_something Vmodules
+    # hublist: list of imconnect_something Vmodules
     # addinfolist: other additional information (e.g. Decls objects)
     hublist1, addinfolist1 = generateSUML(suml)
     hublist2, addinfolist2 = generateMUSL(musl)
@@ -459,8 +468,8 @@ function ilconnect_mlay!(v::Vmodule, lay::Layergraph)
     # qs = Vector{Expr}(undef, length(suml)*2)
     qs = Vector{Alassign}(undef, length(suml)*2)
     for (ind, (upper, _)) in enumerate(suml)
-        qupdate = @alassign_comb ($(nametolower(ilupdate, upper)) = $(wirenameMlayToSuml(ilupdate, upper)))
-        qvalid = @alassign_comb ($(wirenameMlayToSuml(ilvalid, upper)) = $(nametolower(ilvalid, upper)))
+        qupdate = @alassign_comb ($(nametolower(imupdate, upper)) = $(wirenameMlayToSuml(imupdate, upper)))
+        qvalid = @alassign_comb ($(wirenameMlayToSuml(imvalid, upper)) = $(nametolower(imvalid, upper)))
         qs[2ind-1] = qupdate
         qs[2ind] = qvalid
     end
@@ -471,8 +480,8 @@ function ilconnect_mlay!(v::Vmodule, lay::Layergraph)
     # qs = Vector{Expr}(undef, length(musl)*2)
     qs = Vector{Alassign}(undef, length(musl)*2)
     for (ind, (lower, _)) in enumerate(musl)
-        qupdate = @alassign_comb ($(wirenameMuslToMlay(ilupdate, lower)) = $(nametoupper(ilupdate, lower)))
-        qvalid = @alassign_comb ($(nametoupper(ilvalid, lower)) = $(wirenameMuslToMlay(ilvalid, lower)))
+        qupdate = @alassign_comb ($(wirenameMuslToMlay(imupdate, lower)) = $(nametoupper(imupdate, lower)))
+        qvalid = @alassign_comb ($(nametoupper(imvalid, lower)) = $(wirenameMuslToMlay(imvalid, lower)))
         qs[2ind-1] = qupdate
         qs[2ind] = qvalid
     end
@@ -489,11 +498,11 @@ end
     bypassUnconnected_mlay!(v::Vmodule, x::Layergraph)
 
 Add to the top-level module ports that are connected to counterparts of 
-submodules, which are not connected to ports of other `Midlayer` objects.
+submodules, which are not connected to ports of other `Midmodule` objects.
 """
 function bypassUnconnected_mlay!(v::Vmodule, x::Layergraph)
     # connect unconnected ports to outer ports
-    unconnectedvec::Vector{Pair{Midlayer, OrderedSet{Oneport}}} = unconnectedports_mlay(x)
+    unconnectedvec::Vector{Pair{Midmodule, OrderedSet{Oneport}}} = unconnectedports_mlay(x)
 
     npvec = Vector{Oneport}(undef, sum([length(s) for (_, s) in unconnectedvec]))
     ci = 1
@@ -569,7 +578,7 @@ function layer2vmod!(x::Layergraph; name = "Layers")::Vector{Vmodule}
     dbufs = layerconnInstantiate_mlay!(v, x)
     ilconndecl_mlay!(v, x)
 
-    hubs = ilconnect_mlay!(v, x)
+    hubs = imconnect_mlay!(v, x)
     
     # connect unconnected ports to outer ports
     bypassUnconnected_mlay!(v, x)
@@ -588,7 +597,7 @@ function layer2vmod!(x::Layergraph; name = "Layers")::Vector{Vmodule}
     return [v; [lay.vmod for lay in x.layers]; dbufs; hubs]
 end
 
-function vpush!(x::Midlayer, items...)
+function vpush!(x::Midmodule, items...)
     vpush!(x.vmod, items...)
 end
 
@@ -604,10 +613,10 @@ macro layerconn(arg)
     Layerconn(OrderedSet(v))
 end
 
-function ilacceptedLower(pid=defaultMidPid)
-    @wireexpr $(nametolower(ilvalid, pid)) & $(nametolower(ilupdate, pid))
+function imacceptedLower(pid=defaultMidPid)
+    @wireexpr $(nametolower(imvalid, pid)) & $(nametolower(imupdate, pid))
 end
 
-function ilacceptedUpper(pid=defaultMidPid)
-    @wireexpr $(nametoupper(ilvalid, pid)) & $(nametoupper(ilupdate, pid))
+function imacceptedUpper(pid=defaultMidPid)
+    @wireexpr $(nametoupper(imvalid, pid)) & $(nametoupper(imupdate, pid))
 end

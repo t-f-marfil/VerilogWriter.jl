@@ -1,4 +1,4 @@
-function getname(x::Midlayer)
+function getname(x::Midmodule)
     getname(x.vmod)
 end
 function getname(x::Midport)

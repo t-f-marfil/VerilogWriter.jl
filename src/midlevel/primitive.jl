@@ -21,7 +21,7 @@ end
 
 Generate FIFO whose depth is `depth` and width is `width`, with its name `name`.
 
-Supposed to be used inside Midlayer object, or 
+Supposed to be used inside Midmodule object, or 
 it lacks ports `valid_to_lower`, etc.
 """
 function fifogen(depth=8, width=32; name="")
@@ -63,11 +63,11 @@ function fifogen(depth=8, width=32; name="")
     )
 
     ilconn = @always (
-        $(nametolower(ilvalid)) = ~empty;
-        rincr = $(nametolower(ilupdate));
+        $(nametolower(imvalid)) = ~empty;
+        rincr = $(nametolower(imupdate));
 
-        $(nametoupper(ilupdate)) = ~full;
-        wincr = $(nametoupper(ilvalid))
+        $(nametoupper(imupdate)) = ~full;
+        wincr = $(nametoupper(imvalid))
     )
 
     # vshow.((bufram, flags, ptrlogic))

@@ -1,4 +1,4 @@
-function wirenamemodgen(lay::Midlayer)
+function wirenamemodgen(lay::Midmodule)
     x -> string(x, "_", getname(lay))
 end
 

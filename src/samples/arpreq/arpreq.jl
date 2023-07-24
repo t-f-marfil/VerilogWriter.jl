@@ -67,24 +67,24 @@ let
     ])
     waddral = @always (
         awaddr = awaddr_in;
-        $(nametoupper(ilupdate, 1)) = awready;
-        awvalid = $(nametoupper(ilvalid, 1))
+        $(nametoupper(imupdate, 1)) = awready;
+        awvalid = $(nametoupper(imvalid, 1))
     )
     wdataal = @always (
         wdata = wdata_in;
         wstrb = wstrb_in;
-        $(nametoupper(ilupdate, 1)) = wready;
-        wvalid = $(nametoupper(ilvalid, 1))
+        $(nametoupper(imupdate, 1)) = wready;
+        wvalid = $(nametoupper(imvalid, 1))
     )
     raddral = @always (
         araddr = araddr_in;
-        $(nametoupper(ilupdate, 2)) = arready;
-        arvalid = $(nametoupper(ilvalid, 2))
+        $(nametoupper(imupdate, 2)) = arready;
+        arvalid = $(nametoupper(imvalid, 2))
     )
     rdataal = @always (
         rdata_out = rdata;
-        $(nametolower(ilvalid, 2)) = rvalid;
-        rready = $(nametolower(ilupdate, 2))
+        $(nametolower(imvalid, 2)) = rvalid;
+        rready = $(nametolower(imupdate, 2))
     )
     vpush!.(Wdata, (wdataal, @ports (@in $datalen wdata_in; @in $strblen wstrb_in)))
     vpush!.(Waddr, (waddral, @ports @in $addrlen awaddr_in))
@@ -95,10 +95,10 @@ let
     # m = @FSM etherrecv idle, addr1, addr2, addr3, typeRegister, lenRegister, dataRegister, setStatus, readStatus, waitStatus, readall
     # @sym2wire ack, nack, isarp, notarp, abortdone, readdatadone, cleardone
     # transadd!(m, [
-    #     (ilacceptedLower(2), @tstate idler => waiting),
+    #     (imacceptedLower(2), @tstate idler => waiting),
     #     (ack, @tstate waiting => readdata),
     #     (nack, @tstate waiting => idler),
-    #     (ilacceptedUpper(2), @tstate readtype => clear),
+    #     (imacceptedUpper(2), @tstate readtype => clear),
     #     # (notarp, @tstate readtype => clear),
     #     # (abortdone, @tstate abort => idle),
     #     (readdatadone, @tstate readdata => readtype),
@@ -106,13 +106,13 @@ let
     # ])
 
     # alcomb = @always (
-    #     ack = $(ilacceptedUpper(2)) & rdata[0];
-    #     nack = $(ilacceptedUpper(2)) & ~rdata[0];
-    #     isarp = $(ilacceptedUpper(2)) & (rdata[15:0] == $(Wireexpr(16, 0x0608)));
-    #     notarp = $(ilacceptedUpper(2)) & ~isarp;
-    #     readdatadone = $(ilacceptedUpper(2)) & (_count == 2 + 7) & (_subcount == 1);
-    #     cleardone = $(ilacceptedLower(1));
-    #     abortdone = $(ilacceptedLower(1));
+    #     ack = $(imacceptedUpper(2)) & rdata[0];
+    #     nack = $(imacceptedUpper(2)) & ~rdata[0];
+    #     isarp = $(imacceptedUpper(2)) & (rdata[15:0] == $(Wireexpr(16, 0x0608)));
+    #     notarp = $(imacceptedUpper(2)) & ~isarp;
+    #     readdatadone = $(imacceptedUpper(2)) & (_count == 2 + 7) & (_subcount == 1);
+    #     cleardone = $(imacceptedLower(1));
+    #     abortdone = $(imacceptedLower(1));
     # )
 
     # decldata = @decls (
@@ -125,42 +125,42 @@ let
     #     wstrb = 0;
     #     wdata = 0;
     #     bready = 1;
-    #     $(nametolower(ilvalid, 2)) = 0;
-    #     $(nametoupper(ilupdate, 2)) = 0;
-    #     $(nametolower(ilvalid, 1)) = 0;
+    #     $(nametolower(imvalid, 2)) = 0;
+    #     $(nametoupper(imupdate, 2)) = 0;
+    #     $(nametolower(imvalid, 1)) = 0;
     #     fire <= fire | transinit;
 
     #     if etherrecv == idle
-    #         $(nametolower(ilvalid, 2)) = fire
+    #         $(nametolower(imvalid, 2)) = fire
     #         araddr = 0x17fc
     #     elseif etherrecv == waiting
-    #         $(nametoupper(ilupdate, 2)) = 1
+    #         $(nametoupper(imupdate, 2)) = 1
     #         _count <= $(Wireexpr(32, 0))
     #         _subcount <= 0
     #     elseif etherrecv == readtype
     #         if _count == 0
-    #             $(nametolower(ilvalid, 2)) = 1
+    #             $(nametolower(imvalid, 2)) = 1
     #             araddr = 0x100c
-    #             if $(ilacceptedLower(2))
+    #             if $(imacceptedLower(2))
     #                 _count <= _count + 1
     #             end
     #         elseif _count == 1
-    #             $(nametoupper(ilupdate, 2)) = 1
-    #             if $(ilacceptedUpper(2))
+    #             $(nametoupper(imupdate, 2)) = 1
+    #             if $(imacceptedUpper(2))
     #                 _count <= 0
     #             end
     #         end
     #     elseif etherrecv == readdata
     #         if _count == 0
     #             if _subcount == 0
-    #                 $(nametolower(ilvalid, 2)) = 1
+    #                 $(nametolower(imvalid, 2)) = 1
     #                 araddr = 0x1000
-    #                 if $(ilacceptedLower(2))
+    #                 if $(imacceptedLower(2))
     #                     _subcount <= _subcount + $(Wireexpr(32, 1))
     #                 end
     #             else
-    #                 $(nametoupper(ilupdate, 2)) = 1
-    #                 if $(ilacceptedUpper(2))
+    #                 $(nametoupper(imupdate, 2)) = 1
+    #                 if $(imacceptedUpper(2))
     #                     _subcount <= 0
     #                     srcmac[31:0] <= rdata
     #                     _count <= _count + 1
@@ -169,14 +169,14 @@ let
     #         end
     #         if _count == 1
     #             if _subcount == 0
-    #                 $(nametolower(ilvalid, 2)) = 1
+    #                 $(nametolower(imvalid, 2)) = 1
     #                 araddr = 0x1004
-    #                 if $(ilacceptedLower(2))
+    #                 if $(imacceptedLower(2))
     #                     _subcount <= _subcount + $(Wireexpr(32, 1))
     #                 end
     #             else
-    #                 $(nametoupper(ilupdate, 2)) = 1
-    #                 if $(ilacceptedUpper(2))
+    #                 $(nametoupper(imupdate, 2)) = 1
+    #                 if $(imacceptedUpper(2))
     #                     _subcount <= 0
     #                     srcmac[47:32] <= rdata[15:0]
     #                     destmac[15:0] <= rdata[31:16]
@@ -186,14 +186,14 @@ let
     #         end
     #         if _count == 2
     #             if _subcount == 0
-    #                 $(nametolower(ilvalid, 2)) = 1
+    #                 $(nametolower(imvalid, 2)) = 1
     #                 araddr = 0x1008
-    #                 if $(ilacceptedLower(2))
+    #                 if $(imacceptedLower(2))
     #                     _subcount <= _subcount + $(Wireexpr(32, 1))
     #                 end
     #             else
-    #                 $(nametoupper(ilupdate, 2)) = 1
-    #                 if $(ilacceptedUpper(2))
+    #                 $(nametoupper(imupdate, 2)) = 1
+    #                 if $(imacceptedUpper(2))
     #                     _subcount <= 0
     #                     destmac[47:16] <= rdata
     #                     _count <= _count + 1
@@ -202,14 +202,14 @@ let
     #         end
     #         if (2 < _count) & (_count < 3 + 7)
     #             if _subcount == 0
-    #                 $(nametolower(ilvalid, 2)) = 1
+    #                 $(nametolower(imvalid, 2)) = 1
     #                 araddr = 0x100c + ((_count[12:0] - 3) << 2)
-    #                 if $(ilacceptedLower(2))
+    #                 if $(imacceptedLower(2))
     #                     _subcount <= _subcount + $(Wireexpr(32, 1))
     #                 end
     #             else
-    #                 $(nametoupper(ilupdate, 2)) = 1
-    #                 if $(ilacceptedUpper(2))
+    #                 $(nametoupper(imupdate, 2)) = 1
+    #                 if $(imacceptedUpper(2))
     #                     _subcount <= 0
     #                     if _count == 3 + 6
     #                         _count <= 0
@@ -220,7 +220,7 @@ let
     #             end
     #         end
     #     elseif etherrecv == clear || etherrecv == abort
-    #         $(nametolower(ilvalid, 1)) = 1
+    #         $(nametolower(imvalid, 1)) = 1
     #         awaddr = 0x17fc
     #         wdata = 0
     #         wstrb = 0b1
@@ -233,13 +233,13 @@ let
     # m = @FSM ether idle, addr1, addr2, addr3, typeRegister, lenRegister, dataRegister, setStatus, readStatus, waitStatus
     counter(x) = @wireexpr _counter == $x
     subcount(x) = @wireexpr _subcount == $x
-    readdone2() = ilacceptedUpper(2) & counter(2)
+    readdone2() = imacceptedUpper(2) & counter(2)
 
-    wdone = @wireexpr $(nametolower(ilvalid, 1)) & $(nametolower(ilupdate, 1))
+    wdone = @wireexpr $(nametolower(imvalid, 1)) & $(nametolower(imupdate, 1))
     transadd!(m, (@wireexpr transinit), @tstate idle => addr1)
     # transadd!(m, (@wireexpr fire), @tstate idle => addr1)
-    transadd!(m, ilacceptedUpper(2) & subcount(2), @tstate addr1 => addr2)
-    transadd!(m, ilacceptedUpper(2) & counter(2), @tstate addr2 => addr3)
+    transadd!(m, imacceptedUpper(2) & subcount(2), @tstate addr1 => addr2)
+    transadd!(m, imacceptedUpper(2) & counter(2), @tstate addr2 => addr3)
     transadd!(m, readdone2(), @tstate addr3 => typeRegister)
     transadd!(m, readdone2(), @tstate typeRegister => lenRegister)
     transadd!(m, readdone2(), @tstate lenRegister => dataRegister)
@@ -247,9 +247,9 @@ let
 
     # data other than htype
     datawords = 7
-    transadd!(m, ilacceptedUpper(2) & (@wireexpr (_count == $datawords-1) & (_subcount == 2)), @tstate dataRegister => readall)
+    transadd!(m, imacceptedUpper(2) & (@wireexpr (_count == $datawords-1) & (_subcount == 2)), @tstate dataRegister => readall)
     transadd!(m, (@wireexpr _waitcount == 200) & (@wireexpr _count == 11) , @tstate readall => setStatus)
-    transadd!(m, ilacceptedLower(1) & (@wireexpr _count == 2), @tstate setStatus => readStatus)
+    transadd!(m, imacceptedLower(1) & (@wireexpr _count == 2), @tstate setStatus => readStatus)
     transadd!(m, (@wireexpr rissued), @tstate readStatus => waitStatus)
     transadd!(m, (@wireexpr phybusy), @tstate waitStatus => readStatus)
     # transadd!(m, (@wireexpr waitStatusDone), @tstate waitStatus => idler)
@@ -274,9 +274,9 @@ let
         dvec[191:160] = 0x10ac_0000;
         # recv ip2, empty
         dvec[223:192] = 0x0000_0100;
-        rissued = $(nametolower(ilvalid, 2)) & $(nametolower(ilupdate, 2));
-        phybusy = $(nametoupper(ilvalid, 2)) & $(nametoupper(ilupdate, 2)) & rdata[0];
-        waitStatusDone = $(nametoupper(ilvalid, 2)) & $(nametoupper(ilupdate, 2)) & ~rdata[0];
+        rissued = $(nametolower(imvalid, 2)) & $(nametolower(imupdate, 2));
+        phybusy = $(nametoupper(imvalid, 2)) & $(nametoupper(imupdate, 2)) & rdata[0];
+        waitStatusDone = $(nametoupper(imvalid, 2)) & $(nametoupper(imupdate, 2)) & ~rdata[0];
 
         bready = 1;
     )
@@ -293,28 +293,28 @@ let
 
 
 
-        $(nametolower(ilvalid, 1)) = 0;
-        $(nametolower(ilvalid, 2)) = 0;
-        $(nametoupper(ilupdate, 2)) = 0;
+        $(nametolower(imvalid, 1)) = 0;
+        $(nametolower(imvalid, 2)) = 0;
+        $(nametoupper(imupdate, 2)) = 0;
 
         if ether == addr1
             if _subcount == 0
                 awaddr = 0x0000
                 wstrb = 0b1111
                 wdata = ~0
-                $(nametolower(ilvalid, 1)) = fire
-                if $(ilacceptedLower(1))
+                $(nametolower(imvalid, 1)) = fire
+                if $(imacceptedLower(1))
                     _subcount <= 1
                 end
             elseif _subcount == 1
                 araddr = 0x0000
-                $(nametolower(ilvalid, 2)) = 1
-                if $(ilacceptedLower(2))
+                $(nametolower(imvalid, 2)) = 1
+                if $(imacceptedLower(2))
                     _subcount <= 2
                 end
             elseif _subcount == 2
-                $(nametoupper(ilupdate, 2)) = 1
-                if $(ilacceptedUpper(2))
+                $(nametoupper(imupdate, 2)) = 1
+                if $(imacceptedUpper(2))
                     _subcount <= 0
                 end
             end
@@ -323,19 +323,19 @@ let
                 awaddr = 0x0004
                 wstrb = 0b1111
                 wdata = 0x0000_ffff
-                $(nametolower(ilvalid, 1)) = 1;
-                if $(ilacceptedLower(1))
+                $(nametolower(imvalid, 1)) = 1;
+                if $(imacceptedLower(1))
                     _counter <= 1
                 end
             elseif _counter == 1
                 araddr = 0x0004
-                $(nametolower(ilvalid, 2)) = 1
-                if $(ilacceptedLower(2))
+                $(nametolower(imvalid, 2)) = 1
+                if $(imacceptedLower(2))
                     _counter <= 2
                 end
             elseif _counter == 2
-                $(nametoupper(ilupdate, 2)) = 1
-                if $(ilacceptedUpper(2))
+                $(nametoupper(imupdate, 2)) = 1
+                if $(imacceptedUpper(2))
                     _counter <= 0
                 end
             end
@@ -344,19 +344,19 @@ let
                 awaddr = 0x0008
                 wstrb = 0b1111
                 wdata = 0xcefa_005e
-                $(nametolower(ilvalid, 1)) = 1;
-                if $(ilacceptedLower(1))
+                $(nametolower(imvalid, 1)) = 1;
+                if $(imacceptedLower(1))
                     _counter <= 1
                 end
             elseif _counter == 1
                 araddr = 0x0008
-                $(nametolower(ilvalid, 2)) = 1
-                if $(ilacceptedLower(2))
+                $(nametolower(imvalid, 2)) = 1
+                if $(imacceptedLower(2))
                     _counter <= 2
                 end
             elseif _counter == 2
-                $(nametoupper(ilupdate, 2)) = 1
-                if $(ilacceptedUpper(2))
+                $(nametoupper(imupdate, 2)) = 1
+                if $(imacceptedUpper(2))
                     _counter <= 0
                 end
             end
@@ -365,19 +365,19 @@ let
                 awaddr = 0x000c
                 wstrb = 0b1111
                 wdata = $(@wireexpr 0x0100 << 16) | 0x0608
-                $(nametolower(ilvalid, 1)) = 1;
-                if $(ilacceptedLower(1))
+                $(nametolower(imvalid, 1)) = 1;
+                if $(imacceptedLower(1))
                     _counter <= 1
                 end
             elseif _counter == 1
                 araddr = 0x000c
-                $(nametolower(ilvalid, 2)) = 1
-                if $(ilacceptedLower(2))
+                $(nametolower(imvalid, 2)) = 1
+                if $(imacceptedLower(2))
                     _counter <= 2
                 end
             elseif _counter == 2
-                $(nametoupper(ilupdate, 2)) = 1
-                if $(ilacceptedUpper(2))
+                $(nametoupper(imupdate, 2)) = 1
+                if $(imacceptedUpper(2))
                     _counter <= 0
                 end
             end
@@ -386,19 +386,19 @@ let
                 awaddr = 0x07f4
                 wstrb = 0b0011
                 wdata = 28 + 14
-                $(nametolower(ilvalid, 1)) = 1;
-                if $(ilacceptedLower(1))
+                $(nametolower(imvalid, 1)) = 1;
+                if $(imacceptedLower(1))
                     _counter <= 1
                 end
             elseif _counter == 1
                 araddr = 0x07f4
-                $(nametolower(ilvalid, 2)) = 1
-                if $(ilacceptedLower(2))
+                $(nametolower(imvalid, 2)) = 1
+                if $(imacceptedLower(2))
                     _counter <= 2
                 end
             elseif _counter == 2
-                $(nametoupper(ilupdate, 2)) = 1
-                if $(ilacceptedUpper(2))
+                $(nametoupper(imupdate, 2)) = 1
+                if $(imacceptedUpper(2))
                     _counter <= 0
                 end
             end
@@ -406,9 +406,9 @@ let
             if _subcount == 0
                 awaddr = 0x0010 + (_count[12:0] << 2)
                 wstrb = 0b1111
-                $(nametolower(ilvalid, 1)) = 1;
+                $(nametolower(imvalid, 1)) = 1;
                 wdata = dvec[((_count << 5) + 31)-:32]
-                if $(nametolower(ilvalid, 1)) & $(nametolower(ilupdate, 1))
+                if $(nametolower(imvalid, 1)) & $(nametolower(imupdate, 1))
                     _subcount <= 1
                     # if _count < 7 - 1
                     #     _count <= _count + 1
@@ -418,13 +418,13 @@ let
                 end
             elseif _subcount == 1
                 araddr =  0x0010 + (_count[12:0] << 2)
-                $(nametolower(ilvalid, 2)) = 1
-                if $(ilacceptedLower(2))
+                $(nametolower(imvalid, 2)) = 1
+                if $(imacceptedLower(2))
                     _subcount <= 2
                 end
             elseif _subcount == 2
-                $(nametoupper(ilupdate, 2)) = 1
-                if $(ilacceptedUpper(2))
+                $(nametoupper(imupdate, 2)) = 1
+                if $(imacceptedUpper(2))
                     _subcount <= 0
                     if _count < 7 - 1
                         _count <= _count + 1
@@ -449,13 +449,13 @@ let
             else
                 if _subcount == 0
                     araddr = 0x00 + (_count[12:0] << 2)
-                    $(nametolower(ilvalid, 2)) = 1
-                    if $(ilacceptedLower(2))
+                    $(nametolower(imvalid, 2)) = 1
+                    if $(imacceptedLower(2))
                         _subcount <= 1
                     end
                 else
-                    $(nametoupper(ilupdate, 2)) = 1
-                    if $(ilacceptedUpper(2))
+                    $(nametoupper(imupdate, 2)) = 1
+                    if $(imacceptedUpper(2))
                         _subcount <= $(Wireexpr(32, 0))
                         # if _count == 10
                         #     _count <= 0
@@ -467,40 +467,40 @@ let
                 end
             end
         elseif ether == setStatus
-            $(nametolower(ilvalid, 1)) = 0
+            $(nametolower(imvalid, 1)) = 0
             if _count == 0
                 araddr = 0x07fc
-                $(nametolower(ilvalid, 2)) = 1
-                if $(ilacceptedLower(2))
+                $(nametolower(imvalid, 2)) = 1
+                if $(imacceptedLower(2))
                     _count <= _count + 1
                 end
             elseif _count == 1
-                $(nametoupper(ilupdate, 2)) = 1
-                if $(ilacceptedUpper(2))
+                $(nametoupper(imupdate, 2)) = 1
+                if $(imacceptedUpper(2))
                     _count <= _count + 1
                 end
                 rtemp <= rdata
             else
-                $(nametolower(ilvalid, 1)) = 1
+                $(nametolower(imvalid, 1)) = 1
                 awaddr = 0x07fc
                 wstrb = 0b1111
                 wdata[0] = 1
                 wdata[31:1] = rtemp[31:1]
-                if $(ilacceptedLower(1))
+                if $(imacceptedLower(1))
                     _count <= 0
                 end
             end
         else
-            $(nametolower(ilvalid, 1)) = 0
+            $(nametolower(imvalid, 1)) = 0
         end;
 
         if ether == readStatus
             araddr = 0x07fc
-            $(nametolower(ilvalid, 2)) = 1
+            $(nametolower(imvalid, 2)) = 1
         end;
 
         if ether == waitStatus
-            $(nametoupper(ilupdate, 2)) = 1
+            $(nametoupper(imupdate, 2)) = 1
         end
     )
 
