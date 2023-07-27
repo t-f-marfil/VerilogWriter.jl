@@ -24,16 +24,18 @@ export
     oneparam, parameters, @oneparam, @parameters,
     portoneline, ports, @portoneline, @ports,
     onelocalparam, localparams, @onelocalparam, @localparams,
+    @oneport,
     wireexpr, @wireexpr,
     decloneline, decls, @decloneline, @decls,
     # oneblock, 
     ifcontent, 
     # ralways, 
-    always, 
+    always, combffsplit,
     # @oneblock, 
     @ifcontent, 
-    @always
-    # @ralways
+    @always,
+    @cpalways,
+    @ralways
 
 export 
     paramsolve, paramcalc
@@ -63,6 +65,10 @@ export
 export 
     FSM, @FSM, fsmconv, transadd!, @tstate, transcond
 
+export
+    getname, getwidth, getsensitivity, getifcont,
+    getdirec, getports, vrename
+
 export showfield
 
 macro listtestonly(args)
@@ -83,7 +89,7 @@ const testonlyvars = @listtestonly (
     # showfield,
     
     oneblock, @oneblock, 
-    ralways, @ralways
+    ralways
 )
 include("testonlyexport.jl")
 
@@ -99,7 +105,17 @@ for myenum in [Portdirec, Wiretype, Wireop, Atype, Edge]
     end
 end
 
-include("includecore.jl")
+# include("includecore.jl")
+# include(joinpath(@__DIR__, "midlevel", "main.jl"))
+libs = [
+    "core",
+    "midlevel"
+]
+for lib in libs
+    include(joinpath(@__DIR__, lib, "main.jl"))
+end
 
+
+include("exportMidlevel.jl")
 
 end

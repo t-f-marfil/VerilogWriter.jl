@@ -354,31 +354,72 @@ function vfinalize(x::Vmodule)
     autodecl(m)
 end
 
+# """
+#     vexport(x::Vmodule, fpath=""; systemverilog=true, mode="w")
+
+# Export `x` to a verilog/systemverilog file.
+# """
+# function vexport(x::Vmodule, fpath=""; systemverilog=true, mode="w")
+#     vexport([x], fpath, systemverilog=systemverilog, mode=mode)
+# end
+
+# """
+#     vexport(x::Vector{Vmodule}, fpath=""; systemverilog=true, mode="w")
+
+# Export `x` to a verilog/systemverilog file.
+# """
+# function vexport(x::Vector{Vmodule}, fpath=""; systemverilog=true, mode="w")
+#     length(x) > 0 || error("empty vector given.")
+#     if fpath == ""
+#         fpath = string(x[1].name, systemverilog ? ".sv" : ".v")
+#     end
+
+#     open(fpath, mode) do io 
+#         for m in x
+#             write(io, string(m, systemverilog), "\n")
+#         end
+#     end
+# end
+
 """
-    vexport(x::Vmodule, fpath=""; systemverilog=true, mode="w")
+    vexport(fpath::AbstractString, x::Vmodule)
 
 Export `x` to a verilog/systemverilog file.
 """
-function vexport(x::Vmodule, fpath=""; systemverilog=true, mode="w")
-    vexport([x], fpath, systemverilog=systemverilog, mode=mode)
+function vexport(fpath::AbstractString, x::Vmodule)
+    vexport(fpath, [x])
+end
+
+function vexport(x::Vmodule)
+    vexport([x])
+end
+
+function vexport(x::Vector{Vmodule})
+    vexport(string(getname(x[begin]), ".sv"), x)
 end
 
 """
-    vexport(x::Vector{Vmodule}, fpath=""; systemverilog=true, mode="w")
+    vexport(fpath::AbstractString, x::Vector{Vmodule})
 
 Export `x` to a verilog/systemverilog file.
 """
-function vexport(x::Vector{Vmodule}, fpath=""; systemverilog=true, mode="w")
-    length(x) > 0 || error("empty vector given.")
-    if fpath == ""
-        fpath = string(x[1].name, systemverilog ? ".sv" : ".v")
+function vexport(fpath::AbstractString, x::Vector{Vmodule})
+    # wcount = 0
+    wcount = open(fpath, "w") do io 
+        vexport(io, x)
     end
+    return wcount
+end
 
-    open(fpath, mode) do io 
-        for m in x
-            write(io, string(m, systemverilog), "\n")
-        end
+function vexport(io::IO, x::Vmodule)
+    vexport(io, [x])
+end
+function vexport(io::IO, x::Vector{Vmodule})
+    wcount = 0
+    for m in x
+        wcount += write(io, string(m), "\n")
     end
+    return wcount
 end
 
 """

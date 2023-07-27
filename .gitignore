@@ -13,7 +13,7 @@ notes.md
 
 *.png
 *.txt
-*.sv
-*.v
+/src/*.sv
+/src/*.v
 !samples/**.sv
 !samples/**.v

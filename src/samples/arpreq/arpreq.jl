@@ -1,9 +1,6 @@
-# include("midlevel/midlayer.jl")
-# include("core/rawparser.jl")
-let 
+function arpreq()
     addrlen = 13
     datalen = 32
-    ipint(a, b, c, d) = (((((a << 8) | b) << 8) | c) << 8) | d
 
     datalen % 8 == 0 || error("datalen should be multiple of eight")
     strblen = Int(datalen / 8)
@@ -36,7 +33,6 @@ let
         @in 2 rresp
     )
 
-    # v = Vmodule("mymaster")
     @Randlayer v
     vpush!(v, bports)
     vpush!(v, @ports (
@@ -91,160 +87,20 @@ let
     vpush!.(Rdata, (rdataal, @ports @out @logic $datalen rdata_out))
     vpush!.(Raddr, (raddral, @ports @in $addrlen araddr_in))
 
-    # m = @FSM etherrecv idle, idler, waiting, readtype, readdata, clear, abort, addr1, addr2, addr3, typeRegister, lenRegister, dataRegister, setStatus, readStatus, waitStatus
-    # m = @FSM etherrecv idle, addr1, addr2, addr3, typeRegister, lenRegister, dataRegister, setStatus, readStatus, waitStatus, readall
-    # @sym2wire ack, nack, isarp, notarp, abortdone, readdatadone, cleardone
-    # transadd!(m, [
-    #     (imacceptedLower(2), @tstate idler => waiting),
-    #     (ack, @tstate waiting => readdata),
-    #     (nack, @tstate waiting => idler),
-    #     (imacceptedUpper(2), @tstate readtype => clear),
-    #     # (notarp, @tstate readtype => clear),
-    #     # (abortdone, @tstate abort => idle),
-    #     (readdatadone, @tstate readdata => readtype),
-    #     (cleardone, @tstate clear => idle),
-    # ])
-
-    # alcomb = @always (
-    #     ack = $(imacceptedUpper(2)) & rdata[0];
-    #     nack = $(imacceptedUpper(2)) & ~rdata[0];
-    #     isarp = $(imacceptedUpper(2)) & (rdata[15:0] == $(Wireexpr(16, 0x0608)));
-    #     notarp = $(imacceptedUpper(2)) & ~isarp;
-    #     readdatadone = $(imacceptedUpper(2)) & (_count == 2 + 7) & (_subcount == 1);
-    #     cleardone = $(imacceptedLower(1));
-    #     abortdone = $(imacceptedLower(1));
-    # )
-
-    # decldata = @decls (
-    #     @logic 48 srcmac, destmac
-    # )
-
-    # alfsm = @cpalways (
-    #     araddr = 0;
-    #     awaddr = 0;
-    #     wstrb = 0;
-    #     wdata = 0;
-    #     bready = 1;
-    #     $(nametolower(imvalid, 2)) = 0;
-    #     $(nametoupper(imupdate, 2)) = 0;
-    #     $(nametolower(imvalid, 1)) = 0;
-    #     fire <= fire | transinit;
-
-    #     if etherrecv == idle
-    #         $(nametolower(imvalid, 2)) = fire
-    #         araddr = 0x17fc
-    #     elseif etherrecv == waiting
-    #         $(nametoupper(imupdate, 2)) = 1
-    #         _count <= $(Wireexpr(32, 0))
-    #         _subcount <= 0
-    #     elseif etherrecv == readtype
-    #         if _count == 0
-    #             $(nametolower(imvalid, 2)) = 1
-    #             araddr = 0x100c
-    #             if $(imacceptedLower(2))
-    #                 _count <= _count + 1
-    #             end
-    #         elseif _count == 1
-    #             $(nametoupper(imupdate, 2)) = 1
-    #             if $(imacceptedUpper(2))
-    #                 _count <= 0
-    #             end
-    #         end
-    #     elseif etherrecv == readdata
-    #         if _count == 0
-    #             if _subcount == 0
-    #                 $(nametolower(imvalid, 2)) = 1
-    #                 araddr = 0x1000
-    #                 if $(imacceptedLower(2))
-    #                     _subcount <= _subcount + $(Wireexpr(32, 1))
-    #                 end
-    #             else
-    #                 $(nametoupper(imupdate, 2)) = 1
-    #                 if $(imacceptedUpper(2))
-    #                     _subcount <= 0
-    #                     srcmac[31:0] <= rdata
-    #                     _count <= _count + 1
-    #                 end
-    #             end
-    #         end
-    #         if _count == 1
-    #             if _subcount == 0
-    #                 $(nametolower(imvalid, 2)) = 1
-    #                 araddr = 0x1004
-    #                 if $(imacceptedLower(2))
-    #                     _subcount <= _subcount + $(Wireexpr(32, 1))
-    #                 end
-    #             else
-    #                 $(nametoupper(imupdate, 2)) = 1
-    #                 if $(imacceptedUpper(2))
-    #                     _subcount <= 0
-    #                     srcmac[47:32] <= rdata[15:0]
-    #                     destmac[15:0] <= rdata[31:16]
-    #                     _count <= _count + 1
-    #                 end
-    #             end
-    #         end
-    #         if _count == 2
-    #             if _subcount == 0
-    #                 $(nametolower(imvalid, 2)) = 1
-    #                 araddr = 0x1008
-    #                 if $(imacceptedLower(2))
-    #                     _subcount <= _subcount + $(Wireexpr(32, 1))
-    #                 end
-    #             else
-    #                 $(nametoupper(imupdate, 2)) = 1
-    #                 if $(imacceptedUpper(2))
-    #                     _subcount <= 0
-    #                     destmac[47:16] <= rdata
-    #                     _count <= _count + 1
-    #                 end
-    #             end
-    #         end
-    #         if (2 < _count) & (_count < 3 + 7)
-    #             if _subcount == 0
-    #                 $(nametolower(imvalid, 2)) = 1
-    #                 araddr = 0x100c + ((_count[12:0] - 3) << 2)
-    #                 if $(imacceptedLower(2))
-    #                     _subcount <= _subcount + $(Wireexpr(32, 1))
-    #                 end
-    #             else
-    #                 $(nametoupper(imupdate, 2)) = 1
-    #                 if $(imacceptedUpper(2))
-    #                     _subcount <= 0
-    #                     if _count == 3 + 6
-    #                         _count <= 0
-    #                     else
-    #                         _count <= _count + 1
-    #                     end
-    #                 end
-    #             end
-    #         end
-    #     elseif etherrecv == clear || etherrecv == abort
-    #         $(nametolower(imvalid, 1)) = 1
-    #         awaddr = 0x17fc
-    #         wdata = 0
-    #         wstrb = 0b1
-    #     end
-    # )
-    # vpush!.(v, (alcomb, decldata, alfsm..., m, @ports @in transinit))
-    # vpush!.(v, (alcomb, decldata))
     m = @FSM etherrecv idle, addr1, addr2, addr3, typeRegister, lenRegister, dataRegister, setStatus, readStatus, waitStatus, readall
     
-    # m = @FSM ether idle, addr1, addr2, addr3, typeRegister, lenRegister, dataRegister, setStatus, readStatus, waitStatus
     counter(x) = @wireexpr _counter == $x
     subcount(x) = @wireexpr _subcount == $x
     readdone2() = imacceptedUpper(2) & counter(2)
 
     wdone = @wireexpr $(nametolower(imvalid, 1)) & $(nametolower(imupdate, 1))
     transadd!(m, (@wireexpr transinit), @tstate idle => addr1)
-    # transadd!(m, (@wireexpr fire), @tstate idle => addr1)
     transadd!(m, imacceptedUpper(2) & subcount(2), @tstate addr1 => addr2)
     transadd!(m, imacceptedUpper(2) & counter(2), @tstate addr2 => addr3)
     transadd!(m, readdone2(), @tstate addr3 => typeRegister)
     transadd!(m, readdone2(), @tstate typeRegister => lenRegister)
     transadd!(m, readdone2(), @tstate lenRegister => dataRegister)
-    # transadd!(m, wdone, @tstate dataRegister1 => dataRegister2)
-
+    
     # data other than htype
     datawords = 7
     transadd!(m, imacceptedUpper(2) & (@wireexpr (_count == $datawords-1) & (_subcount == 2)), @tstate dataRegister => readall)
@@ -252,7 +108,6 @@ let
     transadd!(m, imacceptedLower(1) & (@wireexpr _count == 2), @tstate setStatus => readStatus)
     transadd!(m, (@wireexpr rissued), @tstate readStatus => waitStatus)
     transadd!(m, (@wireexpr phybusy), @tstate waitStatus => readStatus)
-    # transadd!(m, (@wireexpr waitStatusDone), @tstate waitStatus => idler)
     transadd!(m, (@wireexpr waitStatusDone), @tstate waitStatus => idle)
 
     vpush!(v, @decls @logic 32*$datawords dvec, dbuf, dtarget);
@@ -280,7 +135,6 @@ let
 
         bready = 1;
     )
-    destip = ipint(169, 254, 140, 269)
     alff = @cpalways (
         fire <= fire | transinit;
         
@@ -410,11 +264,6 @@ let
                 wdata = dvec[((_count << 5) + 31)-:32]
                 if $(nametolower(imvalid, 1)) & $(nametolower(imupdate, 1))
                     _subcount <= 1
-                    # if _count < 7 - 1
-                    #     _count <= _count + 1
-                    # else
-                    #     _count <= $(Wireexpr(32, 0))
-                    # end
                 end
             elseif _subcount == 1
                 araddr =  0x0010 + (_count[12:0] << 2)
@@ -433,11 +282,6 @@ let
                     end
                 end
             end
-
-        # elseif ether == dataRegister2
-        #     awaddr = 0x0014
-        #     wstrb = 0b1111
-        #     wdata = dvec[63:32]
         elseif ether == readall
             if _count == 11
                 if _waitcount == 200
@@ -457,11 +301,6 @@ let
                     $(nametoupper(imupdate, 2)) = 1
                     if $(imacceptedUpper(2))
                         _subcount <= $(Wireexpr(32, 0))
-                        # if _count == 10
-                        #     _count <= 0
-                        # else
-                        #     _count <= _count + 1
-                        # end
                         _count <= _count + 1
                     end
                 end
@@ -504,12 +343,11 @@ let
         end
     )
 
-    # vpush!.(v, (arports, awports, bports, wports, rports))
     vpush!.(v, (m, alcomb, alff...))
     vpush!.(v, (@ports @in transinit))
 
 
-    v1 = vfinalize.(layer2vmod!(g, name="vaxi_1"))
+    v1 = vfinalize.(layer2vmod!(g, name="arpreq"))
     wrapper = wrappergen(v1[begin])
     axiformat(s) = replace(s, r"((aw|w|b|ar|r)[a-zA-Z0-9_]+)_[a-zA-Z0-9_]+" => s"\1")
     newports = [Oneport(getdirec(i), wire, getwidth(i), axiformat(getname(i))) for i in getports(wrapper)] |> Ports
@@ -523,9 +361,13 @@ let
     )
     wrapper = Vmodule(getname(wrapper))
     vpush!.(wrapper, (newports, newcore))
-    # vshow(wrapper)
-    vexport(v1)
-    vexport(wrapper, "mymaster_1_wrapper.v")
+    # # vshow(wrapper)
+    # vexport(v1)
+    # # vexport(wrapper, "mymaster_1_wrapper.v")
+    # vexport("mymaster_1_wrapper.v", wrapper)
 
+    return v1, wrapper
     # logic to add multiple ports per vmodule is broken?
 end
+
+v, wrapper = arpreq()

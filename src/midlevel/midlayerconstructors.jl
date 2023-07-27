@@ -16,4 +16,4 @@ Layerconn() = Layerconn(Set{Pair{Oneport, Oneport}}())
 Layerconn(x::Pair{Oneport, Oneport}) = Layerconn(Set([x]))
 Layerconn(x::T) where {T <: AbstractArray} = Layerconn(Set(x))
 
-Layergraph() = Layergraph(Dict{Pair{Midmodule, Midmodule}, Layerconn}(), Set{Midmodule}())
+Layergraph() = Layergraph(OrderedDict{Pair{Midmodule, Midmodule}, Layerconn}(), Set{Midmodule}())
