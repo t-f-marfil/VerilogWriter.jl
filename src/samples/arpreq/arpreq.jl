@@ -33,7 +33,7 @@ function arpreq()
         @in 2 rresp
     )
 
-    @Randlayer v
+    @Randmmod v
     vpush!(v, bports)
     vpush!(v, @ports (
         @out @logic $addrlen awaddr, araddr;
@@ -42,11 +42,11 @@ function arpreq()
         @in $datalen rdata;
     ))
 
-    g = Layergraph()
-    @Randlayer Raddr
-    @Randlayer Rdata
-    @Randlayer Waddr
-    @Randlayer Wdata
+    g = Mmodgraph()
+    @Randmmod Raddr
+    @Randmmod Rdata
+    @Randmmod Waddr
+    @Randmmod Wdata
     vpush!(Raddr, arports)
     vpush!(Rdata, rports)
     vpush!(Waddr, awports)

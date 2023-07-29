@@ -146,11 +146,11 @@ function imconnectMUSL(child::Midport, parents::Midport...)
 end
 
 """
-    graph2adlist(lay::Layergraph)
+    graph2adlist(lay::Mmodgraph)
 
-Generate adjacency list from Layergraph.
+Generate adjacency list from Mmodgraph.
 """
-function graph2adlist(lay::Layergraph)
+function graph2adlist(lay::Mmodgraph)
     # precond: no duplicate egdes in lay.edges
     suml = OrderedDict{Midport, Vector{Midport}}()
     musl = OrderedDict{Midport, Vector{Midport}}()

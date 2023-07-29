@@ -13,7 +13,7 @@ Here we show an example of fully building a verilog module using `VerilogWriter.
 
 ## Define the Name of a Module
 
-We offer an type `Vmodule`, which imitates Verilog modules. Instantiate it defining its name.
+We offer a type `Vmodule`, which imitates Verilog modules. Instantiate it defining its name.
 
 ```jldoctest t1
 julia> m = Vmodule("test");

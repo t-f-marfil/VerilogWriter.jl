@@ -22,7 +22,7 @@ end
 const defaultMidPid = 0
 
 "struct to store and connect Layerconn objects."
-struct Layergraph
+struct Mmodgraph
     edges::OrderedDict{Pair{Midport, Midport}, Layerconn}
     layers::OrderedSet{Midmodule}
 end

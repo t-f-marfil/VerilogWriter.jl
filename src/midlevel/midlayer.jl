@@ -1,27 +1,28 @@
 """
-    (cls::Layergraph)(p::Pair{Midport, Midport}, conn::Layerconn)
+    (cls::Mmodgraph)(p::Pair{Midport, Midport}, conn::Layerconn)
 
 Add new connection between Midmodules.
 """
-function (cls::Layergraph)(p::Pair{Midport, Midport}, args...)
+function (cls::Mmodgraph)(p::Pair{Midport, Midport}, args...)
     dfp, ufp = p
     push!(cls.edges, (dfp => ufp) => Layerconn(args...))
 
     push!(cls.layers, getmmod(dfp))
     push!(cls.layers, getmmod(ufp))
+    return nothing
 end
 """
-    (cls::Layergraph)(p::Pair{Midmodule, Midmodule}, pid::Int, conn::Layerconn)
+    (cls::Mmodgraph)(p::Pair{Midmodule, Midmodule}, pid::Int, conn::Layerconn)
 
-Case where port id is the same between both dfp and ufp
+Case where port id is the same between both dfp and ufp.
 """
-function (cls::Layergraph)(p::Pair{Midmodule, Midmodule}, pid::Int, args...)
+function (cls::Mmodgraph)(p::Pair{Midmodule, Midmodule}, pid::Int, args...)
     dfp, ufp = Midport(pid, p[1]), Midport(pid, p[2])
     cls(dfp => ufp, args...)
 end
-function (cls::Layergraph)(p::Pair{Midmodule, Midmodule}, args...)
+function (cls::Mmodgraph)(p::Pair{Midmodule, Midmodule}, args...)
     # include the case where nothing given as arg
-    cls(p, defaultMidPid, Layerconn(arg...))
+    cls(p, defaultMidPid, Layerconn(args...))
 end
 
 @basehashgen(
@@ -30,11 +31,11 @@ end
 )
 
 """
-    function pushhelp_dotgen!(lay::Midmodule, randset::Set{Midmodule}, regset::Set{Midmodule}, fifoset::Set{Midmodule})
+    pushhelp_dotgen!(lay::Midmodule, randset::S{Midmodule}, regset::S{Midmodule}, fifoset::S{Midmodule}) where {S <: AbstractSet}
 
 Helper function for `dotgen`.
 """
-function pushhelp_dotgen!(lay::Midmodule, randset::Set{Midmodule}, regset::Set{Midmodule}, fifoset::Set{Midmodule})
+function pushhelp_dotgen!(lay::Midmodule, randset::S, regset::S, fifoset::S) where {S <: AbstractSet{Midmodule}}
     t = lay.type
     if t == lrand
         push!(randset, lay)
@@ -63,14 +64,14 @@ function edgepush_dotgen!(iobuf::IOBuffer, edges::D) where {D <: AbstractDict{Pa
 end
 
 """
-    dotgen(lay::Layergraph; dpi=96)
+    dotgen(lay::Mmodgraph; dpi=96)
 
-Convert `Layergraph` object to a graph written in DOT language.
+Convert `Mmodgraph` object to a graph written in DOT language.
 """
-function dotgen(lay::Layergraph; dpi=96)
-    regset = Set{Midmodule}()
-    randset = Set{Midmodule}()
-    fifoset = Set{Midmodule}()
+function dotgen(lay::Mmodgraph; dpi=96)
+    regset = OrderedSet{Midmodule}()
+    randset = OrderedSet{Midmodule}()
+    fifoset = OrderedSet{Midmodule}()
 
     for (dfp, ufp) in keys(lay.edges)
         uno, dos = getmmod.((dfp, ufp))
@@ -107,21 +108,21 @@ function dotgen(lay::Layergraph; dpi=96)
 end
 
 
-Reglayer(arg) = Midmodule(lreg, arg)
-Randlayer(arg) = Midmodule(lrand, arg)
-FIFOlayer(arg) = Midmodule(lfifo, arg)
-FIFOlayer(arg, dep, wid) = Midmodule(lfifo, fifogen(dep, wid, name=arg))
+Regmmod(arg) = Midmodule(lreg, arg)
+Randmmod(arg) = Midmodule(lrand, arg)
+FIFOmmod(arg) = Midmodule(lfifo, arg)
+FIFOmmod(arg, dep, wid) = Midmodule(lfifo, fifogen(dep, wid, name=arg))
 
 
 function layermacro(arg, n::String, others...)
-    :($(esc(arg)) = $(Symbol(string(n, "layer")))($(tuple(string(arg), (esc(t) for t in others)...)...)))
+    :($(esc(arg)) = $(Symbol(string(n, "mmod")))($(tuple(string(arg), (esc(t) for t in others)...)...)))
 end
 
 
-macro FIFOlayer(arg, others...)
+macro FIFOmmod(arg, others...)
     layermacro(arg, "FIFO", others...)
 end
-macro Randlayer(arg)
+macro Randmmod(arg)
     layermacro(arg, "Rand")
 end
 
@@ -143,9 +144,19 @@ const portdir4ilst_upper = Dict([
     (k => (v == pin ? pout : pin)) for (k, v) in portdir4ilst_lower
 ])
 
+"""
+    nametolower(st::IntermmodSigtype)
+
+Return the name of a wire connected to downstream verilog modules.
+"""
 function nametolower(st::IntermmodSigtype)
     nametolower(st, defaultMidPid)
 end
+"""
+    nametoupper(st::IntermmodSigtype)
+
+Return the name of a wire connected to upstream verilog modules.
+"""
 function nametoupper(st::IntermmodSigtype)
     nametoupper(st, defaultMidPid)
 end
@@ -190,7 +201,7 @@ function upperportsgen(upperobj)
     upperportsgen(getname(upperobj))
 end
 
-function addCommonPortEachLayer(x::Layergraph)
+function addCommonPortEachLayer(x::Mmodgraph)
     for ml in x.layers 
         for p in ml.lports
             vpush!(ml.vmod, p)
@@ -200,7 +211,7 @@ function addCommonPortEachLayer(x::Layergraph)
     return nothing
 end
 
-function addIlPortEachLayer(x::Layergraph)
+function addIlPortEachLayer(x::Mmodgraph)
     preadded = Dict([lay => Dict{Int, Bool}() for lay in x.layers])
     postadded = Dict([lay => Dict{Int, Bool}() for lay in x.layers])
 
@@ -218,7 +229,7 @@ function addIlPortEachLayer(x::Layergraph)
     return nothing
 end
 
-function addPortEachLayer(x::Layergraph)
+function addPortEachLayer(x::Mmodgraph)
     addCommonPortEachLayer(x)
     addIlPortEachLayer(x)
 end
@@ -247,12 +258,12 @@ function portmatch_uc(a::Oneport, b::Oneport)
 end
 
 """
-    unconnectedports_mlay(x::Layergraph)
+    unconnectedports_mlay(x::Mmodgraph)
 
-Using data in `x::Layergraph`, detect unconnected ports
+Using data in `x::Mmodgraph`, detect unconnected ports
 in submodules.
 """
-function unconnectedports_mlay(x::Layergraph)
+function unconnectedports_mlay(x::Mmodgraph)
 
     # try detecting unconnected ports 
     pconnected = OrderedDict{Midmodule, OrderedDict{Oneport, Bool}}([
@@ -281,11 +292,11 @@ function unconnectedports_mlay(x::Layergraph)
 end
 
 """
-    layerconnInstantiate_mlay!(v::Vmodule, x::Layergraph)
+    layerconnInstantiate_mlay!(v::Vmodule, x::Mmodgraph)
 
 Push data in Layerconn objects into Vmodule in a form of Verilog codes.
 """
-function layerconnInstantiate_mlay!(v::Vmodule, x::Layergraph)
+function layerconnInstantiate_mlay!(v::Vmodule, x::Mmodgraph)
     mvec = Vmodule[]
     layVisited = Dict{Midmodule, Layerconn}()
     # # generate always_comb that connects ports 
@@ -373,14 +384,14 @@ function layerconnInstantiate_mlay!(v::Vmodule, x::Layergraph)
 end
 
 """
-    ilconndecl_mlay!(v::Vmodule, x::Layergraph)
+    ilconndecl_mlay!(v::Vmodule, x::Mmodgraph)
 
 Originally, Connect valid/update wires, which are generated automatically
 when converting `Midmodule` objects into Verilog HDL, between `Midmodule` objects.
 
 Now is needed only for wire declaration.
 """
-function ilconndecl_mlay!(v::Vmodule, x::Layergraph)
+function ilconndecl_mlay!(v::Vmodule, x::Mmodgraph)
     # rvec = Expr[]
     # dvec = Expr[]
     dvec = Onedecl[]
@@ -442,7 +453,7 @@ function ilconndecl_mlay!(v::Vmodule, x::Layergraph)
 end
 
 """
-    imconnect_mlay(v::Vmodule, lay::Layergraph)
+    imconnect_mlay(v::Vmodule, lay::Mmodgraph)
 
 Connect valid and update signals of `Midmodule` objects with each other.
 
@@ -453,7 +464,7 @@ Currently all this connections are placed at the top module.
 May better create one verilog module other than top module and push these
 wires there.
 """
-function imconnect_mlay!(v::Vmodule, lay::Layergraph)
+function imconnect_mlay!(v::Vmodule, lay::Mmodgraph)
     suml, musl = graph2adlist(lay)
 
     # hublist: list of imconnect_something Vmodules
@@ -495,12 +506,12 @@ function imconnect_mlay!(v::Vmodule, lay::Layergraph)
 end
 
 """
-    bypassUnconnected_mlay!(v::Vmodule, x::Layergraph)
+    bypassUnconnected_mlay!(v::Vmodule, x::Mmodgraph)
 
 Add to the top-level module ports that are connected to counterparts of 
 submodules, which are not connected to ports of other `Midmodule` objects.
 """
-function bypassUnconnected_mlay!(v::Vmodule, x::Layergraph)
+function bypassUnconnected_mlay!(v::Vmodule, x::Mmodgraph)
     # connect unconnected ports to outer ports
     unconnectedvec::Vector{Pair{Midmodule, OrderedSet{Oneport}}} = unconnectedports_mlay(x)
 
@@ -527,12 +538,12 @@ const commonports = (x -> Oneport(pin, getname(x))).(
 )
 
 """
-    connectCommonPorts_mlay!(v::Vmodule, x::Layergraph)
+    connectCommonPorts_mlay!(v::Vmodule, x::Mmodgraph)
 
 Connect ports which all submodules have in common to the 
 proper ports in the top module.
 """
-function connectCommonPorts_mlay!(v::Vmodule, x::Layergraph)
+function connectCommonPorts_mlay!(v::Vmodule, x::Mmodgraph)
 
     vpush!(v, commonports...)
 
@@ -561,13 +572,13 @@ function connectCommonPorts_mlay!(v::Vmodule, x::Layergraph)
 end
 
 """
-    layer2vmod!(x::Layergraph; name = "Layers")::Vector{Vmodule}
+    layer2vmod!(x::Mmodgraph; name = "Layers")::Vector{Vmodule}
 
-Generate a list of `Vmodule` objects from `Layergraph`.
+Generate a list of `Vmodule` objects from `Mmodgraph`.
 
 `x` may change its content through the evaluation.
 """
-function layer2vmod!(x::Layergraph; name = "Layers")::Vector{Vmodule}
+function layer2vmod!(x::Mmodgraph; name = "Layers")::Vector{Vmodule}
     # toplevel module 
     v = Vmodule(name)
 

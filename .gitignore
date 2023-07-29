@@ -4,15 +4,17 @@
 !/src/testonlyexport.jl
 /src/myaxim.v
 
-/docs/make.jl
 /docs/build
+/docs/assets
 
 /src/project_1/
 
 notes.md
 
-*.png
+/*.png
+/src/*.png
 *.txt
+*.drawio
 /src/*.sv
 /src/*.v
 !samples/**.sv

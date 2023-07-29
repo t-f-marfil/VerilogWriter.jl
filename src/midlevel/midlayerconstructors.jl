@@ -10,10 +10,10 @@ Midmodule(t::Midmoduletype, s) = Midmodule(t, Vmodule(s))
 
 # Layerconn(x) = Layerconn(0, x)
 Layerconn(x::Layerconn) = x
-Layerconn() = Layerconn(Set{Pair{Oneport, Oneport}}())
+Layerconn() = Layerconn(OrderedSet{Pair{Oneport, Oneport}}())
 # Layerconn(pid::Int, x::Pair{Oneport, Oneport}) = Layerconn(pid, Set([x]))
 # Layerconn(pid::Int, x::T) where {T <: AbstractArray} = Layerconn(pid, Set(x))
-Layerconn(x::Pair{Oneport, Oneport}) = Layerconn(Set([x]))
-Layerconn(x::T) where {T <: AbstractArray} = Layerconn(Set(x))
+Layerconn(x::Pair{Oneport, Oneport}) = Layerconn(OrderedSet([x]))
+Layerconn(x::T) where {T <: AbstractArray} = Layerconn(OrderedSet(x))
 
-Layergraph() = Layergraph(OrderedDict{Pair{Midmodule, Midmodule}, Layerconn}(), Set{Midmodule}())
+Mmodgraph() = Mmodgraph(OrderedDict{Pair{Midmodule, Midmodule}, Layerconn}(), Set{Midmodule}())

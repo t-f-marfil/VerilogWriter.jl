@@ -1,13 +1,13 @@
 export
     Midmoduletype, Midmodule, 
-    Layerconn, Midport, Layergraph,
+    Layerconn, Midport, Mmodgraph,
     defaultMidPid,
     IntermmodSigtype
 
 export
     dotgen,
-    Reglayer, Randlayer, FIFOlayer,
-    @FIFOlayer, @Randlayer
+    Regmmod, Randmmod, FIFOmmod,
+    @FIFOmmod, @Randmmod
 
 for myenum in [Midmoduletype, IntermmodSigtype]
     for i in instances(myenum)
