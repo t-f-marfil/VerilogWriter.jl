@@ -1,8 +1,8 @@
 name: CI
 on:
   push:
-    # branches:
-    #   - master
+    branches:
+      - master
     tags: '*'
   pull_request:
 concurrency:
@@ -14,11 +14,13 @@ jobs:
   test:
     name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
     runs-on: ${{ matrix.os }}
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     strategy:
       fail-fast: false
       matrix:
         version:
-          - '1.7'
+          - '1.9'
           - 'nightly'
         os:
           - ubuntu-latest
@@ -34,3 +36,5 @@ jobs:
       - uses: julia-actions/cache@v1
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
+      - uses: julia-actions/julia-processcoverage@v1
+      - uses: codecov/codecov-action@v3

@@ -1,7 +1,10 @@
 module VerilogWriter
 
+include("includedeps.jl")
+
 export 
-    showfield, vshow
+    # showfield, 
+    vshow
 
 export
     Oneparam, Parameters,
@@ -21,23 +24,32 @@ export
     oneparam, parameters, @oneparam, @parameters,
     portoneline, ports, @portoneline, @ports,
     onelocalparam, localparams, @onelocalparam, @localparams,
+    @oneport,
     wireexpr, @wireexpr,
     decloneline, decls, @decloneline, @decls,
-    oneblock, ifcontent, ralways, always, @oneblock, @ifcontent, @always, @ralways
+    # oneblock, 
+    ifcontent, 
+    # ralways, 
+    always, combffsplit,
+    # @oneblock, 
+    @ifcontent, 
+    @always,
+    @cpalways,
+    @ralways
 
 export 
     paramsolve, paramcalc
 
 export 
-    ifadd!, 
+    ifadd!, addatype!,
     invport, invports, 
-    declmerge,
+    # declmerge,
     @sym2wire,
-    alloutreg,
+    alloutreg, alloutwire, alloutlogic,
     naiveinst,
     wrappergen,
     @preport,
-    finalized,
+    vfinalize,
     vexport
 
 export 
@@ -47,15 +59,45 @@ export
     wireextract, wireextract!,
     lhsextract, lhsunify, autoreset, autoreset!, isreset,
     defclk, defrst,
-    Vmodenv, autodecl, autodecl_core, mergedeclenv
+    Vmodenv, autodecl, autodecl_core
+    #  mergedeclenv
 
 export 
     FSM, @FSM, fsmconv, transadd!, @tstate, transcond
 
+export
+    getname, getwidth, getsensitivity, getifcont,
+    getdirec, getports, vrename
+
+export showfield
+
+macro listtestonly(args)
+    strs = Symbol[]
+    for arg in args.args 
+        if arg isa Symbol 
+            push!(strs, arg)
+        else
+            arg.head == :macrocall || error("$(arg) is not accepted")
+            # macroname
+            push!(strs, arg.args[1])
+        end
+    end
+    :($([string(s) for s in strs]))
+end
+
+const testonlyvars = @listtestonly (
+    # showfield,
+    
+    oneblock, @oneblock, 
+    ralways
+)
+include("testonlyexport.jl")
+
+
 # priority for files declaring `struct`s
 
 include("codegenfunc.jl")
-include("vstructs.jl")
+include("includestructs.jl")
 
 for myenum in [Portdirec, Wiretype, Wireop, Atype, Edge]
     for i in instances(myenum)
@@ -63,23 +105,17 @@ for myenum in [Portdirec, Wiretype, Wireop, Atype, Edge]
     end
 end
 
-include("baseutils.jl")
-include("textutils.jl")
-include("vstructhandlers.jl")
-include("vconstructors.jl")
-include("rawparser.jl")
-include("alwaysinference.jl")
-include("paramsolve.jl")
+# include("includecore.jl")
+# include(joinpath(@__DIR__, "midlevel", "main.jl"))
+libs = [
+    "core",
+    "midlevel"
+]
+for lib in libs
+    include(joinpath(@__DIR__, lib, "main.jl"))
+end
 
-include("vopoverloads.jl")
 
-include("fsm.jl")
-
-include("autoreset.jl")
-include("widthinference.jl")
-
-include("vstring.jl")
-include("vpush.jl")
-
+include("exportMidlevel.jl")
 
 end

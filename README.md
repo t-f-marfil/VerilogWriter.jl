@@ -1,16 +1,13 @@
 # VerilogWriter.jl
+[![CI](https://github.com/t-f-marfil/VerilogWriter.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/t-f-marfil/VerilogWriter.jl/actions/workflows/CI.yml)[![codecov](https://codecov.io/gh/t-f-marfil/VerilogWriter.jl/branch/master/graph/badge.svg?token=2JM0REZRDK)](https://codecov.io/gh/t-f-marfil/VerilogWriter.jl)
 
-[![CI](https://github.com/t-f-marfil/VerilogWriter.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/t-f-marfil/VerilogWriter.jl/actions/workflows/CI.yml)
-
-A package to generate Verilog/SystemVerilog codes and offer an introductory HLS (high level synthesis) on Julia.
+A package to generate Verilog/SystemVerilog codes (primarily targeted on FPGAs) and offer an introductory HLS (high level synthesis) on Julia.
 
 You may:
 + Convert Verilog-like Julia code into objects
 + Automatically infer wire width in always-blocks
 + Construct Finite State Machines in a simple method
-
 Examples and full documents are available [here](https://t-f-marfil.github.io/VerilogWriter.jl/).
-
 ## Brief Introduction 
 
 If you have IJulia locally, execute
@@ -70,48 +67,48 @@ c = always(:(
         reg5 <= 0
     end
 ))
-autoreset!(c)
-env = Vmodenv(Parameters(), ps, Localparams(), ds)
-ad = autodecl(c, env)
 
-vshow(ad)
-vshow(c)
+m = Vmodule("test")
+vpush!.(m, (ps, ds, c))
+vshow(vfinalize(m))
 ```
 
 ###### Out[3]
 
 ```systemverilog
-input b1
-input CLK
-input RST
+module test (
+    input b1,
+    input CLK,
+    input RST
+);
+    reg [7:0] dreg1;
+    logic [7:0] reg1;
+    logic [1:0] reg2;
+    logic reg3;
+    logic [7:0] reg4;
+    logic [31:0] reg5;
 
-reg [7:0] dreg1;
-reg [7:0] reg1;
-reg [1:0] reg2;
-reg reg3;
-reg [7:0] reg4;
-reg [31:0] reg5;
-type: Vmodenv
-always_ff @( posedge CLK ) begin
-    if (RST) begin
-        reg1 <= 0;
-        reg2 <= 0;
-        reg3 <= 0;
-        reg4 <= 0;
-        reg5 <= 0;
-    end else begin
-        reg1 <= dreg1;
-        if (b1) begin
-            reg2 <= reg1[7:6];
-            reg3 <= reg1[0];
-            reg4 <= reg1;
-            reg5 <= 32'd4;
-        end else begin
+    always_ff @( posedge CLK ) begin
+        if (RST) begin
+            reg1 <= 0;
+            reg2 <= 0;
+            reg3 <= 0;
+            reg4 <= 0;
             reg5 <= 0;
+        end else begin
+            reg1 <= dreg1;
+            if (b1) begin
+                reg2 <= reg1[7:6];
+                reg3 <= reg1[0];
+                reg4 <= reg1;
+                reg5 <= 32'd4;
+            end else begin
+                reg5 <= 0;
+            end
         end
     end
-end
-type: Alwayscontent
+endmodule
+type: Vmodule
 ```
 
 (of course this verilog module itself is far from being useful.)

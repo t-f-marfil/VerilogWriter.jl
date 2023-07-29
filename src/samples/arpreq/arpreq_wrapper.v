@@ -1,0 +1,46 @@
+module arpreq_wrapper (
+    input transinit,
+    input [1:0] bresp,
+    input bvalid,
+    output bready,
+    output [12:0] awaddr,
+    output awvalid,
+    input awready,
+    input wready,
+    output wvalid,
+    output [3:0] wstrb,
+    output [31:0] wdata,
+    input arready,
+    output arvalid,
+    output [12:0] araddr,
+    input [31:0] rdata,
+    input [1:0] rresp,
+    output rready,
+    input rvalid,
+    input CLK,
+    input RST
+);
+    arpreq uarpreq (
+        .transinit_v(transinit),
+        .bresp_v(bresp),
+        .bvalid_v(bvalid),
+        .bready_v(bready),
+        .awaddr_Waddr(awaddr),
+        .awvalid_Waddr(awvalid),
+        .awready_Waddr(awready),
+        .wready_Wdata(wready),
+        .wvalid_Wdata(wvalid),
+        .wstrb_Wdata(wstrb),
+        .wdata_Wdata(wdata),
+        .arready_Raddr(arready),
+        .arvalid_Raddr(arvalid),
+        .araddr_Raddr(araddr),
+        .rdata_Rdata(rdata),
+        .rresp_Rdata(rresp),
+        .rready_Rdata(rready),
+        .rvalid_Rdata(rvalid),
+        .CLK(CLK),
+        .RST(RST)
+    );
+
+endmodule

@@ -1,296 +1,153 @@
-# What You Can Do with `VerilogWriter.jl`
-
+# VerilogWriter.jl
 ```@meta 
 CurrentModule = VerilogWriter
-DocTestSetup = quote
-    using VerilogWriter
-end
+```
+```@setup top
+using VerilogWriter
 ```
 
-## Convert Verilog-like Julia Code into Objects
 
-```jldoctest
-julia> a = @portoneline @in x;
+A package to generate Verilog/SystemVerilog codes (primarily targeted on FPGAs) and offer an introductory HLS (high level synthesis) on Julia.
 
-julia> vshow(a);
-input x
-type: Oneport
+You may:
++ Convert Verilog-like Julia code into objects
++ Automatically infer wire width in always-blocks
++ Construct Finite State Machines in a simple method
+## Brief Introduction 
 
-julia> b = @portoneline @out @reg 8 d1, d2;
-
-julia> vshow(b);
-output reg [7:0] d1
-type: Oneport
-output reg [7:0] d2
-type: Oneport
+If you have IJulia locally, execute
+###### In[1]
+```Julia
+using VerilogWriter
 ```
-```jldoctest
-c = @always (
-    @posedge clk;
-    
-    d1 <= d2 + d3;
-    if b1 && b2
-        d4 <= d5 ^ d6 
-    else
-        d4 <= ~d4[7:0] 
+(or make `.jl` file and execute codes with `julia <filename>.jl` instead.) and then
+
+###### In[2]
+```Julia
+x = @always (
+    dout = d1 + d2;
+    if b1
+        dout = ~d1
+    elseif b2 
+        dout = ~d2
     end
 )
-vshow(c)
+vshow(x)
+```
 
-# output
+(note that variables such as `dout`, `b1` are not declared anywhere.)
 
-always_ff @( posedge clk ) begin
-    d1 <= (d2 + d3);
-    if ((b1 && b2)) begin
-        d4 <= (d5 ^ d6);
-    end else begin
-        d4 <= ~d4[7:0];
+and now you see the following:
+
+###### Out[2]
+```systemverilog
+always_comb begin
+    dout = (d1 + d2);
+    if (b1) begin
+        dout = ~d1;
+    end else if (b2) begin
+        dout = ~d2;
     end
 end
 type: Alwayscontent
 ```
-```jldoctest
-prs = @parameters splind = 5
 
+Another example is 
+###### In[3]
+```Julia
 ps = @ports (
-    @in clk, sig1, sig2;
-    @in 8 din, din2;
-    @out @reg 8 dout
+    @in b1, CLK, RST
 )
-
 ds = @decls (
-    @reg 8 dbuf
+    @reg 8 dreg1
 )
-
-proc = @always (
-    @posedge clk;
-
-    if sig2 && |(din2)
-        dbuf <= din 
-    elseif sig1 ^ sig2
-        dout[7:splind] <= dbuf[7:splind]
-        dout[splind-1:0] <= din[splind-1:0]
-    else
-        dout <= ~din 
-    end
-)
-
-mymod = Vmodule(
-    "mymodule",
-    prs,
-    ps,
-    ds,
-    Assign[],
-    [proc]
-)
-
-vshow(mymod, systemverilog=false)
-
-# output
-
-module mymodule #(
-    parameter splind = 5
-)(
-    input clk,
-    input sig1,
-    input sig2,
-    input [7:0] din,
-    input [7:0] din2,
-    output reg [7:0] dout
-);
-    reg [7:0] dbuf;
-
-    always @( posedge clk ) begin
-        if ((sig2 && |(din2))) begin
-            dbuf <= din;
-        end else if ((sig1 ^ sig2)) begin
-            dout[7:splind] <= dbuf[7:splind];
-            dout[(splind - 1):0] <= din[(splind - 1):0];
-        end else begin
-            dout <= ~din;
-        end
-    end
-endmodule
-type: Vmodule
-```
-
-
-You may also create objects from constructors and apply some operations.
-```jldoctest
-julia> c = Wireexpr("wire1");
-
-julia> d = Wireexpr("wire2");
-
-julia> e = @wireexpr wire3 << 5;
-
-julia> vshow((c & d) + e);
-((wire1 & wire2) + (wire3 << 5))
-type: Wireexpr
-```
-
-## Embed Generated Objects Back into Verilog-like Codes
-
-Using [metaprogramming](https://docs.julialang.org/en/v1/manual/metaprogramming/), you would do, for example, 
-
-```jldoctest
-a = @always (
-    d1 = d2 + d3;
-    d4 = d4 & d5
-)
-b = always(:(
-    $(a);
-    if b1 == b2 
-        d6 = ~d7
+c = always(:(
+    reg1 <= dreg1;
+    if b1 
+        reg2 <= reg1[7:6]
+        reg3 <= reg1[0]
+        reg4 <= reg1
+        reg5 <= $(Wireexpr(32, 4))
+    else 
+        reg5 <= 0
     end
 ))
-vshow(b)
 
-# output
-
-always_comb begin
-    d1 = (d2 + d3);
-    d4 = (d4 & d5);
-    if ((b1 == b2)) begin
-        d6 = ~d7;
-    end
-end
-type: Alwayscontent
+m = Vmodule("test")
+vpush!.(m, (ps, ds, c))
+vshow(vfinalize(m))
 ```
 
-Note that you cannot use macros when embedding objects in Verilog-like codes.
+###### Out[3]
 
-One application of this syntax would be 
-```jldoctest
-a = @ports (
-    @in 8 bus1, bus2;
-    @out 8 bus3
-)
-send = Vmodule(
-    "send",
-    ports(:(
-        @in sendin;
-        $(a)
-    )),
-    Decls(),
-    Alwayscontent[]
-)
-recv = Vmodule(
-    "recv",
-    ports(:(
-        @in recvin;
-        $(invports(a))
-    )),
-    Decls(),
-    Alwayscontent[]
-)
-vshow(send)
-println()
-vshow(recv)
-
-# output
-
-module send (
-    input sendin,
-    input [7:0] bus1,
-    input [7:0] bus2,
-    output [7:0] bus3
+```systemverilog
+module test (
+    input b1,
+    input CLK,
+    input RST
 );
+    reg [7:0] dreg1;
+    logic [7:0] reg1;
+    logic [1:0] reg2;
+    logic reg3;
+    logic [7:0] reg4;
+    logic [31:0] reg5;
 
-endmodule
-type: Vmodule
-
-module recv (
-    input recvin,
-    output [7:0] bus1,
-    output [7:0] bus2,
-    input [7:0] bus3
-);
-
+    always_ff @( posedge CLK ) begin
+        if (RST) begin
+            reg1 <= 0;
+            reg2 <= 0;
+            reg3 <= 0;
+            reg4 <= 0;
+            reg5 <= 0;
+        end else begin
+            reg1 <= dreg1;
+            if (b1) begin
+                reg2 <= reg1[7:6];
+                reg3 <= reg1[0];
+                reg4 <= reg1;
+                reg5 <= 32'd4;
+            end else begin
+                reg5 <= 0;
+            end
+        end
+    end
 endmodule
 type: Vmodule
 ```
 
-where you can construct `Ports` objects first and embed them in multiple modules.
+(of course this verilog module itself is far from being useful.)
 
-## Wire Width Inference
+## Introduction
 
-```jldoctest wwi; output=false
-ds = @decls (
-    @wire dwire1;
-    @wire 10 dwire2
-)
+This package offers a simple method to write on Julia Verilog/SystemVerilog codes not as raw strings but as objects with certain structures, such as always-block-objects, port-declaration-objects, and so on (not as sophisticated as, for example, Chisel is, though).
 
-c = @ifcontent (
-    reg1 = 0;
-    reg2 = 0;
-    if dwire1
-        reg1 = dwire2[0] & dwire2[1]
-        reg2 = dwire2 + 1
-    end
-)
+The motivation here is that it would be nice if we could write Verilog/SystemVerilog with the power of the Julia language, with a minimal amount of additional syntaxes (function calls, constructors, etc.). 
 
-env = Vmodenv(
-    Parameters(),
-    Ports(),
-    Localparams(),
-    ds
-)
+As in the examples above, we offer, for instance, simple macros to convert Verilog-like Julia code into certain objects that have proper structure found in Verilog codes.
 
-# output
+## Usage 
 
-Vmodenv(Parameters(Oneparam[]), Ports(Oneport[]), Localparams(Onelocalparam[]), Decls(Onedecl[Onedecl(wire, Wireexpr(literal, "", Wireexpr[], -1, 1), "dwire1", false, Wireexpr(id, "", Wireexpr[], -1, -1)), Onedecl(wire, Wireexpr(literal, "", Wireexpr[], -1, 10), "dwire2", false, Wireexpr(id, "", Wireexpr[], -1, -1))]))
+This module is not yet registered, so
+```Julia
+using Pkg
+Pkg.add(PackageSpec(url="https://github.com/t-f-marfil/VerilogWriter.jl"))
 ```
-
-```jldoctest wwi
-julia> autodecl(c); # fail in width inference with no additional information
-ERROR: Wire width cannot be inferred for the following wires.
-1. dwire1
-2. reg2 = dwire2
-
-julia> nenv = autodecl(c, env); vshow(nenv); # using information in `env`
-wire dwire1;
-wire [9:0] dwire2;
-reg reg1;
-reg [9:0] reg2;
-type: Vmodenv
+would work. Or simply 
 ```
-
-## Easy construction of Finite State Machines
-
-```jldoctest
-julia> fsm = @FSM nstate (uno, dos, tres); # create a new Finite State Machine
-
-julia> transadd!(fsm, (@wireexpr b1 == b2), @tstate uno => dos); # transition from "uno" to "dos"
-
-julia> transadd!(fsm, (@wireexpr b3), @tstate uno => tres); # "uno" to "tres"
-
-julia> transadd!(fsm, (@wireexpr b4), "dos" => "uno"); # "dos" to "uno"
-
-julia> vshow(fsm);
-reg [1:0] nstate;
-
-localparam uno = 0;
-localparam dos = 1;
-localparam tres = 2;
-
-case (nstate)
-    uno: begin
-        if ((b1 == b2)) begin
-            nstate <= dos;
-        end else if (b3) begin
-            nstate <= tres;
-        end
-    end
-    dos: begin
-        if (b4) begin
-            nstate <= uno;
-        end
-    end
-    tres: begin
-        
-    end
-endcase
-type: FSM
+git clone "https://github.com/t-f-marfil/VerilogWriter.jl"
 ```
+and try `tutorial.ipynb` in `/src`.
 
-You may need to include the case statement inside an always block.
+Dockerfile to build environment with julia and this module is also available in this repository.
+
+
+## What is Left to be Done
+
+It seems too many things are left to be done to make this `VerilogWriter.jl`, at least to some extent, useful, but to list few of them, 
+
+### Unsupported Syntaxes
+Lots of operators and syntaxes in Verilog/SystemVerilog is not supported (e.g. for, generate for, interfaces, tasks, always_latch, some of indexed part select, and so on), although some of them can be replaced by using Julia syntaxes instead (e.g. using Julia for loop and generate multiple `always` blocks instead of Verilog), or rather it is better to use Julia-for instead to make use of the power of Julia language (Verilog for-loop which changes its behavior according to parameters of the module cannot be imitated this way).
+
+### Not Enough Handlers of the Structs 
+We offer here some structs to imitate what is done in Verilog codes, but few functions to handle them are offered together. Still you can construct some more functions to handle the structs offered here, making it a little easier to make more complex Verilog modules.

@@ -6,9 +6,6 @@ DocTestSetup = quote
     using VerilogWriter
 end
 ```
-```@setup top
-using VerilogWriter
-```
 
 We offer some tools to automatically add additional information inferred from a given Verilog-like codes.
 
@@ -30,5 +27,5 @@ autodecl
 `env` in an argument for `autodecl` is of type `Vmodenv`.
 
 ```@docs
-finalized
+vfinalize
 ```
