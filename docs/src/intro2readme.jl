@@ -13,7 +13,7 @@ function main()
     # body starts from line 10
     for ind in 10:length(lines)
         if startswith(lines[ind], "## Brief Introduction")
-            outtxt = string(outtxt, "\n", doclink)
+            outtxt = string(outtxt, "\n\n", doclink)
         end
 
         line = replace(lines[ind], r"jldoctest[.]*" => "Julia")

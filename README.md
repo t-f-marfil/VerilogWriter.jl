@@ -7,6 +7,7 @@ You may:
 + Convert Verilog-like Julia code into objects
 + Automatically infer wire width in always-blocks
 + Construct Finite State Machines in a simple method
+
 Examples and full documents are available [here](https://t-f-marfil.github.io/VerilogWriter.jl/).
 ## Brief Introduction 
 
@@ -56,7 +57,7 @@ ps = @ports (
 ds = @decls (
     @reg 8 dreg1
 )
-c = always(:(
+c = @always (
     reg1 <= dreg1;
     if b1 
         reg2 <= reg1[7:6]
@@ -66,7 +67,7 @@ c = always(:(
     else 
         reg5 <= 0
     end
-))
+)
 
 m = Vmodule("test")
 vpush!.(m, (ps, ds, c))

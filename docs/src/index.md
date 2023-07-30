@@ -61,7 +61,7 @@ ps = @ports (
 ds = @decls (
     @reg 8 dreg1
 )
-c = always(:(
+c = @always (
     reg1 <= dreg1;
     if b1 
         reg2 <= reg1[7:6]
@@ -71,7 +71,7 @@ c = always(:(
     else 
         reg5 <= 0
     end
-))
+)
 
 m = Vmodule("test")
 vpush!.(m, (ps, ds, c))
