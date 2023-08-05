@@ -11,6 +11,7 @@
 obj_dir/
 
 notes.md
+test.ipynb
 
 /*.png
 /src/*.png
