@@ -68,3 +68,23 @@ function tupsep3(tup)
     f.(tup)
     resize!(v1, count1), resize!(v2, count2)
 end
+
+"""
++ using IOBuffer is significantly faster
+"""
+function strpush1(n)
+    ans = string()
+    c = 'c'
+    for _ in 1:n
+        ans = string(ans, c)
+    end
+    return ans
+end
+function strpush2(n)
+    ans = IOBuffer()
+    c = 'c'
+    for _ in 1:n
+        write(ans, c)
+    end
+    return String(take!(ans))
+end
