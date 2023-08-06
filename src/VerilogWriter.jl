@@ -33,6 +33,7 @@ export
     always, combffsplit,
     # @oneblock, 
     @ifcontent, 
+    @alassign_comb, @alassign_ff,
     @always,
     @cpalways,
     @ralways
@@ -54,6 +55,14 @@ export
 
 export 
     vpush!
+
+# verilog debug
+export
+    verilatorSimrun
+
+# vpatch
+export 
+    posedgePrec, bitbundle
 
 export
     wireextract, wireextract!,
