@@ -16,6 +16,7 @@ const pathbasic = [
     "vpush.jl", 
     "accessor.jl",
     "verilator.jl",
+    "stdpatch.jl",
 ]
 
 for p in pathbasic
