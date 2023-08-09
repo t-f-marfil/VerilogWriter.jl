@@ -9,6 +9,10 @@ function getmmod(x::Midport)
     x.mmod
 end
 
+function getvmod(x::Midmodule)
+    x.vmod
+end
+
 function getpid(x::Midport)
     x.pid
 end

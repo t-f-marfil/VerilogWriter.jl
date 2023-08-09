@@ -138,6 +138,7 @@ Wireexpr(op::Wireop, w::Wireexpr...) = Wireexpr(op, [w...])
 # e.g. :($(some_symbol)[1])
 Wireexpr(op::Wireop, uno, dos) = Wireexpr(op, Wireexpr(uno), Wireexpr(dos))
 
+Wireexpr(p::Oneport) = Wireexpr(getname(p))
 
 Alassign(lhs, rhs) = Alassign(lhs, rhs, aunknown)
 
