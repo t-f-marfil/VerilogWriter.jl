@@ -81,11 +81,11 @@ Convert Symbol to String and construct Wireexpr.
 """
 Wireexpr(n::Symbol) = Wireexpr(string(n))
 """
-    Wireexpr(n::Int)
+    Wireexpr(n::Integer)
 
 Literal of Integer.
 """
-Wireexpr(n::Int) = Wireexpr(-1, n)
+Wireexpr(n::Integer) = Wireexpr(-1, n)
 # Wireexpr(n::Int) = Wireexpr(literal, "", [], -1, n)
 """
     Wireexpr(w::Integer, n::Integer)

@@ -63,7 +63,7 @@ export
 # vpatch
 export 
     PrivateWireNameGen, Vpatch,
-    posedgePrec, bitbundle
+    posedgePrec, bitbundle, nonegedge, posedgeSync
 
 export
     wireextract, wireextract!,
