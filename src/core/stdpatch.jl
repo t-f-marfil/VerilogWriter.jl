@@ -13,10 +13,6 @@ struct Vpatch{T<:Tuple}
 end
 Vpatch(args...) = Vpatch(args)
 
-function patchmerge(ps::Vpatch...)
-    return Vpatch(ps)
-end
-
 function vpush!(v::Vmodule, p::Vpatch)
     vpush!.(v, p.data)
     return
@@ -54,7 +50,7 @@ function posedgePrec(earlier::Wireexpr, later::Wireexpr, name::AbstractString)
         $buflater <= $later | $buflater;
 
         $buffedearlier = $bufearlier | $earlier | $(Wireexpr(1, 0));
-        $buffedlater = $buflater | $buflater | $(Wireexpr(1, 0));
+        $buffedlater = $buflater | $later | $(Wireexpr(1, 0));
 
         $answire[1] = $buffedearlier | $buffedlater;
         $ans1buf <= $answire[1] | $ans1buf;

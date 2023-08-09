@@ -5,6 +5,7 @@ Add new connection between Midmodules.
 """
 function (cls::Mmodgraph)(p::Pair{Midport, Midport}, args...)
     dfp, ufp = p
+    isnothing(get(cls.edges, (dfp => ufp), nothing)) || error("pair dfp => ufp is already registered")
     push!(cls.edges, (dfp => ufp) => Layerconn(args...))
 
     push!(cls.layers, getmmod(dfp))
@@ -251,10 +252,12 @@ end
 
 function portmatch_uc(a::Oneport, b::Oneport)
     directest = getdirec(a) == getdirec(b)
-    widthtest = isequal(getwidth(a), getwidth(b)) # comparing wireexpr
+    # width may not have been inferred at this point
+    # widthtest = isequal(getwidth(a), getwidth(b)) # comparing wireexpr
     nametest = getname(a) == getname(b)
 
-    return directest & widthtest & nametest
+    # return directest & widthtest & nametest
+    return directest & nametest
 end
 
 """
@@ -592,6 +595,8 @@ function layer2vmod!(x::Mmodgraph; name = "Layers")::Vector{Vmodule}
     hubs = imconnect_mlay!(v, x)
     
     # connect unconnected ports to outer ports
+    # currently doing this before `vfinalize`,
+    # port of unknown width should not exist at this time
     bypassUnconnected_mlay!(v, x)
 
     connectCommonPorts_mlay!(v, x)

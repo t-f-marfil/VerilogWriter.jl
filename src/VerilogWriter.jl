@@ -62,6 +62,7 @@ export
 
 # vpatch
 export 
+    PrivateWireNameGen, Vpatch,
     posedgePrec, bitbundle
 
 export

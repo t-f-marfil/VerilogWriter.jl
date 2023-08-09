@@ -12,5 +12,5 @@ function debugAdd!(m::Midmodule, n::AbstractString, wid=-1)
     dbgal = @always $dname = $n
 
     vpush!.(m, (dbgpdecl, dbgal))
-    return nothing
+    return @oneport @out @logic $wid $(wirenamemodgen(getvmod(m))(dname))
 end

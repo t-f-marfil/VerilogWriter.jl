@@ -148,38 +148,45 @@ function verilatorSimrun(dut::Vmodule, tplen::Integer, cycles::Integer)
     @assert acceptableInVerilatorTest(dut, tplen)
 
     dirnow = pwd()
-    vworkdir = "tmpverilatorsim"
-    isdir(vworkdir) && error("$vworkdir already exists, files in the directory would be lost")
 
-    mkdir(vworkdir)
-    cd(vworkdir)
-    # get vmodule and generate vmodule, testbench file
+    try
+        vworkdir = "tmpverilatorsim"
+        isdir(vworkdir) && error("$vworkdir already exists, files in the directory would be lost")
 
-    tbfile = "testbench.sv"
-    tbcpp = "testbench.cpp"
-    dutfile = "dut.sv"
-    verilatorTestbenchGen(tbfile, tplen, cycles)
-    verilatorCppGen(tbcpp)
-    open(dutfile, "w") do iodut
-        vexport(iodut, dut)
+        mkdir(vworkdir)
+        cd(vworkdir)
+        # get vmodule and generate vmodule, testbench file
+
+        tbfile = "testbench.sv"
+        tbcpp = "testbench.cpp"
+        dutfile = "dut.sv"
+        verilatorTestbenchGen(tbfile, tplen, cycles)
+        verilatorCppGen(tbcpp)
+        open(dutfile, "w") do iodut
+            vexport(iodut, dut)
+        end
+
+        compilecmd = `verilator --cc -Wall $tbfile $dutfile --exe $tbcpp`
+        run(compilecmd)
+
+        cd("obj_dir")
+        bufignore = IOBuffer()
+        makecmd = `make -f Vtestbench.mk`
+        # prevent log for make from being displayed in the terminal where julia is running
+        run(pipeline(makecmd, stdout=bufignore, stderr=bufignore))
+
+        outbuf = IOBuffer()
+        simruncmd = `./Vtestbench`
+        run(pipeline(simruncmd, stdout=outbuf))
+        seek(outbuf, 0)
+
+        cd(dirnow)
+        rm(vworkdir, force=true, recursive=true)
+        
+        return parseVerilatorSimResult(outbuf, tplen)
+    catch
+        cd(dirnow)
+        rm(vworkdir, force=true, recursive=true)
+        rethrow()
     end
-
-    compilecmd = `verilator --cc $tbfile $dutfile --exe $tbcpp`
-    run(compilecmd)
-
-    cd("obj_dir")
-    bufignore = IOBuffer()
-    makecmd = `make -f Vtestbench.mk`
-    # prevent log for make from being displayed in the terminal where julia is running
-    run(pipeline(makecmd, stdout=bufignore, stderr=bufignore))
-
-    outbuf = IOBuffer()
-    simruncmd = `./Vtestbench`
-    run(pipeline(simruncmd, stdout=outbuf))
-    seek(outbuf, 0)
-
-    cd(dirnow)
-    rm(vworkdir, force=true, recursive=true)
-
-    return parseVerilatorSimResult(outbuf, tplen)
 end
