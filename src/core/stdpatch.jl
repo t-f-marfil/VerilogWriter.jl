@@ -88,3 +88,58 @@ end
 function bitbundle(wvec)
     bitbundle(wvec, "")
 end
+
+function nonegedge(uno::Wireexpr, name::AbstractString)
+    ans = string("_nonegedge_", name)
+    pvg = PrivateWireNameGen(ans)
+
+    negedgenow = pvg("_nedge")
+    prevwire = pvg("_prev")
+    negedgebuf = pvg("_ansbuf")
+    al = @cpalways (
+        $prevwire <= $uno;
+        $negedgebuf <= $negedgenow | $negedgebuf;
+
+        $negedgenow = $prevwire & ~$uno;
+        $ans = $(Wireexpr(1, 0)) | ~($negedgenow | $negedgebuf);
+    )
+
+    return ans, Vpatch(al)
+end
+function nonegedge(uno::Wireexpr)
+    nonegedge(uno, "")
+end
+
+function posedgeSync(uno::Wireexpr, dos::Wireexpr, name::AbstractString)
+    answire = string("_posedgeSync_", name)
+    pvg = PrivateWireNameGen(answire)
+
+    edgedetectedbuf = pvg("_edgedetectedbuf")
+    edgedetectedcomb = pvg("_edgedetectedcomb")
+    firstedge = pvg("_firstedge")
+
+    unoaccum = pvg("_unobuf")
+    dosaccum = pvg("_dosbuf")
+
+    ansbuf0 = pvg("_ansbuf0")
+
+    als = @cpalways (
+        $edgedetectedcomb = $uno | $dos | $(Wireexpr(1, 0));
+        $edgedetectedbuf <= $edgedetectedcomb | $edgedetectedbuf;
+        $answire[1] = $edgedetectedcomb | $edgedetectedbuf;
+        $firstedge = ~$edgedetectedbuf & $edgedetectedcomb;
+
+        $answire[0] = 0;
+        if $firstedge
+            $answire[0] = $uno & $dos
+            $ansbuf0 <= $answire[0]
+        elseif $edgedetectedbuf
+            $answire[0] = $ansbuf0
+        end
+    )
+
+    return Wireexpr(answire), Vpatch(als..., @decls @logic 2 $answire)
+end
+function posedgeSync(uno::Wireexpr, dos::Wireexpr)
+    posedgeSync(uno, dos, "")
+end

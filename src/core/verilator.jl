@@ -151,7 +151,10 @@ function verilatorSimrun(dut::Vmodule, tplen::Integer, cycles::Integer)
 
     try
         vworkdir = "tmpverilatorsim"
-        isdir(vworkdir) && error("$vworkdir already exists, files in the directory would be lost")
+        if isdir(vworkdir)
+            println("$vworkdir already exists in $dirnow, files in the directory would be lost")
+            rm(vworkdir, force=true, recursive=true)
+        end
 
         mkdir(vworkdir)
         cd(vworkdir)
@@ -186,7 +189,6 @@ function verilatorSimrun(dut::Vmodule, tplen::Integer, cycles::Integer)
         return parseVerilatorSimResult(outbuf, tplen)
     catch
         cd(dirnow)
-        rm(vworkdir, force=true, recursive=true)
         rethrow()
     end
 end
