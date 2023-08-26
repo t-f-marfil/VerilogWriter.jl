@@ -5,7 +5,7 @@ include("testutils.jl")
 @testonlyexport()
 
 tpaths = readdir(joinpath(@__DIR__, "core"), join=true)
-# tpaths = vcat([], readdir(joinpath(@__DIR__, "midlevel"), join=true))
+tpaths = [tpaths; readdir(joinpath(@__DIR__, "midlevel"), join=true)]
 
 macro testconduct(tpath)
     quote

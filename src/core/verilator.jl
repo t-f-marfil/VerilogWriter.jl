@@ -76,6 +76,9 @@ function verilatorCppGen(fname::AbstractString)
     end
 end
 
+function acceptableInVerilatorTest(v::Vector{Vmodule}, tplen)
+    return acceptableInVerilatorTest(v[begin], tplen)
+end
 function acceptableInVerilatorTest(v::Vmodule, tplen::Integer)::Bool
     expectedname = "dut"
     expectedbitports = [
@@ -109,7 +112,7 @@ function acceptableInVerilatorTest(v::Vmodule, tplen::Integer)::Bool
             println("tp should be an output port.")
             return false
         elseif !isequal(getwidth(tpport), @wireexpr $tplen)
-            println("unexpected to width, expected ", string(tplen), ", given ", string(getwidth(tpport)))
+            println("unexpected tp width, expected ", string(tplen), ", given ", string(getwidth(tpport)))
             return false
         end
     end
@@ -124,27 +127,47 @@ function acceptableInVerilatorTest(v::Vmodule, tplen::Integer)::Bool
 end
 
 
-function parseVerilatorSimResult(outbuf::IO, tplen)::Bool
-    for line in eachline(outbuf)
+function parseVerilatorSimResult(parseresultbuf::IO, simoutput::IO, tplen)::Bool
+    for line in eachline(simoutput)
         result = line == "1"^tplen
         if !result
-            println("simulation result failure, test points value: ", line)
+            # println("simulation result failure, test points value: ", line)
+            write(parseresultbuf, "simulation result failure, test points value: ", line, "\n")
         end
         return result
     end
 
     return false
 end
+function parseVerilatorSimResult(simoutput::IO, tplen)::Bool
+    return parseVerilatorSimResult(stdout, simoutput, tplen)
+end
+
+struct VerilatorOption
+    wall::Bool
+    disabledWarning::Vector{String}
+end
+function (cls::VerilatorOption)()
+    disabled = [string("-Wno-", s) for s in cls.disabledWarning]
+    if cls.wall
+        disabled = ["-Wall"; disabled]
+    end
+
+    return disabled
+end
+
+VerilatorOption(wno::Vector{String})= VerilatorOption(true, wno)
+const DEFAULT_VERILATOR_OPTION = VerilatorOption(true, String[])
 
 """
-    verilatorSimrun(dut::Vmodule, tplen::Integer, cycles::Integer)
+    verilatorSimrun(resultbuf::IO, dut::V, tplen::Integer, cycles::Integer; option::VerilatorOption=DEFAULT_VERILATOR_OPTION) where {V <: Union{Vmodule, Vector{Vmodule}}}
 
 Run simulation using Verilator.
 
 `dut` must pass `acceptableInVerilatorTest`.
 Simulation is run for `cycles` cycles, for `tplen`-many test points.
 """
-function verilatorSimrun(dut::Vmodule, tplen::Integer, cycles::Integer)
+function verilatorSimrun(resultbuf::IO, dut::V, tplen::Integer, cycles::Integer; option::VerilatorOption=DEFAULT_VERILATOR_OPTION) where {V <: Union{Vmodule, Vector{Vmodule}}}
     @assert acceptableInVerilatorTest(dut, tplen)
 
     dirnow = pwd()
@@ -169,7 +192,8 @@ function verilatorSimrun(dut::Vmodule, tplen::Integer, cycles::Integer)
             vexport(iodut, dut)
         end
 
-        compilecmd = `verilator --cc -Wall $tbfile $dutfile --exe $tbcpp`
+        compilecmd = `verilator --cc $(option()) $tbfile $dutfile --exe $tbcpp`
+        println("compile command: ", compilecmd)
         run(compilecmd)
 
         cd("obj_dir")
@@ -178,17 +202,21 @@ function verilatorSimrun(dut::Vmodule, tplen::Integer, cycles::Integer)
         # prevent log for make from being displayed in the terminal where julia is running
         run(pipeline(makecmd, stdout=bufignore, stderr=bufignore))
 
-        outbuf = IOBuffer()
+        simoutbuf = IOBuffer()
         simruncmd = `./Vtestbench`
-        run(pipeline(simruncmd, stdout=outbuf))
-        seek(outbuf, 0)
+        # error message is returned to terminal
+        run(pipeline(simruncmd, stdout=simoutbuf))
+        seek(simoutbuf, 0)
 
         cd(dirnow)
         rm(vworkdir, force=true, recursive=true)
         
-        return parseVerilatorSimResult(outbuf, tplen)
+        return parseVerilatorSimResult(resultbuf, simoutbuf, tplen)
     catch
         cd(dirnow)
         rethrow()
     end
+end
+function verilatorSimrun(dut, tplen, cycles; option::VerilatorOption=DEFAULT_VERILATOR_OPTION)
+    return verilatorSimrun(stdout, dut, tplen, cycles, option=option)
 end

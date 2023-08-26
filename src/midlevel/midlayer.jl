@@ -205,7 +205,9 @@ end
 function addCommonPortEachLayer(x::Mmodgraph)
     for ml in x.layers 
         for p in ml.lports
-            vpush!(ml.vmod, p)
+            if !(p in getports(getvmod(ml)))
+                vpush!(ml, p)
+            end
         end
     end
 
@@ -291,7 +293,7 @@ function unconnectedports_mlay(x::Mmodgraph)
         end
     end
 
-    [midl => filter(k -> !d[k], keys(d)) for (midl, d) in pconnected]
+    [midl => filter(k -> (!d[k] & !(k in commonports)), keys(d)) for (midl, d) in pconnected]
 end
 
 """
@@ -521,7 +523,7 @@ function bypassUnconnected_mlay!(v::Vmodule, x::Mmodgraph)
     npvec = Vector{Oneport}(undef, sum([length(s) for (_, s) in unconnectedvec]))
     ci = 1
     for (midl, d) in unconnectedvec
-        for p in d 
+        for p in d
             nname = outerportnamegen(getname(p), midl)
             newport = vrename(p, nname)
 

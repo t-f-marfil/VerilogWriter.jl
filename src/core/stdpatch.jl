@@ -110,6 +110,16 @@ function nonegedge(uno::Wireexpr)
     nonegedge(uno, "")
 end
 
+"""
+    posedgeSync(uno::Wireexpr, dos::Wireexpr, name::AbstractString)
+
+Return `Wireexpr` which indicates whether a rising edge is detected
+at the same clock cycle in `uno` and `dos`.
+
+## Bit field
++ [1]: 1 if edge detected in either of two wires
++ [0]: 1 if edge in `earlier` was earlier than `later`
+"""
 function posedgeSync(uno::Wireexpr, dos::Wireexpr, name::AbstractString)
     answire = string("_posedgeSync_", name)
     pvg = PrivateWireNameGen(answire)

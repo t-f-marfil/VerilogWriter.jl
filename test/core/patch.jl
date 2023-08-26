@@ -1,5 +1,20 @@
 # verilator
 
+function simDetectFailure()
+    v = Vmodule("dut")
+    tplen = 2
+    cycles = 100
+    vpush!(v, @ports (@in CLK, RST; @out @logic $tplen tp))
+    vpush!(v, @always tp = 0)
+
+    errmessage = IOBuffer()
+    expectedMessage = "simulation result failure, test points value: 00\n"
+
+    simresult = verilatorSimrun(errmessage, v, tplen, cycles, option=VerilatorOption(["UNUSED"]))
+
+    return (!simresult) && (String(take!(errmessage)) == expectedMessage)
+end
+
 function posedgePrecTest()
     v = Vmodule("dut")
     vpush!(v, @always (
@@ -34,7 +49,7 @@ function posedgePrecTest()
 
     tplen = 7
     cycles = 200
-    verilatorSimrun(v, tplen, cycles)
+    return verilatorSimrun(v, tplen, cycles)
 end
 
 function nonegedgeTest()
@@ -150,10 +165,10 @@ function posedgeSyncTest()
     v = vfinalize(v)
     
     
-    verilatorSimrun(v, tplen, 200)
+    return verilatorSimrun(v, tplen, 200)
 end
 
-function verilatorTest()
+function verilatorPatchTest()
     if !Sys.islinux()
         return
     end
@@ -169,6 +184,8 @@ function verilatorTest()
         rethrow()
     end
 
+    @test simDetectFailure()
+
     @test posedgePrecTest()
     @test nonegedgeTest()
     @test posedgeSyncTest()
@@ -176,4 +193,4 @@ function verilatorTest()
     return
 end
 
-verilatorTest()
+verilatorPatchTest()

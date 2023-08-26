@@ -6,6 +6,7 @@ const defaultlports = [
 Midmodule(t::Midmoduletype, lp::Vector{Oneport}, v::Vmodule) = Midmodule(getname(v), t, lp, v)
 Midmodule(n::String, t::Midmoduletype, v::Vmodule) = Midmodule(n, t, defaultlports, v)
 Midmodule(t::Midmoduletype, v::Vmodule) = Midmodule(t, defaultlports, v)
+Midmodule(v::Vmodule) = Midmodule(lrand, v)
 Midmodule(t::Midmoduletype, s) = Midmodule(t, Vmodule(s))
 
 # Layerconn(x) = Layerconn(0, x)
