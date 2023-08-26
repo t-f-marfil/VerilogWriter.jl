@@ -58,6 +58,7 @@ export
 
 # verilog debug
 export
+    debugAdd!, VerilatorOption,
     verilatorSimrun
 
 # vpatch
