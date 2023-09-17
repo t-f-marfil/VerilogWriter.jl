@@ -29,8 +29,8 @@ The wires `earlier` and `later` being high from the beginning
 is regarded as an edge at the beginning.
 
 ## Bit field
-+ [1]: 1 if edge detected in either of two wires
-+ [0]: 1 if edge in `earlier` was earlier than `later`
++ (1): 1 if edge detected in either of two wires
++ (0): 1 if edge in `earlier` was earlier than `later`
 """
 function posedgePrec(earlier::Wireexpr, later::Wireexpr, name::AbstractString)
     answire = string("_posedgePrec_", name)
@@ -65,8 +65,9 @@ function posedgePrec(earlier::Wireexpr, later::Wireexpr, name::AbstractString)
 
     return Wireexpr(answire), Vpatch(als..., @decls @logic 2 $answire)
 end
+posedgePrecCounter::Int = 0
 function posedgePrec(earlier::Wireexpr, later::Wireexpr)
-    posedgePrec(earlier, later, "")
+    posedgePrec(earlier, later, string(global posedgePrecCounter+=1))
 end
 
 """
@@ -76,7 +77,7 @@ Return wire which bundles `Wireexpr`s in wvec.
 
 Width of wires in `wvec` are supposed to be all one.
 """
-function bitbundle(wvec, name::AbstractString)
+function bitbundle(wvec::Vector{Wireexpr}, name::AbstractString)
     bundlename = string("_bitbundle_", name)
     buf = Vector{Alassign}(undef, length(wvec))
     for (i, w) in enumerate(wvec)
@@ -85,10 +86,22 @@ function bitbundle(wvec, name::AbstractString)
     
     return Wireexpr(bundlename), Vpatch(Alwayscontent(comb, Ifcontent(buf)))
 end
+bitbundleCounter::Int = 0
 function bitbundle(wvec)
-    bitbundle(wvec, "")
+    bitbundle(wvec, string(global bitbundleCounter+=1))
 end
 
+"""
+    nonegedge(uno::Wireexpr, name::AbstractString)
+
+Return wire which shows whether wire `uno` underwent a
+falling edge.
+
+Wire `uno` must be single-bit wide or fails in width inference.
+
+## Bit field
++ (0): 1 if wire `uno` has never encountered a falling edge
+"""
 function nonegedge(uno::Wireexpr, name::AbstractString)
     ans = string("_nonegedge_", name)
     pvg = PrivateWireNameGen(ans)
@@ -106,8 +119,9 @@ function nonegedge(uno::Wireexpr, name::AbstractString)
 
     return ans, Vpatch(al)
 end
+nonegedgeCounter::Int = 0
 function nonegedge(uno::Wireexpr)
-    nonegedge(uno, "")
+    nonegedge(uno, string(global nonegedgeCounter+=1))
 end
 
 """
@@ -117,8 +131,8 @@ Return `Wireexpr` which indicates whether a rising edge is detected
 at the same clock cycle in `uno` and `dos`.
 
 ## Bit field
-+ [1]: 1 if edge detected in either of two wires
-+ [0]: 1 if edge in `earlier` was earlier than `later`
++ (1): 1 if edge detected in either of two wires
++ (0): 1 if edge in `earlier` was earlier than `later`
 """
 function posedgeSync(uno::Wireexpr, dos::Wireexpr, name::AbstractString)
     answire = string("_posedgeSync_", name)
@@ -150,6 +164,7 @@ function posedgeSync(uno::Wireexpr, dos::Wireexpr, name::AbstractString)
 
     return Wireexpr(answire), Vpatch(als..., @decls @logic 2 $answire)
 end
+posedgeSyncCounter::Int = 0
 function posedgeSync(uno::Wireexpr, dos::Wireexpr)
-    posedgeSync(uno, dos, "")
+    posedgeSync(uno, dos, string(global posedgeSyncCounter+=1))
 end
