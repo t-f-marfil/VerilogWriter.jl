@@ -18,6 +18,88 @@ function vpush!(v::Vmodule, p::Vpatch)
     return
 end
 
+"""
+    extractTypedArguments(expr::Expr)
+
+From an expression of the whole function, extract 
+arguments with type.
+"""
+function extractTypedArguments(expr::Expr)
+    ans = Vector{Tuple{Symbol, Union{Symbol, Expr}}}()
+    funarguments = expr.args[begin]
+    funarguments.head == :call || error("parametric type and return type not implemented yet")
+    for arg in funarguments.args[2:end]
+        if arg isa Expr && arg.head == :(::)
+            argname, argtype = arg.args
+            push!(ans, (argname, argtype))
+        else
+            println(arg)
+            error("not a typed argument")
+        end
+    end
+
+    return ans
+end
+
+"""
+    extractFunName(expr::Expr)
+
+Extract the name of a function from the whole function expression.
+"""
+function extractFunName(expr::Expr)
+    return expr.args[begin].args[begin]
+end
+
+"""
+    @vstdpatch(expr)
+
+Attached at methods generating a pair of `Wireexpr` and `Vpatch`.
+Methods should take `name::AbstractString` as the last argument.
+The macro additionally defines the method which does not take `name` argument,
+and which internally passes as `name` an `Int` value which is incremented
+everytime the method without `name` argument is called.
+
+To summarize, when this macro takes
+```
+function Foo(arg1::T1, arg2::T2, name::AbstractString)
+    ...
+end
+```
+as its argument, it generates
+```
+# The original method definition
+function Foo(arg1::T1, arg2::T2, name::AbstractString)
+    ...
+end
+
+# Int value
+FooCounter::Int = 0
+
+# Additional method without `name`
+function Foo(arg1::T1, arg2::T2)
+    return Foo(arg1, arg2, string(global FooCounter += 1))
+end
+```
+"""
+macro vstdpatch(expr)
+    funname = extractFunName(expr)
+    args = extractTypedArguments(expr)
+    if args[end] != (:name, :AbstractString)
+        error("the last argument should be name::AbstractString, given $(args[end])")
+    end
+    argnames = [i for (i, j) in args]
+    countername = Symbol(funname, "Counter")
+
+    qgenerated = quote
+        $expr
+        $countername::Int = 0
+        function $funname($([:($i::$j) for (i, j) in args[begin:end-1]]...))
+            return $funname($(argnames[begin:end-1]...), string(global $countername += 1))
+        end
+    end
+    return esc(qgenerated)
+end
+
 # methods here return a tuple of wire and Vpatch
 """
     posedgePrec(earlier::Wireexpr, later::Wireexpr, name::AbstractString)
@@ -28,7 +110,7 @@ earlier than that of `later`.
 The wires `earlier` and `later` being high from the beginning 
 is regarded as an edge at the beginning.
 
-## Bit field
+## Bit Field
 + (1): 1 if edge detected in either of two wires
 + (0): 1 if edge in `earlier` was earlier than `later`
 """
@@ -71,7 +153,7 @@ function posedgePrec(earlier::Wireexpr, later::Wireexpr)
 end
 
 """
-    bitbundle(wvec, name::AbstractString)
+    bitbundle(wvec::Vector{Wireexpr}, name::AbstractString)
 
 Return wire which bundles `Wireexpr`s in wvec.
 
@@ -84,7 +166,7 @@ function bitbundle(wvec::Vector{Wireexpr}, name::AbstractString)
         buf[i] = @alassign_comb $bundlename[$(i-1)] = $w
     end
     
-    return Wireexpr(bundlename), Vpatch(Alwayscontent(comb, Ifcontent(buf)))
+    return Wireexpr(bundlename), Vpatch((@decls @logic $(length(wvec)) $bundlename), Alwayscontent(comb, Ifcontent(buf)))
 end
 bitbundleCounter::Int = 0
 function bitbundle(wvec)
@@ -99,7 +181,7 @@ falling edge.
 
 Wire `uno` must be single-bit wide or fails in width inference.
 
-## Bit field
+## Bit Field
 + (0): 1 if wire `uno` has never encountered a falling edge
 """
 function nonegedge(uno::Wireexpr, name::AbstractString)
@@ -117,7 +199,7 @@ function nonegedge(uno::Wireexpr, name::AbstractString)
         $ans = $(Wireexpr(1, 0)) | ~($negedgenow | $negedgebuf);
     )
 
-    return ans, Vpatch(al)
+    return Wireexpr(ans), Vpatch(al)
 end
 nonegedgeCounter::Int = 0
 function nonegedge(uno::Wireexpr)
@@ -130,7 +212,7 @@ end
 Return `Wireexpr` which indicates whether a rising edge is detected
 at the same clock cycle in `uno` and `dos`.
 
-## Bit field
+## Bit Field
 + (1): 1 if edge detected in either of two wires
 + (0): 1 if edge in `earlier` was earlier than `later`
 """
@@ -168,3 +250,37 @@ posedgeSyncCounter::Int = 0
 function posedgeSync(uno::Wireexpr, dos::Wireexpr)
     posedgeSync(uno, dos, string(global posedgeSyncCounter+=1))
 end
+
+
+function invertBitOrder(w::Wireexpr, wid::Int, name::AbstractString)
+    answire = Wireexpr(string("_invertBitOrder_", name))
+    assigns = [(@alassign_comb $answire[$(i-1)] = $w[$(wid-i)]) for i in 1:wid]
+    return answire, Vpatch((@decls @logic $wid $answire), @always $(assigns...))
+end
+invertBitOrderCounter::Int = 0
+function invertBitOrder(w::Wireexpr, wid::Int)
+    return invertBitOrder(w, wid, string(global invertBitOrderCounter+=1))
+end
+
+@vstdpatch function isAtRisingEdge(w::Wireexpr, name::AbstractString)
+    retname = string("_risingEdge_", name)
+    pvg = PrivateWireNameGen(retname)
+
+    prev = pvg("_prev")
+
+    al = @cpalways (
+        $prev <= $w;
+        $retname = ($prev == $(Wireexpr(1, 0))) & ($w == $(Wireexpr(1, 1)))
+    )
+    
+    return Wireexpr(retname), Vpatch(al...)
+end
+"""
+    isAtRisingEdge(w::Wireexpr, name::AbstractString)
+
+Return wire whose value is 1 iff the wire is at the rising edge.
+
+## Bit Field
++ (0): 1 at the cycle at which a rising edge is detected.
+"""
+isAtRisingEdge
