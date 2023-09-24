@@ -81,7 +81,7 @@ function nonegedgeTest()
         end
     )
     vpush!(v, als...)
-    ws = Vector{String}(undef, length(sigs))
+    ws = Vector{Wireexpr}(undef, length(sigs))
     for (ind, sig) in enumerate(sigs)
         w, pkg = nonegedge(sig, getname(sig))
         vpush!(v, pkg)
@@ -168,6 +168,30 @@ function posedgeSyncTest()
     return verilatorSimrun(v, tplen, 200)
 end
 
+function isAtRisingEdgeTest()
+    m = Vmodule("dut")
+    w1, p1 = isAtRisingEdge(@wireexpr abc)
+    w2, p2 = nonegedge(w1)
+    w3, p3 = nonegedge(~w1)
+
+    tps = [~w2, ~w3]
+    tplen = length(tps)
+    w4, p4 = bitbundle(tps)
+
+    vpush!.(m, [p1, p2, p3, p4])
+    vpush!(m, @ports (@in CLK, RST; @out @logic $tplen tp))
+    vpush!(m, @always tp = $w4)
+    vpush!(m, @always (
+        counter <= counter + $(Wireexpr(32, 1));
+        if 10 < counter
+            abc <= 1
+        end
+    ))
+
+    m = vfinalize(m)
+    return verilatorSimrun(m, tplen, 50)
+end
+
 function verilatorPatchTest()
     if !Sys.islinux()
         return
@@ -189,6 +213,7 @@ function verilatorPatchTest()
     @test posedgePrecTest()
     @test nonegedgeTest()
     @test posedgeSyncTest()
+    @test isAtRisingEdgeTest()
 
     return
 end

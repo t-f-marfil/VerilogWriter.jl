@@ -63,8 +63,9 @@ export
 
 # vpatch
 export 
-    PrivateWireNameGen, Vpatch,
-    posedgePrec, bitbundle, nonegedge, posedgeSync
+    PrivateWireNameGen, Vpatch, @vstdpatch,
+    posedgePrec, bitbundle, nonegedge, posedgeSync,
+    isAtRisingEdge
 
 export
     wireextract, wireextract!,
