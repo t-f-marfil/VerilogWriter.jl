@@ -284,3 +284,29 @@ Return wire whose value is 1 iff the wire is at the rising edge.
 + (0): 1 at the cycle at which a rising edge is detected.
 """
 isAtRisingEdge
+
+
+@vstdpatch function interceptBuffer(data::Wireexpr, update::Wireexpr, name::AbstractString)
+    answire = string("_interceptBuffer_", name)
+    pvg = PrivateWireNameGen(answire)
+    buffer = pvg("_buffer")
+
+    al = @cpalways (
+        if $update
+            $answire = $data
+            $buffer <= $data
+        else
+            $answire = $buffer
+        end
+    )
+
+    return Wireexpr(answire), Vpatch(al...)
+end
+"""
+    interceptBuffer(data::Wireexpr, update::Wireexpr, name::AbstractString)
+
+Buffer that changes its data at the exact cycle at which `update` is triggerred.
+
+Should be careful on the critical path on using this buffer.
+"""
+interceptBuffer
