@@ -25,7 +25,7 @@ end
 
 function widtxtgen(wid::Wireexpr)
     # space at the tail
-    if isequal(wid, wwinvalid)
+    if isequal(wid, WWINVALID)
         widtxt = "[unknown] "
     elseif wid.operation == literal 
         if wid.value == 1

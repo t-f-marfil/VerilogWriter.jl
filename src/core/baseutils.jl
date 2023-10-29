@@ -148,15 +148,16 @@ end
 # end
 @valIterBcast Localparams
 
-function Base.iterate(iter::Decls)
-    iterate(iter.val)
-end
-function Base.iterate(iter::Decls, state)
-    iterate(iter.val, state)
-end
-function Base.length(iter::Decls)
-    length(iter.val)
-end
+# function Base.iterate(iter::Decls)
+#     iterate(iter.val)
+# end
+# function Base.iterate(iter::Decls, state)
+#     iterate(iter.val, state)
+# end
+# function Base.length(iter::Decls)
+#     length(iter.val)
+# end
+@valIterBcast Decls
 
 function Base.iterate(iter::Parameters)
     iterate(iter.val)

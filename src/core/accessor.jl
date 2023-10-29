@@ -1,13 +1,17 @@
-function getname(x::T) where {T <: Union{Wireexpr, Oneport, Vmodule}}
+function getname(x::T) where {T <: Union{Wireexpr, Oneport, Onedecl, Vmodule}}
     x.name 
 end
 
-function getwidth(x::T) where {T <: Union{Oneport}}
+function getwidth(x::T) where {T <: Union{Oneport, Onedecl}}
     return x.width
 end
 
 function getsensitivity(x::Alwayscontent)
     return x.sens
+end
+
+function getwiretype(x::Oneport)
+    return x.wtype
 end
 
 function getifcont(x::Alwayscontent)

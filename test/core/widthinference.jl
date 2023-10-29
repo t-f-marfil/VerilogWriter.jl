@@ -1,23 +1,23 @@
 # inference on shift operator
 # e.g. in `w = x << y` width of y is unknown
-c = @ifcontent (
+c = @always (
     reg1 = $(Wireexpr(32, 5)) << reg2;
     reg2 = $(Wireexpr(10, 5))
 )
 
-d, _ = autodecl_core(c)
+d, _ = autodeclCore(c)
 
 @test string(d) == """
 logic [31:0] reg1;
 logic [9:0] reg2;"""
 
 # Bitwise and reduction unary operator
-c = @ifcontent (
+c = @always (
     reg1 = ^($(Wireexpr(32, 10)));
     reg2 = ~($(Wireexpr(10, 6)))
 )
 
-d, _ = autodecl_core(c)
+d, _ = autodeclCore(c)
 
 @test string(d) == """
 logic reg1;
@@ -30,8 +30,8 @@ env = Vmodenv(
         @reg A+B reg2
     )
 )
-d, _ = autodecl_core(
-    (@ifcontent (
+d, _ = autodeclCore(
+    (@always (
         reg1 <= reg2;
         reg3 <= reg2;
         reg4 <= reg1;
@@ -42,8 +42,8 @@ d, _ = autodecl_core(
     env
 )
 @test string(d) == """
-logic [(A + B)-1:0] reg3;
-logic [(A + B)-1:0] reg4;"""
+logic [(A + B)-1:0] reg4;
+logic [(A + B)-1:0] reg3;"""
 
 # recursive check for '==' and reductions
 c = @always (
@@ -51,11 +51,11 @@ c = @always (
         a <= &(b == c)
     end
 )
-d, nenv = autodecl_core(c)
+d, nenv = autodeclCore(c)
 @test string(d) == """
-logic a;
+logic c;
 logic b;
-logic c;"""
+logic a;"""
 
 # error message 
 c = @always (
@@ -63,9 +63,10 @@ c = @always (
     a <= $(Wireexpr(1, 0))
 )
 
-@test (@strerror autodecl_core(c)) == """
-width inference failure in evaluating a <=> 1'd0.
-width discrepancy between 32 and 1."""
+# @test (@strerror autodeclCore(c)) == """
+# width inference failure in evaluating a <=> 1'd0.
+# width discrepancy between 32 and 1."""
+@test_throws WireWidthConflict autodeclCore(c)
 
 # 2d reg 
 d = @decls (
@@ -80,7 +81,7 @@ c = @always (
     end
 )
 
-dc, _ = autodecl_core(c, Vmodenv(d))
+dc, _ = autodeclCore(c, Vmodenv(d))
 
 @test string(dc) == """
 logic [9:0] c;"""
@@ -98,8 +99,9 @@ c = @always (
     end
 )
 
-@test (@strerror autodecl_core(c, Vmodenv(d))) == """
-2d reg b is sliced at [(W << 2):0]."""
+# @test (@strerror autodeclCore(c, Vmodenv(d))) == """
+# 2d reg b is sliced at [(W << 2):0]."""
+@test_throws SliceOnTwoDemensionalLogic autodeclCore(c, Vmodenv(d))
 
 # empty equality lists
 alempty = @always (
