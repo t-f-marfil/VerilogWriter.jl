@@ -38,7 +38,8 @@ function main()
     if "DEPLOY" in ARGS
         deploydocs(
             repo="github.com/t-f-marfil/VerilogWriter.jl.git",
-            push_preview=true
+            push_preview=true,
+            devbranch="develop",
         )
     end
 end
