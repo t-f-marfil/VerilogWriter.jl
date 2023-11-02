@@ -18,6 +18,7 @@ function docgen(prettyurls)
                 "Mid-Level Synthesis" => "midlevel.md",
                 "Reference" => "reference.md",
             ],
+            "Release Note" => "release.md",
         ],
         warnonly = [:missing_docs],
         modules = [VerilogWriter],
