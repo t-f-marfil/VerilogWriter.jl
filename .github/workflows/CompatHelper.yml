@@ -1,16 +1,21 @@
 name: CompatHelper
 on:
   schedule:
-    - cron: 0 0 * * *
+    - cron: 0 0 * * 6
   workflow_dispatch:
 jobs:
   CompatHelper:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/create-github-app-token@v1
+        id: create_token
+        with:
+          app-id: ${{ secrets.BOT_HELPER_APP_ID }}
+          private-key: ${{ secrets.BOT_HELPER_APP_PRIVATE_KEY }}
       - name: Pkg.add("CompatHelper")
         run: julia -e 'using Pkg; Pkg.add("CompatHelper")'
       - name: CompatHelper.main()
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.create_token.outputs.token }}
           COMPATHELPER_PRIV: ${{ secrets.DOCUMENTER_KEY }}
         run: julia -e 'using CompatHelper; CompatHelper.main()'
