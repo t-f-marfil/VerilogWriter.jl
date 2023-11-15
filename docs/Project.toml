@@ -1,6 +1,6 @@
 [deps]
-VerilogWriter = "609488a3-1988-4612-be37-e0d5b22d8f97"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+VerilogWriter = "609488a3-1988-4612-be37-e0d5b22d8f97"
 
 [compat]
-Documenter = "0.27"
+Documenter = "0.27, 1"
