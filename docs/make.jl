@@ -19,7 +19,7 @@ function docgen(prettyurls)
                 "Reference" => "reference.md",
             ],
         ],
-        strict = false,
+        warnonly = [:missing_docs],
         modules = [VerilogWriter],
         doctest = false
     )
