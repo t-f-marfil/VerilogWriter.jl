@@ -28,7 +28,7 @@ jobs:
         arch:
           - x64
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Install Verilator
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: sudo apt install verilator
