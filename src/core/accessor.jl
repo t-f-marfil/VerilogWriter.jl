@@ -22,6 +22,13 @@ function getdirec(x::Oneport)
     return x.direc
 end
 
+function isOutput(x::Oneport)
+    return x.direc == pout
+end
+function isInput(x::Oneport)
+    return x.direc == pin
+end
+
 function getports(x::Vmodule)
     return x.ports
 end

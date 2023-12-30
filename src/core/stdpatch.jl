@@ -110,7 +110,7 @@ earlier than that of `later`.
 The wires `earlier` and `later` being high from the beginning 
 is regarded as an edge at the beginning.
 
-## Bit Field
+## Return Wire
 + (1): 1 if edge detected in either of two wires
 + (0): 1 if edge in `earlier` was earlier than `later`
 """
@@ -181,7 +181,7 @@ falling edge.
 
 Wire `uno` must be single-bit wide or fails in width inference.
 
-## Bit Field
+## Return Wire
 + (0): 1 if wire `uno` has never encountered a falling edge
 """
 function nonegedge(uno::Wireexpr, name::AbstractString)
@@ -212,7 +212,7 @@ end
 Return `Wireexpr` which indicates whether a rising edge is detected
 at the same clock cycle in `uno` and `dos`.
 
-## Bit Field
+## Return Wire
 + (1): 1 if edge detected in either of two wires
 + (0): 1 if edge in `earlier` was earlier than `later`
 """
@@ -280,7 +280,7 @@ end
 
 Return wire whose value is 1 iff the wire is at the rising edge.
 
-## Bit Field
+## Return Wire
 + (0): 1 at the cycle at which a rising edge is detected.
 """
 isAtRisingEdge
@@ -308,5 +308,8 @@ end
 Buffer that changes its data at the exact cycle at which `update` is triggerred.
 
 Should be careful on the critical path on using this buffer.
+
+## Return Wire
++ (length(data)-1:0): Buffer output
 """
 interceptBuffer

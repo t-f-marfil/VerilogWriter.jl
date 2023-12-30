@@ -302,6 +302,9 @@ end
     layerconnInstantiate_mlay!(v::Vmodule, x::Mmodgraph)
 
 Push data in Layerconn objects into Vmodule in a form of Verilog codes.
+
+Currently only adding to the top level Vmodule (v) always_comb statements that connects upstream ports to 
+downstream ports.
 """
 function layerconnInstantiate_mlay!(v::Vmodule, x::Mmodgraph)
     mvec = Vmodule[]
@@ -310,7 +313,7 @@ function layerconnInstantiate_mlay!(v::Vmodule, x::Mmodgraph)
     # # as described in Layerconn
     # qvec = Expr[]
     qvec = Alassign[]
-    dclsvec = Onedecl[]
+    
     for ((_uno::Midport, _dos::Midport), conn) in x.edges 
         uno, dos = getmmod.((_uno, _dos))
         # what is needed below: 
@@ -318,29 +321,7 @@ function layerconnInstantiate_mlay!(v::Vmodule, x::Mmodgraph)
         # layVisited[uno] = vmerge(conn, get(layVisited, uno, Layerconn()))
         db = ildatabuffer(uno, conn)
 
-        smod = wirenamemodgen(db)
-        
         for (ppre, ppost) in conn.ports
-            # getname(ppre) is not typo
-            # this is needed to match the name with 
-            # the one generated for Vmodinst ports
-
-            # q1 = @alassign_comb (
-            #     $(
-            #         wireAddSuffix(getname(ppost), dos)
-            #     ) = $(
-            #         smod(string("dout_", getname(ppre)))
-            #     )
-            # )
-            # q2 = @alassign_comb (
-            #     $(
-            #         smod(string("din_", getname(ppre)))
-            #     ) = $(
-            #         wireAddSuffix(getname(ppre), uno)
-            #     )
-            # )
-            # push!(qvec, q1, q2)
-
             # below means
             # always_comb begin
             #   <ppost_name>_<dos_name> = <ppre_name>_<uno_name>
@@ -358,38 +339,12 @@ function layerconnInstantiate_mlay!(v::Vmodule, x::Mmodgraph)
             # dcl = @decls @logic $(getwidth(ppost)) $(postwire)
             # vpush!(v, dcl) 
         end
-
     end
 
-    # ilbuf not needed now
-    # for (uno, conn) in layVisited
-    #     db = ildatabuffer(uno, conn)
-    #     vpush!(db, commonports)
-    #     push!(mvec, db)
-
-    #     smod = wirenamemodgen(db)
-    #     dports = filter(x -> getname(x) != "CLK" && getname(x) != "RST", [i for i in getports(db)])
-    #     vpush!(v, Vmodinst(
-    #         getname(db),
-    #         "uildatabuf_$(getname(uno))",
-    #         [
-    #             "CLK" => Wireexpr("CLK"),
-    #             "RST" => Wireexpr("RST"),
-    #             [(n = getname(p); n => Wireexpr(smod(n))) for p in dports]...
-    #         ]
-    #     ))
-    #     alil = @always (
-    #         $(smod(nametolower(imupdate))) = $(nametolower(imupdate, uno));
-    #         $(smod(nametolower(imvalid))) = $(nametolower(imvalid, uno))
-    #     )
-    #     vpush!(v, alil)
-    # end
-
-    # alans = Alwayscontent(comb, ifcontent(Expr(:block, qvec...)))
     alans = Alwayscontent(comb, qvec)
     vpush!(v, alans)
     
-    return mvec
+    return nothing
 end
 
 """
@@ -398,29 +353,19 @@ end
 Originally, Connect valid/update wires, which are generated automatically
 when converting `Midmodule` objects into Verilog HDL, between `Midmodule` objects.
 
-Now is needed only for wire declaration.
+Now is needed only for wire declaration (wires at the top level to connect valid and update).
 """
 function ilconndecl_mlay!(v::Vmodule, x::Mmodgraph)
-    # rvec = Expr[]
-    # dvec = Expr[]
     dvec = Onedecl[]
-    # rregistered = Dict([lay::Midmodule => [false, false] for lay in x.layers])
-    # lregistered = Dict([lay::Midmodule => [false, false] for lay in x.layers])
+    
     ufpregistered = Dict([lay::Midmodule => Dict{Int, Vector{Bool}}() for lay in x.layers])
     dfpregistered = Dict([lay::Midmodule => Dict{Int, Vector{Bool}}() for lay in x.layers])
 
     for ((dfp::Midport, ufp::Midport), _) in x.edges 
         for ilattr in instances(IntermmodSigtype)
-            # rlhs = nametoupper(ilattr, dos)
-            # rrhs = nametolower(ilattr, uno)
             rufp = nametoupper(ilattr, ufp)
             rdfp = nametolower(ilattr, dfp)
-            # rlhs, rrhs = rufp, rdfp
-            # # set appropiate lhs <=> rhs
-            # if portdir4ilst_upper[ilattr] == pout
-            #     rlhs, rrhs = rrhs, rlhs
-            #     uno, dos = dos, uno
-            # end
+            
             ddfp = dfpregistered[getmmod(dfp)]
             if getpid(dfp) in keys(ddfp)
                 # port id specified
@@ -446,16 +391,9 @@ function ilconndecl_mlay!(v::Vmodule, x::Mmodgraph)
                 push!(dvec, (@decloneline (@logic $rufp))...)
                 dufp[getpid(ufp)][Int(ilattr) + 1] = true
             end
-            # rregistered[uno][Int(ilattr) + 1] || push!(dvec, (@decloneline (@logic $rrhs))...)
-            # lregistered[dos][Int(ilattr) + 1] || push!(dvec, (@decloneline (@logic $(rlhs)))...)
-
-            # rregistered[uno][Int(ilattr) + 1] = lregistered[dos][Int(ilattr) + 1] = true
         end
-
     end
 
-    # vpush!(v, always(Expr(:block, rvec...)))
-    # vpush!(v, decls(Expr(:block, dvec...)))
     vpush!(v, Decls(dvec))
 
     return nothing
@@ -485,7 +423,6 @@ function imconnect_mlay!(v::Vmodule, lay::Mmodgraph)
     addsumlinfo!(v, addinfolist2)
 
     # Connection between upstream layer and SUML hub
-    # qs = Vector{Expr}(undef, length(suml)*2)
     qs = Vector{Alassign}(undef, length(suml)*2)
     for (ind, (upper, _)) in enumerate(suml)
         qupdate = @alassign_comb ($(nametolower(imupdate, upper)) = $(wirenameMlayToSuml(imupdate, upper)))
@@ -493,11 +430,9 @@ function imconnect_mlay!(v::Vmodule, lay::Mmodgraph)
         qs[2ind-1] = qupdate
         qs[2ind] = qvalid
     end
-    # vpush!(v, always(Expr(:block, qs...)))
     vpush!(v, Alwayscontent(comb, qs))
 
     # Connection between downstream layer and MUSL hub
-    # qs = Vector{Expr}(undef, length(musl)*2)
     qs = Vector{Alassign}(undef, length(musl)*2)
     for (ind, (lower, _)) in enumerate(musl)
         qupdate = @alassign_comb ($(wirenameMuslToMlay(imupdate, lower)) = $(nametoupper(imupdate, lower)))
@@ -505,7 +440,6 @@ function imconnect_mlay!(v::Vmodule, lay::Mmodgraph)
         qs[2ind-1] = qupdate
         qs[2ind] = qvalid
     end
-    # vpush!(v, always(Expr(:block, qs...)))
     vpush!(v, Alwayscontent(comb, qs))
 
     vpush!.(hublist1, Ref(@ports @in CLK, RST))
@@ -521,7 +455,6 @@ Add to the top-level module ports that are connected to counterparts of
 submodules, which are not connected to ports of other `Midmodule` objects.
 """
 function bypassUnconnected_mlay!(v::Vmodule, x::Mmodgraph)
-    # connect unconnected ports to outer ports
     unconnectedvec::Vector{Pair{Midmodule, OrderedSet{Oneport}}} = unconnectedports_mlay(x)
 
     npvec = Vector{Oneport}(undef, sum([length(s) for (_, s) in unconnectedvec]))
@@ -557,7 +490,6 @@ function connectCommonPorts_mlay!(v::Vmodule, x::Mmodgraph)
     vpush!(v, commonports...)
 
     for lay in x.layers 
-        # qvec = Vector{Expr}(undef, length(commonports))
         qvec = Vector{Alassign}(undef, length(commonports))
         for (ind, prt::Oneport) in enumerate(commonports)
             f = wirenamemodgen(lay)
@@ -568,12 +500,8 @@ function connectCommonPorts_mlay!(v::Vmodule, x::Mmodgraph)
                     Symbol(getname(prt))
                 )
             )
-
             qvec[ind] = q
-            # vpush!(v, al)
         end
-
-        # vpush!(v, always(Expr(:block, qvec...)))
         vpush!(v, Alwayscontent(comb, qvec))
     end
 
@@ -595,7 +523,8 @@ function layer2vmod!(x::Mmodgraph; name = "Layers")::Vector{Vmodule}
     # as described in Layerconn
     # note that 2 function calls below do not modify 
     # Vmodules in each midlayer objects
-    dbufs = layerconnInstantiate_mlay!(v, x)
+    # dbufs = layerconnInstantiate_mlay!(v, x)
+    layerconnInstantiate_mlay!(v, x)
     ilconndecl_mlay!(v, x)
 
     hubs = imconnect_mlay!(v, x)
@@ -616,7 +545,7 @@ function layer2vmod!(x::Mmodgraph; name = "Layers")::Vector{Vmodule}
         vpush!(v, vinstnamemod(lay.vmod))
     end
 
-    return [v; [lay.vmod for lay in x.layers]; dbufs; hubs]
+    return [v; [lay.vmod for lay in x.layers]; hubs]
 end
 
 function vpush!(x::Midmodule, items...)
