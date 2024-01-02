@@ -328,7 +328,7 @@ function layerconnInstantiate_mlay!(v::Vmodule, x::Mmodgraph)
             # same pre may be connected to multiple ports, thus to avoid 
             # duplicate, not added here
             dcl = @decls @logic $(getwidth(ppost)) $(postwire)
-            vpush!(v, dcl) 
+            vpush!(v, dcl)
         end
     end
 
@@ -421,11 +421,9 @@ function imconnect_mlay!(v::Vmodule, lay::Mmodgraph)
         qs[2ind-1] = qupdate
         qs[2ind] = qvalid
     end
-    # vpush!(v, always(Expr(:block, qs...)))
     vpush!(v, Alwayscontent(comb, qs))
 
     # Connection between downstream layer and MUSL hub
-    # qs = Vector{Expr}(undef, length(musl)*2)
     qs = Vector{Alassign}(undef, length(musl)*2)
     for (ind, (lower, _)) in enumerate(musl)
         qupdate = @alassign_comb ($(wirenameMuslToMlay(imupdate, lower)) = $(nametoupper(imupdate, lower)))
@@ -433,7 +431,6 @@ function imconnect_mlay!(v::Vmodule, lay::Mmodgraph)
         qs[2ind-1] = qupdate
         qs[2ind] = qvalid
     end
-    # vpush!(v, always(Expr(:block, qs...)))
     vpush!(v, Alwayscontent(comb, qs))
 
     vpush!.(hublist1, Ref(@ports @in CLK, RST))
@@ -449,7 +446,6 @@ Add to the top-level module ports that are connected to counterparts of
 submodules, which are not connected to ports of other `Midmodule` objects.
 """
 function bypassUnconnected_mlay!(v::Vmodule, x::Mmodgraph)
-    # connect unconnected ports to outer ports
     unconnectedvec::Vector{Pair{Midmodule, OrderedSet{Oneport}}} = unconnectedports_mlay(x)
 
     npvec = Vector{Oneport}(undef, sum([length(s) for (_, s) in unconnectedvec]))
@@ -485,7 +481,6 @@ function connectCommonPorts_mlay!(v::Vmodule, x::Mmodgraph)
     vpush!(v, commonports...)
 
     for lay in x.layers 
-        # qvec = Vector{Expr}(undef, length(commonports))
         qvec = Vector{Alassign}(undef, length(commonports))
         for (ind, prt::Oneport) in enumerate(commonports)
             f = wirenamemodgen(lay)
@@ -496,12 +491,8 @@ function connectCommonPorts_mlay!(v::Vmodule, x::Mmodgraph)
                     Symbol(getname(prt))
                 )
             )
-
             qvec[ind] = q
-            # vpush!(v, al)
         end
-
-        # vpush!(v, always(Expr(:block, qvec...)))
         vpush!(v, Alwayscontent(comb, qvec))
     end
 
