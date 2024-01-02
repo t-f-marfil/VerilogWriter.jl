@@ -1,3 +1,5 @@
+# order in which files below are included matters,
+# vconstructors should be included before contructors are used
 const pathbasic = [
     "baseutils.jl",
     "textutils.jl",
@@ -13,6 +15,8 @@ const pathbasic = [
     "vstring.jl",
     "vpush.jl", 
     "accessor.jl",
+    "verilator.jl",
+    "stdpatch.jl",
 ]
 
 for p in pathbasic

@@ -81,11 +81,11 @@ Convert Symbol to String and construct Wireexpr.
 """
 Wireexpr(n::Symbol) = Wireexpr(string(n))
 """
-    Wireexpr(n::Int)
+    Wireexpr(n::Integer)
 
 Literal of Integer.
 """
-Wireexpr(n::Int) = Wireexpr(-1, n)
+Wireexpr(n::Integer) = Wireexpr(-1, n)
 # Wireexpr(n::Int) = Wireexpr(literal, "", [], -1, n)
 """
     Wireexpr(w::Integer, n::Integer)
@@ -138,6 +138,7 @@ Wireexpr(op::Wireop, w::Wireexpr...) = Wireexpr(op, [w...])
 # e.g. :($(some_symbol)[1])
 Wireexpr(op::Wireop, uno, dos) = Wireexpr(op, Wireexpr(uno), Wireexpr(dos))
 
+Wireexpr(p::Oneport) = Wireexpr(getname(p))
 
 Alassign(lhs, rhs) = Alassign(lhs, rhs, aunknown)
 
