@@ -1,109 +1,5 @@
-"""
-    wireextract(x)
-
-Extract `Wireexpr`s from `x::Ifcontent`, along with
-equality constraints of wire width.
-
-Return `declonly::Vector{Wireexpr}`, which contains wires appear in 
-`x::Ifcontent`, and `equality::Vector{Tuple{Wireexpr, Wireexpr}}`, 
-which contains tuples of two `Wireexpr`s which are supposed to be of the same width.
-
-Type of `x` is restricted by `wireextract!`.
-"""
-function wireextract(x)
-    declonly = Wireexpr[]
-    equality = Tuple{Wireexpr, Wireexpr}[]
-
-    wireextract!(x, declonly, equality)
-    declonly, equality
-end
-
-"""
-    wireextract!(x::Ifcontent, declonly, equality)
- 
-For `Ifcontent`.
-"""
-function wireextract!(x::Ifcontent, declonly, equality)
-    for i in x.assigns 
-        push!(equality, (i.lhs, i.rhs))
-    end
-
-    for i in x.ifelseblocks
-        push!(declonly, i.conds...)
-        map(y -> wireextract!(y, declonly, equality), i.contents)
-    end
-
-    for i in x.cases 
-        push!(declonly, i.condwire)
-        for (cnd, dos) in i.conds 
-            # push!(declonly, uno)
-            push!(equality, (i.condwire, cnd))
-            wireextract!(dos, declonly, equality)
-        end
-    end
-end
-
-"""
-    wireextract!(x::Vector{T}, declonly, equality) where {T <: Union{Ifcontent, Alwayscontent}}
-
-For `Vector{Ifcontent/Alwayscontent}`.
-"""
-function wireextract!(x::Vector{T}, declonly, equality) where {T <: Union{Ifcontent, Alwayscontent}}
-    for c in x 
-        wireextract!(c, declonly, equality)
-    end
-end
-
-"""
-    wireextract!(x::Alwayscontent, declonly, equality)
-
-For `Alwayscontent`. 
-"""
-function wireextract!(x::Alwayscontent, declonly, equality)
-    if x.atype == ff
-        wireextract!(x.sens, declonly, equality)
-    end
-    wireextract!(x.content, declonly, equality)
-end
-
-"""
-    wireextract!(x::Sensitivity, declonly, equality)
-
-For `Sensitivity`.
-"""
-function wireextract!(x::Sensitivity, declonly, equality)
-    if x.edge != unknownedge
-        push!(declonly, x.sensitive)
-    end
-end
-
-"Helper function for [`wireextract`](@ref)."
-wireextract!
-
-
-"update julia to v1.8 and replace with `wirewidid::Int = 0`."
-wirewidid = 0
-
 "Value which indicates that the `Wirewid` object does not have a valid value."
-const wwinvalid = Wireexpr(-1)
-# const wwinvalid = -1
-
-struct Wirewid 
-    id::Int 
-    "`wwinvalid` for undef val"
-    val::Wireexpr
-    # val::Int
-end
-
-function Wirewid(v::Wireexpr)
-    global wirewidid += 1
-    Wirewid(wirewidid, v)
-end
-
-Wirewid(v::Int) = Wirewid(Wireexpr(v))
-
-Wirewid() = Wirewid(wwinvalid)
-
+const WWINVALID::Wireexpr = Wireexpr(-1)
 
 eachfieldconstruct(Vmodenv)
 
@@ -116,61 +12,11 @@ Vmodenv() = Vmodenv(Parameters(), Ports(), Localparams(), Decls())
 Vmodenv(m::Vmodule) = Vmodenv(m.params, m.ports, m.lparams, m.decls)
 
 """
-    separate_widunknown(v::Vector{Onedecl})
-
-Separate `Onedecls` into the group of wires whose width
-is already determined and the group of wires with unknown width.
-"""
-function separate_widunknown(v::Vector{Onedecl})
-    wknown = v[(d->!isequal(d.width, wwinvalid)).(v)]
-    wunknown = v[(d->isequal(d.width, wwinvalid)).(v)]
-    wknown, wunknown
-end
-
-function separate_widunknown(x::Decls)
-    Decls.(separate_widunknown(x.val))
-end
-
-function separate_widunknown(v::Vector{Oneport})
-    pknown = v[(p->!isequal(p.width, wwinvalid)).(v)]
-    punknown = v[(p->isequal(p.width, wwinvalid)).(v)]
-    pknown, punknown
-end
-
-function separate_widunknown(x::Ports)
-    Ports.(separate_widunknown(x.val))
-end
-
-"""
-    unknowndeclpush!(ansset::Dict{String, Wirewid}, widvars::Dict{Wirewid, Vector{String}}, ukports::Ports, ukdecls::Decls)
-
-Register ports/wire declarations of unknown width 
-to `ansset` and `widvars`.
-"""
-function unknowndeclpush!(ansset::Dict{String, Wirewid}, widvars::Dict{Wirewid, Vector{String}},
-    ukports::Ports, ukdecls::Decls)
-
-    for p in ukports.val
-        n = p.name 
-        widvar = Wirewid()
-        ansset[n] = widvar
-        widvars[widvar] = [n]
-    end
-    for d in ukdecls.val
-        n = d.name
-        widvar = Wirewid()
-        ansset[n] = widvar
-        widvars[widvar] = [n]
-    end
-end
-
-
-"""
     extract2dreg(x::Vector{Onedecl})
 
 Extract 2d regs as dict object from `x`.
 """
-function extract2dreg(x::Vector{Onedecl})
+function extract2dreg(x::Vector{Onedecl})::Dict{String, Onedecl}
     ans = Dict{String, Onedecl}()
     for d in x
         if d.is2d 
@@ -195,477 +41,558 @@ function extract2dreg(x::Vmodule)
     extract2dreg(x.decls)
 end
 
-
-"""
-    findandpush_widunify!(newval::String, envdicts::NTuple{4, Dict{String, Wirewid}}, ansset, widvars)
-
-Looking inside envdicts, add `newval` to `ansset` and `widvars`
-if `newval` is not in `envdicts`.
-"""
-function findandpush_widunify!(newval::String, envdicts::NTuple{4, Dict{String, Wirewid}}, ansset, widvars)
-    dictans = map(d -> get(d, newval, nothing), envdicts)
+"""Store values needed to infer wire widths."""
+struct WidthConstraint
+    equality::Vector{NTuple{2, Int}}
+    name2id::Dict{String, Int}
+    id2wid::Dict{Int, Wireexpr}
     
-    if all(isnothing, dictans)
-        v = get(ansset, newval, nothing)
-        if isnothing(v)
-            widvar = Wirewid()
-            ansset[newval] = widvar
-            widvars[widvar] = [newval]
-        end
-    end
+    "id whose width can be inferred from wire, preprocess and convert into id2wid"
+    id2wire::Dict{Int, Wireexpr}
 
+    "store all wires associated with id for debugging purpose"
+    id2wireAll::Vector{Wireexpr}
+end
+
+function Base.broadcastable(x::WidthConstraint)
+    Ref(x)
+end
+
+WidthConstraint() = WidthConstraint(Vector{Tuple{Int, Int}}(), Dict{String, Int}(), Dict{Int, Wireexpr}(), Dict{Int, Wireexpr}(), Vector{Wireexpr}())
+
+function dumpConstraint(x::WidthConstraint)
+    dumpDictInConstraint(x.equality, "wid1" => "wid2", "equality")
+    dumpDictInConstraint(x.name2id, "name" => "id", "name2id")
+    dumpDictInConstraint(x.id2wid, "id" => "wid", "id2wid")
+    dumpDictInConstraint(x.id2wire, "id" => "wire", "id2wire (unresolved)")
+
+    # dumpDictInConstraint(x.id2wireAll, "idAll" => "wireAll", "id2wireAll")
+    println("$(length(x.id2wireAll)) items in id2wireAll (current total widvar: $(getTotalWidvar()))")
+    
+    buf = IOBuffer()
+    for item in x.id2wireAll
+        write(buf, string(item))
+        write(buf, ", ")
+    end
+    println(String(take!(buf)))
+end
+function dumpDictInConstraint(d, names, title)
+    keyName, valueName = names
+    println("Dumping $title")
+    for (k, v) in d
+        println("  ", "($keyName) $(string(k)) => ($valueName) $(string(v))")
+    end
+end
+
+"""Identifier to represent wire width variable."""
+WidvarId::Int = 0
+
+function generateWidvarId()
+    global WidvarId
+    WidvarId += 1
+    return WidvarId
+end
+
+function initializeWidvarId()
+    global WidvarId
+    WidvarId = 0
     return nothing
 end
 
-"""
-    wirepush_widunify!(w::Wireexpr, envdicts::NTuple{4, Dict{String, Wirewid}}, ansset, widvars)
-
-Push every wire that appears inside `w` to `ansset` and `widvars`.
-"""
-function wirepush_widunify!(w::Wireexpr, envdicts::NTuple{4, Dict{String, Wirewid}}, ansset, widvars)
-    f!(x) = findandpush_widunify!(x, envdicts, ansset, widvars)
-    g!(x) = wirepush_widunify!(x, envdicts, ansset, widvars)
-
-    op = w.operation
-    if op == id 
-        f!(w.name)
-    elseif op == slice || op == ipselm
-        map((x -> g!(x)), w.subnodes)
-
-    elseif op in wunaop || op in wbinop 
-        map((x -> g!(x)), w.subnodes)
-    end
-
-    return nothing
+function getTotalWidvar()
+    return WidvarId
 end
 
-function wirepush_widunify!(t::Tuple{Wireexpr, Wireexpr}, envdicts::NTuple{4, Dict{String, Wirewid}}, ansset, widvars)
-    for w in t 
-        wirepush_widunify!(w, envdicts, ansset, widvars)
-    end
-end
+function extractConstraintsCore!(x::Wireexpr, constraint::WidthConstraint)::Int
+    op = x.operation
 
-"""
-    eqwidflatten!(x::Wireexpr, envdicts, reg2d, ansset, eqwids::Vector{Wirewid}, declonly, equality)
-
-Extract wires that appear inside `x` which are of the same width as `x` itself, 
-find `Wirewid` objects which correspond to the wire and push them into `eqwids`.
-When slice appears inside `x`, new Wirewid object is created and then added to `eqwids`.
-"""
-function eqwidflatten!(x::Wireexpr, envdicts, reg2d, ansset, eqwids::Vector{Wirewid}, declonly, equality)
-    f!(xx) = eqwidflatten!(xx, envdicts, reg2d, ansset, eqwids, declonly, equality)
-
-    op = x.operation 
     if op == neg
-        # unary bitwise operator
-        f!(x.subnodes[1])
-    elseif op in wunaop 
+        # neg is the only bitwise opearator in unary ones
+        return extractConstraintsCore!(x.subnodes[], constraint)
+    elseif op in wunaop
         # reduction
-        push!(eqwids, Wirewid(1))
-        push!(declonly, x.subnodes[])
-    elseif op == lshift || op == rshift 
-        f!(x.subnodes[1])
+        extractConstraintsCore!(x.subnodes[], constraint)
+
+        widvarId = generateWidvarId()
+        constraint.id2wid[widvarId] = Wireexpr(1)
+        push!(constraint.id2wireAll, x)
+        return widvarId
+    elseif op == lshift || op == rshift
+        # e.g. In case of `a << b`, width of `b` can be of any value, 
+        # width(a << b) == width(a)
+        extractConstraintsCore!(x.subnodes[2], constraint)
+        return extractConstraintsCore!(x.subnodes[1], constraint)
     elseif op in (logieq, lt, leq)
-        push!(eqwids, Wirewid(1))
-        push!(equality, tuple(x.subnodes...))
+        wid1 = extractConstraintsCore!(x.subnodes[1], constraint)
+        wid2 = extractConstraintsCore!(x.subnodes[2], constraint)
+        
+        thisWid = generateWidvarId()
+        constraint.id2wid[thisWid] = Wireexpr(1)
+        push!(constraint.equality, (wid1, wid2))
+        push!(constraint.id2wireAll, x)
+        return thisWid
     elseif op in wbinop
-        f!.(x.subnodes[1:2])
-    elseif op == id 
-        widnow = nothing
-        for d in (envdicts..., ansset)
-            widnow = get(d, x.name, nothing)
-            if widnow != nothing 
-                break
-            end
+        # binary operator other than shifting and logical comparison
+        wids = extractConstraintsCore!.(x.subnodes, constraint)
+        push!(constraint.equality, (wids[1], wids[2]))
+        return wids[begin]
+    elseif op == id
+        if x.name in keys(constraint.name2id)
+            return constraint.name2id[x.name]
+        else
+            widvarId = generateWidvarId()
+            constraint.name2id[x.name] = widvarId
+            push!(constraint.id2wireAll, x)
+            return widvarId
         end
-        @assert widnow != nothing
+    elseif op == slice
+        @assert length(x.subnodes) == 2 || length(x.subnodes) == 3
+        extractConstraintsCore!.(x.subnodes, constraint)
 
-        push!(eqwids, widnow)
-
-    elseif op == slice 
-        subname = x.subnodes[1].name
-
-        if length(x.subnodes) == 2
-            # e.g. x[1] --> bit select or 2d reg
-            # subname = x.subnodes[1].name
-            push!(eqwids, Wirewid(
-                    get(reg2d, subname, Wireexpr(1))
-                )
-            )
-        elseif length(x.subnodes) == 3
-            # x[m:2], y[3:0]
-            # error if 2d reg
-            !(subname in keys(reg2d)) || error(
-                "2d reg $(subname) is sliced at [$(string(x.subnodes[2])):$(string(x.subnodes[3]))]."
-            )
-
-            indexes = view(x.subnodes, 2:3)
-            if all(w -> w.operation == literal, indexes)
-                # y[3:0] -> width(y) == 4
-                widval = abs(indexes[1].value - indexes[2].value) + 1
-                push!(eqwids, Wirewid(widval))
-            else 
-                # x[m:2] -> width(x) == (m-2) + 1
-                # suppose indexes[1] > indexes[2] ? is this always true?
-                widnow = Wirewid(
-                    Wireexpr(
-                        add, 
-                        Wireexpr(
-                            minus,
-                            indexes[1],
-                            indexes[2]
-                        ),
-                        Wireexpr(1)
-                    )
-                )
-                push!(eqwids, widnow)
-            end
-
-        end
-
+        # width of x cannot be fully inferred without additional information
+        # e.g. `r[2]` may be one bit wide and also may be n-bit wide if `r` is a 2d reg
+        # pass
+        widvarId = generateWidvarId()
+        # leave further processing to preprocess phase
+        # e.g. detecting whether slicing is applied to 1d or 2d wire
+        constraint.id2wire[widvarId] = x
+        push!(constraint.id2wireAll, x)
+        return widvarId
     elseif op == ipselm
-        push!(eqwids, Wirewid(x.subnodes[3]))
-
+        extractConstraintsCore!.(x.subnodes[2:3], constraint)
+        
+        widvarId = generateWidvarId()
+        # leave consequent processing to preprocess phase
+        constraint.id2wire[widvarId] = x
+        push!(constraint.id2wireAll, x)
+        return widvarId
     elseif op == literal
+        widvarId = generateWidvarId()
         bw = x.bitwidth
         if bw > 0
-            push!(eqwids, Wirewid(bw))
+            constraint.id2wid[widvarId] = Wireexpr(bw)
         end
+        push!(constraint.id2wireAll, x)
+        return widvarId
     end
+end
+
+function extractConstraints!(x::Alassign, constraint)
+    widLhs = extractConstraintsCore!(x.lhs, constraint)
+    widRhs = extractConstraintsCore!(x.rhs, constraint)
+    push!(constraint.equality, (widLhs, widRhs))
 
     return nothing
 end
 
-function eqwidflatten!(t::Tuple{Wireexpr, Wireexpr}, envdicts, reg2d, ansset, eqwids::Vector{Wirewid}, declonly, equality)
-    for w in t 
-        eqwidflatten!(w, envdicts, reg2d, ansset, eqwids, declonly, equality)
+function extractConstraints!(x::Wireexpr, constraint)
+    extractConstraintsCore!(x, constraint)
+    return nothing
+end
+
+function extractConstraints!(x::Vector{T}, constraint) where {T}
+    for item in x
+        extractConstraints!(item, constraint)
     end
+    return nothing
 end
 
-# """
-#     declonly_widunify!(declonly, envdicts, ansset, widvars)
 
-# Called in [`widunify`](@ref), push wires that appear in `declonly`.
-# """
-# function declonly_widunify!(declonly, envdicts, ansset, widvars)
-#     for w in declonly
-#         wirepush_widunify!(w, envdicts, ansset, widvars)
-#     end
-#     return nothing 
-# end
-
-function unifycore_errorstr(t::Tuple{Wireexpr, Wireexpr})
-    lhs, rhs = t
-    string(string(lhs), " <=> ", string(rhs))
+function extractConstraints!(x::Ifelseblock, constraint)
+    # TODO: what is the width of condition? 1bit-long only?
+    extractConstraints!.((x.conds, x.contents), constraint)
+    return nothing
 end
 
-function unifycore_errorstr(w::Wireexpr)
-    string(w)
+function extractConstraints!(x::Ifcontent, constraint)
+    extractConstraints!.((x.assigns, x.ifelseblocks, x.cases), constraint)
+    return nothing
 end
 
-"""
-    unifycore_widunify!(items::Vector{T}, envdicts, reg2d, ansset, widvars, declonly, equality) where {T <: Union{Wireexpr, Tuple{Wireexpr, Wireexpr}}}
+function extractConstraints!(x::Case, constraint)
+    extractConstraints!(x.condwire, constraint)
+    for (w::Wireexpr, cont::Ifcontent) in x.conds
+        extractConstraints!(w, constraint)
+        extractConstraints!(cont, constraint)
+    end
+    return nothing
+end
 
-Called in [`widunify`](@ref), infer wire width from `equality` constraints.
+function extractConstraints!(x::Alwayscontent, constraint)
+    extractConstraints!(x.content, constraint)
+    return nothing
+end
 
-To recursively look into `Wireexpr`s in `items`, push new equality 
-and declaration into `declonly` and `equality` given as arguments.
-"""
-function unifycore_widunify!(items::Vector{T}, envdicts, reg2d, ansset, widvars, declonly, equality) where {T <: Union{Wireexpr, Tuple{Wireexpr, Wireexpr}}}
-    for item in items
-        # lhs, rhs = item
+function extractConstraints!(x::Onelocalparam, constraint)
+    extractConstraints!(x.val, constraint)
+    return nothing
+end
 
-        # push every wires in lhs/rhs first
-        # if wire isn't declared, add new Wirewid to `ansset` and `widvars`
-        wirepush_widunify!(item, envdicts, ansset, widvars)
-        
-        # no consideration on wire concats?
-        # from lhs/rhs pick all `Wirewid`s whose value should be the same
-        eqwids = Wirewid[]
-        eqwidflatten!(item, envdicts, reg2d, ansset, eqwids, declonly, equality)
-        unique!(eqwids)
+function extractConstraints(x)
+    constraint = WidthConstraint()
+    initializeWidvarId()
 
-        # unify, determine width value
-        widhere = wwinvalid
-        for ww in eqwids 
-            # if ww.val != wwinvalid
-            if !isequal(ww.val, wwinvalid)
-                # if widhere == wwinvalid 
-                if isequal(widhere, wwinvalid)
-                    widhere = ww.val 
-                else
-                    # if widhere != ww.val 
-                    if !isequal(widhere, ww.val)
-                        error(
-                            "width inference failure in evaluating $(unifycore_errorstr(item)).\n",
-                            "width discrepancy between $(string(widhere)) and $(string(ww.val))."
-                        )
-                    end
-                end
-            end
+    extractConstraints!(x, constraint)
+    return constraint
+end
+
+function uniqueNameToWidvar!(equality, ansset)::Dict{String, Wirewid}
+    newAnsSet = Dict{String, Wirewid}()
+    for (name::String, wid::Wirewid) in ansset
+        if !(name in keys(newAnsSet))
+            newAnsSet[name] = wid
+        else
+            push!(equality, (wid, newAnsSet[name]))
         end
+    end
 
-        # finally,
-        # if widhere != wwinvalid
-        if !isequal(widhere, wwinvalid)
-            # register concrete width value
-            newwid = Wirewid(widhere)
-            for ww in eqwids
-                # if ww.val == wwinvalid
-                if isequal(ww.val, wwinvalid)
-                    # otherwise ww is not contained in `widvars`
+    return newAnsSet
+end
 
-                    # ww may be of `parameters`, `localparams`
-                    updatee = pop!(widvars, ww, String[])
-                    for item in updatee 
-                        ansset[item] = newwid
-                    end 
-                end
-            end
-        else 
-            # argmax should not be applied to length-zero vector
-            if length(eqwids) > 0
-            # concrete width value is not determined, do unify only
-                newwid = argmax(
-                    (
-                        x -> length(
-                            get(widvars, x, String[])
-                        )
-                    ),
-                    eqwids
+struct Reg2dInfo
+    # pairs of 2d reg names and its width (not depth)
+    nameToWidth::Dict{String, Wireexpr}
+end
+"""Error raised when slicing on 2d-array is attempted."""
+struct SliceOnTwoDemensionalLogic <: Exception
+    cause::Wireexpr
+end
+function Base.showerror(io::IO, e::SliceOnTwoDemensionalLogic)
+    print(io, "Slicing $(string(e.cause.subnodes[begin])) which is a 2D logic (at $(string(e.cause)))")
+end
+
+"""
+    resolveSliceWidth!(constraint::WidthConstraint, info::Reg2dInfo)
+
+Determine the width of slices (e.g. `wire1[A], reg2[4:1]`) in `constraint.id2wire` 
+"""
+function resolveSliceWidth!(constraint::WidthConstraint, info::Reg2dInfo)
+    id2wid = constraint.id2wid
+    for (widvarId::Int, wire::Wireexpr) in constraint.id2wire
+        op = wire.operation
+        if op == slice
+            # sanity, true for all wires
+            @assert wire.subnodes[1].operation == id
+            if length(wire.subnodes) == 2
+                slicedName = getname(wire.subnodes[1])
+                id2wid[widvarId] = (
+                    if slicedName in keys(info.nameToWidth)
+                        info.nameToWidth[slicedName]
+                    else
+                        Wireexpr(1)
+                    end
                 )
+            else
+                # sanity, true for all wires
+                @assert length(wire.subnodes) == 3
+                !(getname(wire.subnodes[1]) in keys(info.nameToWidth)) || throw(SliceOnTwoDemensionalLogic(wire))
 
-
-                lst = get(widvars, newwid, nothing)
-                if lst != nothing
-                    for ww in eqwids
-                        if ww != newwid 
-                            removing = pop!(widvars, ww, String[])
-                            push!(lst, removing...)
-
-                            for item in removing 
-                                ansset[item] = newwid
-                            end
-                        end
-                    end
-                end 
+                indexes = view(wire.subnodes, 2:3)
+                if all(w -> w.operation == literal, indexes)
+                    width = abs(indexes[1].value - indexes[2].value) + 1
+                    id2wid[widvarId] = Wireexpr(width)
+                else
+                    # what if w0[1+3:0] ... ???
+                    width = @wireexpr $(indexes[1]) - $(indexes[2]) + 1
+                    id2wid[widvarId] = width
+                end
             end
-
+        else
+            vshow(wire)
+            error("While preprocessing id2wire, encountered unacceptable value")
         end
-
     end
-
     return nothing
 end
 
 """
-    envdictsgen_widunify(env::Vmodenv)::Tuple{Dict{String, Wirewid}, Dict{Wirewid, Vector{String}}, NTuple{4, Dict{String, Wirewid}}}
+    addDeclarationInfo!(constraint::WidthConstraint, declarations::T) where {T<:Union{Ports,Decls}}
 
-Separate variables with known and unknown width.
-
-Appropriately insert them into the return value `ansset`, `widvars` and `envdicts`.
+Add width information obtained from `declarations` into `constraint`.
 """
-function envdictsgen_widunify(env::Vmodenv)::Tuple{
-    Dict{String, Wirewid},
-    Dict{Wirewid, Vector{String}},
-    NTuple{4, Dict{String, Wirewid}}
-}
-    prms = env.prms 
-    prts = env.prts 
-    lprms = env.lprms 
-    dcls = env.dcls
+function addDeclarationInfo!(constraint::WidthConstraint, declarations::T) where {T<:Union{Ports,Decls}}
+    for item in declarations
+        name = getname(item)
+        width = getwidth(item)
 
-    # separate ports/decls of unknown width
-    kprts, ukprts = separate_widunknown(prts)
-    kdcls, ukdcls = separate_widunknown(dcls)
+        widId = get(constraint.name2id, name, nothing)
 
-    prmdict = Dict([p.name => Wirewid() for p in prms.val])
-    lprmdict = Dict([p.name => Wirewid() for p in lprms.val])
+        # TODO: generate warning when declaring wires which is not used at all
 
-    # only data of delc/ports of known width
-    prtdict = Dict([(p.name => Wirewid(p.width)) for p in kprts.val])
-    dcldict = Dict([d.name => Wirewid(d.width) for d in kdcls.val])
-
-    envdicts = (prmdict, prtdict, lprmdict, dcldict)
-
-
-    # may contain Wirewid with both wwinvalid and a valid value
-    ansset = Dict{String, Wirewid}()
-    # only contain Wireval whose val field == wwinvalid
-    widvars = Dict{Wirewid, Vector{String}}()
-
-    unknowndeclpush!(ansset, widvars, ukprts, ukdcls)
-
-
-    ansset, widvars, envdicts
-end
-
-"""
-    widunify(declonly::Vector{Wireexpr}, equality::Vector{Tuple{Wireexpr, Wireexpr}}, env::Vmodenv)::Tuple{Dict{String, Wirewid}, Dict{Wirewid, Vector{String}}}
-
-Given `declonly` and `equality` from [`wireextract`](@ref), 
-infer width of wires which appear in the conditions.
-"""
-function widunify(declonly::Vector{Wireexpr}, 
-    equality::Vector{Tuple{Wireexpr, Wireexpr}}, env::Vmodenv)::Tuple{
-        Dict{String, Wirewid},
-        Dict{Wirewid, Vector{String}}
-    }
-
-    # generate a dict object from env
-    ansset, widvars, envdicts = envdictsgen_widunify(env)
-
-    # set of 2d regs
-    prereg2d = extract2dreg(env.dcls)
-    reg2d = Dict([k=>i.width for (k, i) in prereg2d])
-
-    # helper functions
-    while length(declonly) > 0 || length(equality) > 0
-        newdonly = Wireexpr[]
-        newequal = Tuple{Wireexpr, Wireexpr}[]
-
-        unifycore_widunify!(declonly, envdicts, reg2d, ansset, widvars, newdonly, newequal)
-        unifycore_widunify!(equality, envdicts, reg2d, ansset, widvars, newdonly, newequal)
-        
-        declonly, equality = newdonly, newequal
-    end 
-
-    ansset, widvars 
-end
-
-
-"""
-    widunify(declonly::Vector{Wireexpr}, equality::Vector{Tuple{Wireexpr, Wireexpr}})
-
-Call `widunify` under an empty `env` (, where no ports, parameters,... are declared).
-"""
-function widunify(declonly::Vector{Wireexpr}, 
-    equality::Vector{Tuple{Wireexpr, Wireexpr}})
-
-    widunify(declonly, equality, Vmodenv())
-end
-
-
-"Error thrown when wire width inferenece is not possible."
-struct WirewidthUnresolved <: Exception 
-    mes::String
-end
-
-Base.showerror(io::IO, e::WirewidthUnresolved) = print(
-    io, "Wire width cannot be inferred for the following wires.\n", e.mes
-)
-
-"""
-    strwidunknown(widvars)
-
-Format `widvars`, returned from [`widunify`](@ref), to a string.
-"""
-function strwidunknown(widvars)
-    # sort by the first element of wire names
-    debuglst = sort([i for i in widvars], by=(x -> x[2][1]))
-    txt = ""
-    for (ind, (var, lst)) in enumerate(debuglst)
-        txt *= "$(ind). "
-        subtxt = reduce((x, y) -> x * " = " * y, lst)
-        txt *= subtxt
-        txt *= "\n"
-    end
-
-    rstrip(txt)
-end
-
-"""
-    portdeclupdated!(env::Vmodenv, ansset::Dict{String, Wirewid})
-
-When env contains ports/wire declarations of unknown width, 
-return new `Vmodenv` object whose bitwidth are all filled in.
-
-`ansset` is supposed to contain enough information. 
-Data in `ansset` which is used in this method is removed from `ansset`, 
-this behavior is essential for `autodecl_core`.
-"""
-function portdeclupdated!(env::Vmodenv, ansset::Dict{String, Wirewid})
-
-    prenewprts = Vector{Oneport}(undef, length(env.prts.val))
-    prenewdcls = Vector{Onedecl}(undef, length(env.dcls.val))
-
-    for (ind, p) in enumerate(env.prts.val)
-        if isequal(p.width, wwinvalid)
-            # oldd = p.decl
-            widhere = pop!(ansset, p.name)
-            prenewprts[ind] = Oneport(p.direc, p.wtype, widhere.val, p.name)
+        @assert isnothing(widId) || !(widId in keys(constraint.id2wid))
+        if !isnothing(widId)
+            constraint.id2wid[widId] = width
         else
-            prenewprts[ind] = p 
+            # unused wire declaration
+            # add entry to dict only for supressing key error in updateUnknownWidth
+            widId = generateWidvarId()
+            constraint.name2id[name] = widId
+            constraint.id2wid[widId] = width
+            push!(constraint.id2wireAll, Wireexpr(name))
         end
     end
-
-    for (ind, d) in enumerate(env.dcls.val)
-        if isequal(d.width, wwinvalid)
-            prenewdcls[ind] = Onedecl(d.wtype, pop!(ansset, d.name).val, d.name)
-        else
-            prenewdcls[ind] = d 
-        end
-    end
-
-    Vmodenv(
-        env.prms, 
-        Ports(prenewprts),
-        env.lprms,
-        Decls(prenewdcls)
-    )
+    return nothing
 end
 
+"""
+    addParameterInfo!(constraint::WidthConstraint, info::T) where {T <: Union{Localparams}}
+
+Exclude items in `info` from target of wire width inference.
+
+Localparam with explicit width declaration is not yet implemented.
+As a workaround we treat localparam as wire of unknown width.
+"""
+function addParameterInfo!(constraint::WidthConstraint, info::T) where {T <: Union{Localparams}}
+    for item in info
+        # localparam is not the target of width inference
+        pop!(constraint.name2id, item.name, nothing)
+    end
+    return nothing
+end
+
+"""Error to be raised when wire width conflict is detected."""
+struct WireWidthConflict <: Exception 
+    wires::Vector{Wireexpr}
+    widths::Vector{Wireexpr}
+end
+
+function Base.showerror(io::IO, e::WireWidthConflict)
+    println(io, "Wire Width Conflict Detected")
+    println(io, "WIRE -> WIDTH")
+    bodyStarted = false
+    for (wire, width) in zip(e.wires, e.widths)
+        if bodyStarted
+            print(io, "\n")
+        else
+            bodyStarted = true
+        end
+        print(io, "  ", string(wire), " : ", isequal(width, WWINVALID) ? "Unspecified" : string(width))
+    end
+end
+
+function widUpdated_uuw(x::Oneport, w::Wireexpr)
+    return Oneport(getdirec(x), getwiretype(x), w, getname(x))
+end
+function widUpdated_uuw(x::Onedecl, w::Wireexpr)
+    return Onedecl(x.wtype, w, getname(x), x.is2d, x.wid2d)
+end
 
 """
-    autodecl_core(x, env::Vmodenv)
+    updateUnknownWidth(tree::UnionFindTree, container::T, name2id, groupToWid) where {T <: Union{Ports, Decls}}
+
+Return new `T` object which is constructed updating wires with unknown width in `container`
+by actual width value.
+"""
+@generated function updateUnknownWidth(tree::UnionFindTree, container::T, name2id, groupToWid) where {T <: Union{Ports, Decls}}
+    itemType = container == Ports ? Oneport : Onedecl
+    quote
+        newItems = Vector{$itemType}(undef, length(container))
+        for (ind, item) in enumerate(container)
+            # can even infer width for 2d reg
+            if isequal(getwidth(item), WWINVALID)
+                widId = name2id[getname(item)]
+                widIdGroup = getRoot(widId, tree)
+                wid = groupToWid[widIdGroup]
+                item = widUpdated_uuw(item, wid)
+            end
+            # if getname(item) in keys(isNameVisited)
+            #     isNameVisited[getname(item)] = true
+            # end
+            newItems[ind] = item
+        end
+        widthAssigned = $T(newItems)
+        return widthAssigned
+    end
+end
+
+"""
+    unifyEquality(equality)
+
+Body of width inference.
+
+Given list of pairs of wire-width-id (identifier which represents width),
+group ids that are inferred to be representing the same width.
+
+Adopt union-find-tree as an internal implementation of grouping.
+"""
+function unifyEquality(equality)
+    tree = UnionFindTree(getTotalWidvar())
+    for (wid1, wid2) in equality
+        uniteTree(wid1, wid2, tree)
+    end
+    return tree
+end
+
+"""
+    treeToWidthGroup(tree::UnionFindTree)
+
+Take a return value from [unifyEquality](@ref) as an argument and
+generate a list of sets, each of which contains ids that represent the same width.
+"""
+function treeToWidthGroup(tree::UnionFindTree)
+    widthGroup = Dict{Int, Set{Int}}()
+    for i in 1:getTotalWidvar()
+        parent = getRoot(i, tree)
+        if parent in keys(widthGroup)
+            push!(widthGroup[parent], i)
+        else
+            widthGroup[parent] = Set(i)
+        end
+    end
+    return widthGroup
+end
+
+"""
+    mapGroupToWidth(widthGroup::Dict{Int, Set{Int}}, constraint::WidthConstraint)
+
+Take an output from [treeToWidthGroup](@ref) and map each group to actual width(`::Wireexpr`).
+
+As a representative of each group we adopt the root width-id in the tree passed to [treeToWidthGroup](@ref).
+"""
+function mapGroupToWidth(widthGroup::Dict{Int, Set{Int}}, constraint::WidthConstraint)
+    groupToWid = Dict{Int, Wireexpr}()
+    for (parent, group) in widthGroup
+        width = WWINVALID
+        for widId in group
+            currentWidth = get(constraint.id2wid, widId, WWINVALID)
+            if isequal(width, WWINVALID)
+                width = currentWidth
+            elseif !isequal(currentWidth, WWINVALID)
+                if !isequal(width, currentWidth)
+                    e = WireWidthConflict(
+                        [constraint.id2wireAll[i] for i in group],
+                        [get(constraint.id2wid, i, WWINVALID) for i in group]
+                    )
+                    throw(e)
+                end
+            end
+        end
+        groupToWid[parent] = width
+    end
+    return groupToWid
+end
+
+"""
+    generateUndeclaredLogic(env::Vmodenv, tree, name2id, groupToWid)
+
+Generate `Decls` object that contains all wire declarations
+which turned out to be required through wire width inference.
+"""
+function generateUndeclaredLogic(env::Vmodenv, tree, name2id, groupToWid)
+    names = keys(name2id)
+    alreadyDeclared = union(Set(getname.(env.prts)), Set(getname.(env.dcls)))
+    generating = filter(x -> !(x in alreadyDeclared), names)
+    generatedLogics = Vector{Onedecl}(undef, length(generating))
+    for (ind, name) in enumerate(generating)
+        widId = name2id[name]
+        widIdGroup = getRoot(widId, tree)
+        wid = groupToWid[widIdGroup]
+        generatedLogics[ind] = Onedecl(logic, wid, name)
+    end
+
+    return Decls(generatedLogics)
+end
+
+"""
+    isWidthUnresolved(widId::Int, tree::UnionFindTree, groupToWid)
+
+Check if wire width value for `widId` has successfully been determined.
+"""
+function isWidthUnresolved(widId::Int, tree::UnionFindTree, groupToWid)
+    root = getRoot(widId, tree)
+    wid = groupToWid[root]
+    return isequal(wid, WWINVALID)
+end
+
+"""Error to be thrown when width of any wires remain unknown."""
+struct WidthRemainUnresolved <: Exception
+    unresolvedId::Vector{Int}
+    unifyTree::UnionFindTree
+    widthGroup::Dict{Int, Set{Int}}
+    constraint::WidthConstraint
+end
+
+function Base.showerror(io::IO, e::WidthRemainUnresolved)
+    println(io, "Wire width cannot be inferred for the following wires.")
+    visitedRoot = Set{Int}()
+    ind = 1
+    for (count, widId) in enumerate(e.unresolvedId)
+        root = getRoot(widId, e.unifyTree)
+        if !(root in visitedRoot)
+            push!(visitedRoot, root)
+            isFirstItem = true
+            for w in sort(collect(e.widthGroup[root]))
+                wireNow = e.constraint.id2wireAll[w]
+                if wireNow.operation != literal
+                    if isFirstItem
+                        print(io, "$ind. $(string(wireNow))")
+                        isFirstItem = false
+                    else
+                        print(io, " = $(string(wireNow))")
+                    end
+                end
+            end
+            # if all items are of literal then no newline
+            if !isFirstItem
+                if (count != length(e.unresolvedId))
+                    println(io, "")
+                end
+                ind += 1
+            end
+        end
+    end
+end
+
+"""
+    errorUnlessWidthResolved(unresolved::Vector{Int}, tree, widthGroup, constraint)
+
+Throw error when `unresolves` in not empty, which indicates that width of some wires remain unknown.
+"""
+function errorUnlessWidthResolved(unresolved::Vector{Int}, tree, widthGroup, constraint)
+    if length(unresolved) > 0
+        throw(WidthRemainUnresolved(unresolved, tree, widthGroup, constraint))
+    end
+    return nothing
+end
+
+"""
+    autodeclCore(x, env::Vmodenv)
 
 Core of `autodecl`, return `Decls` object of automatically declared wires, 
 and `env::Vmodenv` all of whose unknown width value is filled in through width inference.
-
-Type of `x` is restricted to the type `wireextract!` accepts.
 """
-function autodecl_core(x, env::Vmodenv)
-    don, equ = wireextract(x)
-    ansset, widvars = widunify(don, equ, env)
+function autodeclCore(x, env::Vmodenv)
+    constraint = extractConstraints(x)
+    reg2d = extract2dreg(env.dcls)
+    info = Reg2dInfo(Dict([k => v.width for (k, v) in reg2d]))
+    
+    resolveSliceWidth!(constraint, info)
+    addDeclarationInfo!.(constraint, (env.prts, env.dcls))
+    addParameterInfo!(constraint, env.lprms)
 
-    length(widvars) == 0 || throw(
-        WirewidthUnresolved(
-            strwidunknown(widvars)
-        )
-    )
-    # length(widvars) == 0 || error("Wirewidth unresolved, ", strwidunknown(widvars))
+    tree = unifyEquality(constraint.equality)
+    widthGroup = treeToWidthGroup(tree)
 
-    # extract from ansset ports/declarations specified in `env`
-    newenv = portdeclupdated!(env, ansset)
+    groupToWid = mapGroupToWidth(widthGroup, constraint)
+    unresolved = filter(x -> isWidthUnresolved(x, tree, groupToWid), [x[2] for x in constraint.name2id])
+    errorUnlessWidthResolved(unresolved, tree, widthGroup, constraint)
 
-    newdecls = [Onedecl(logic, ww.val, n) for (n, ww) in ansset]
-    sort!(newdecls, by=(d -> d.name))
-    Decls(newdecls), newenv
+    nprts = (updateUnknownWidth(tree, env.prts, constraint.name2id, groupToWid))
+    ndcls = (updateUnknownWidth(tree, env.dcls, constraint.name2id, groupToWid))
+
+    autoGenerated = generateUndeclaredLogic(env, tree, constraint.name2id, groupToWid)
+    return autoGenerated, Vmodenv(env.prms, nprts, env.lprms, ndcls)
 end
 
 """
-    autodecl_core(x)
+    autodeclCore(x)
 
-Call `autodecl_core` under an empty environment.
+Call `autodeclCore` under an empty environment.
 For debug (test) use.
 """
-function autodecl_core(x)
-    autodecl_core(x, Vmodenv())
+function autodeclCore(x)
+    autodeclCore(x, Vmodenv())
 end
-
-# """
-#     mergedeclenv(d::Decls, env::Vmodenv)
-
-# Merge return value from autodecl_core into a new `Vmodenv` object.
-# """
-# function mergedeclenv(d::Decls, env::Vmodenv)
-#     Vmodenv(
-#         env.prms, 
-#         env.prts,
-#         env.lprms,
-#         declmerge(env.dcls, d)
-#     )
-# end
 
 
 """
@@ -673,8 +600,6 @@ end
 
 Declare wires in `x` which are not yet declared in `env`.
 Raise error when not enough information to determine width of all wires is given.
-
-Type of `x` is restricted to the type `wireextract!` accepts.
 
 # Examples 
 
@@ -715,28 +640,28 @@ When declaring ports/wires without specifying
 its bit width, assign `-1` as its width.
 
 ```jldoctest
-ps = @ports (
-    @in 2 x;
-    @in -1 y;
-    @out @reg A z
-) 
-ds = @decls (
-    @wire -1 w1;
-    @wire B w2
-)
+julia> ps = @ports (
+       @in 2 x;
+       @in -1 y;
+       @out @reg A z
+       );
 
-ab = @always (
-    z <= r1 + r2 + r3;
-    r4 <= (y & w1) << r1[1:0];
-    r5 <= y + w2
-)
-env = Vmodenv(Parameters(), ps, Localparams(), ds)
-nenv = autodecl(ab.content, env)
+julia> ds = @decls (
+       @wire -1 w1;
+       @wire B w2
+       );
 
-vshow(nenv)
+julia> ab = @always (
+       z <= r1 + r2 + r3;
+       r4 <= (y & w1) << r1[1:0];
+       r5 <= y + w2
+       );
 
-# output
+julia> env = Vmodenv(Parameters(), ps, Localparams(), ds);
 
+julia> nenv = autodecl(ab.content, env);
+
+julia> vshow(nenv);
 input [1:0] x
 input [B-1:0] y
 output reg [A-1:0] z
@@ -745,9 +670,9 @@ wire [B-1:0] w1;
 wire [B-1:0] w2;
 logic [A-1:0] r1;
 logic [A-1:0] r2;
+logic [B-1:0] r5;
 logic [A-1:0] r3;
 logic [B-1:0] r4;
-logic [B-1:0] r5;
 type: Vmodenv
 ```
 
@@ -755,26 +680,22 @@ type: Vmodenv
 ## Fail in Inference
 
 ```jldoctest
-c = @ifcontent (
-    reg1 = 0;
-    reg2 = din;
-    if b1 
-        reg1 = din[10:7]
-    end
-) 
+julia> c = @always (
+       reg1 = 0;
+       reg2 = din;
+       if b1 
+           reg1 = din[10:7]
+       end
+       );
 
-autodecl(c)
-
-# output
-
+julia> autodecl(c);
 ERROR: Wire width cannot be inferred for the following wires.
 1. b1
 2. reg2 = din
 ```
 """
 function autodecl(x, env::Vmodenv)::Vmodenv
-    d, nenv = autodecl_core(x, env)
-    # mergedeclenv(d, nenv)
+    d, nenv = autodeclCore(x, env)
     vpush!(nenv.dcls, d)
     return nenv
 end

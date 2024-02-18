@@ -11,6 +11,7 @@ const pathbasic = [
     "vopoverloads.jl", 
     "fsm.jl", 
     "autoreset.jl",
+    "unionfind.jl",
     "widthinference.jl", 
     "vstring.jl",
     "vpush.jl", 

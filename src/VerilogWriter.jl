@@ -71,8 +71,9 @@ export
     wireextract, wireextract!,
     lhsextract, lhsunify, autoreset, autoreset!, isreset,
     defclk, defrst,
-    Vmodenv, autodecl, autodecl_core
+    Vmodenv, autodecl, autodeclCore, 
     #  mergedeclenv
+    WidthRemainUnresolved, WireWidthConflict, SliceOnTwoDemensionalLogic
 
 export 
     FSM, @FSM, fsmconv, transadd!, @tstate, transcond
@@ -106,7 +107,7 @@ const testonlyvars = @listtestonly (
 include("testonlyexport.jl")
 
 
-# priority for files declaring `struct`s
+# prioritize files declaring types
 
 include("codegenfunc.jl")
 include("includestructs.jl")

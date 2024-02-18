@@ -301,7 +301,6 @@ struct Assign
 end
 
 """
-
 Represents module instantiation.
 
 ```jldoctest
