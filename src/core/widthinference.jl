@@ -1,15 +1,7 @@
 "Value which indicates that the `Wirewid` object does not have a valid value."
 const WWINVALID::Wireexpr = Wireexpr(-1)
 
-eachfieldconstruct(Vmodenv)
 
-"""
-    Vmodenv()
-
-Create an empty `Vmodenv` object.
-"""
-Vmodenv() = Vmodenv(Parameters(), Ports(), Localparams(), Decls())
-Vmodenv(m::Vmodule) = Vmodenv(m.params, m.ports, m.lparams, m.decls)
 
 """
     extract2dreg(x::Vector{Onedecl})
@@ -225,6 +217,16 @@ end
 
 function extractConstraints!(x::Onelocalparam, constraint)
     extractConstraints!(x.val, constraint)
+    return nothing
+end
+
+function extractConstraints!(x::Vmodinst, constraint)
+    extractConstraints!.([w for (_, w) in x.ports], constraint)
+    return nothing
+end
+
+function extractConstraints!(x::VmodBody, constraint)
+    extractConstraints!.((x.insts, x.assigns, x.always), constraint)
     return nothing
 end
 
@@ -718,8 +720,12 @@ return a new `Vmodule` object with inferred wires.
 """
 function autodecl(x::Vmodule)::Vmodule
     env = Vmodenv(x)
+
+    if (length(x.assigns) > 0)
+        error("Width inference for assign statement is not implemented")
+    end
     
-    nenv = autodecl(x.always, env)
+    nenv = autodecl(VmodBody(x), env)
     Vmodule(
         x.name, 
         nenv, 

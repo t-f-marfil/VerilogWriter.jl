@@ -366,3 +366,10 @@ struct Vmodenv
     lprms::Localparams
     dcls::Decls
 end
+
+struct VmodBody
+    insts::Vector{Vmodinst}
+
+    assigns::Vector{Assign}
+    always::Vector{Alwayscontent}
+end

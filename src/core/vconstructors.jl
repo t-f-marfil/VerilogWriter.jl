@@ -196,3 +196,17 @@ ass::Vector{Assign}, als::Vector{Alwayscontent}
 
 Vmodule(n::String, ps::Ports, decls::Decls, als::Vector{Alwayscontent}
 ) = Vmodule(n, Parameters(), ps, decls, Assign[], als)
+
+
+eachfieldconstruct(Vmodenv)
+
+"""
+    Vmodenv()
+
+Create an empty `Vmodenv` object.
+"""
+Vmodenv() = Vmodenv(Parameters(), Ports(), Localparams(), Decls())
+Vmodenv(m::Vmodule) = Vmodenv(m.params, m.ports, m.lparams, m.decls)
+
+
+VmodBody(m::Vmodule) = VmodBody(m.insts, m.assigns, m.always)
