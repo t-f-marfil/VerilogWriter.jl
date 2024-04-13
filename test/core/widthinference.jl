@@ -1,11 +1,11 @@
 # inference on shift operator
-# e.g. in `w = x << y` width of y is unknown
+# e.g. in `w = x << y`, width of y is independent on x
 c = @always (
     reg1 = $(Wireexpr(32, 5)) << reg2;
     reg2 = $(Wireexpr(10, 5))
 )
 
-d, _ = autodeclCore(c)
+_, (d, _) = autodeclCore(c)
 
 @test string(d) == """
 logic [31:0] reg1;
@@ -17,7 +17,7 @@ c = @always (
     reg2 = ~($(Wireexpr(10, 6)))
 )
 
-d, _ = autodeclCore(c)
+_, (d, _) = autodeclCore(c)
 
 @test string(d) == """
 logic reg1;
@@ -30,7 +30,7 @@ env = Vmodenv(
         @reg A+B reg2
     )
 )
-d, _ = autodeclCore(
+_, (d, _) = autodeclCore(
     (@always (
         reg1 <= reg2;
         reg3 <= reg2;
@@ -51,7 +51,7 @@ c = @always (
         a <= &(b == c)
     end
 )
-d, nenv = autodeclCore(c)
+_, (d, _) = autodeclCore(c)
 @test string(d) == """
 logic c;
 logic b;
@@ -81,7 +81,7 @@ c = @always (
     end
 )
 
-dc, _ = autodeclCore(c, Vmodenv(d))
+_, (dc, _) = autodeclCore(c, Vmodenv(d))
 
 @test string(dc) == """
 logic [9:0] c;"""
@@ -109,5 +109,5 @@ alempty = @always (
         a <= $(Wireexpr(1, 1))
     end
 )
-dempty = autodecl(alempty)
+_, dempty = autodecl(alempty)
 @test string(dempty) == "logic a;"

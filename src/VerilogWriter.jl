@@ -73,7 +73,8 @@ export
     defclk, defrst,
     Vmodenv, autodecl, autodeclCore, 
     #  mergedeclenv
-    WidthRemainUnresolved, WireWidthConflict, SliceOnTwoDemensionalLogic
+    WidthRemainUnresolved, WireWidthConflict, SliceOnTwoDemensionalLogic,
+    WidthInfereceStatus, widthInferenceCompleted, widthInferenceMadeProgress, throwIfInferenceIsIncomplete
 
 export 
     FSM, @FSM, fsmconv, transadd!, @tstate, transcond

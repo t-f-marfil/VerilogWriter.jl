@@ -351,7 +351,9 @@ function vfinalize(x::Vmodule)
     # reg2d = Dict([k => i.wid2d for (k, i) in prereg2d])
     # m = autoreset(x, reg2d=reg2d)
     m = autoreset(x)
-    autodecl(m)
+    status, m = autodecl(m)
+    throwIfInferenceIsIncomplete(status)
+    return m
 end
 
 # """
