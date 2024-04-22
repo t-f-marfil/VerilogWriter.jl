@@ -197,6 +197,9 @@ ass::Vector{Assign}, als::Vector{Alwayscontent}
 Vmodule(n::String, ps::Ports, decls::Decls, als::Vector{Alwayscontent}
 ) = Vmodule(n, Parameters(), ps, decls, Assign[], als)
 
+Vmodule(n::AbstractString, env::Vmodenv, body::VmodBody
+) = Vmodule(n, env, body.insts, body.assigns, body.always)
+
 
 eachfieldconstruct(Vmodenv)
 
@@ -210,3 +213,5 @@ Vmodenv(m::Vmodule) = Vmodenv(m.params, m.ports, m.lparams, m.decls)
 
 
 VmodBody(m::Vmodule) = VmodBody(m.insts, m.assigns, m.always)
+
+VinstInterfaces() = VinstInterfaces(Dict{String, VinstInterfaceFinder}())

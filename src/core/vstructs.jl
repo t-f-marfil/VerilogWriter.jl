@@ -358,6 +358,11 @@ struct Vmodule
     always::Vector{Alwayscontent}
 end
 
+struct VinstInterfaceFinder
+    ports::Dict{String, Oneport}
+end
+VinstInterfaceFinder() = VinstInterfaceFinder(Dict{String, Oneport}())
+VinstInterfaceFinder(v::Vmodule) = VinstInterfaceFinder(Dict([getname(p) => p for p in v.ports]))
 
 "Environment in which wire width inference is done."
 struct Vmodenv
@@ -365,6 +370,16 @@ struct Vmodenv
     prts::Ports
     lprms::Localparams
     dcls::Decls
+
+    # # maps name of modules which are instantiated 
+    # # to VinstInterfaceFinder objects
+    # instInterfaces::Dict{String, VinstInterfaceFinder}
+end
+
+struct VinstInterfaces
+    # maps name of modules which are instantiated 
+    # to VinstInterfaceFinder objects
+    value::Dict{String, VinstInterfaceFinder}
 end
 
 struct VmodBody
