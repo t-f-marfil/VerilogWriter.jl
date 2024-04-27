@@ -308,7 +308,8 @@ function getPortWidth(portName::S, interfaceFinder::VinstInterfaceFinder) where 
 end
 function addInstPortInfo!(constraint::WidthConstraint, x::Vmodinst, instInterfaces::VinstInterfaces)
     interfaceFinder = get(instInterfaces.value, x.vmodname, VinstInterfaceFinder())
-
+    # TODO: return widvarId for each port to caller, and then
+    # upper function can figure out the widvarId of each port in Vmodinst
     for (portName, connectedWire) in x.ports
         widvarId = extractConstraintsCore!(connectedWire, constraint)
         portWidth = getPortWidth(portName, interfaceFinder)
@@ -641,6 +642,8 @@ and `env::Vmodenv` all of whose unknown width value is filled in through width i
 """
 function autodeclCore(x, env::Vmodenv, instInterfaces::VinstInterfaces)
     constraint = extractConstraints(x)
+    # TODO: maybe get widId -> portname mapping here, 
+    # and later update Oneport in instInterfaces with concrete width
     addInstPortInfo!(constraint, x, instInterfaces)
 
     reg2d = extract2dreg(env.dcls)
@@ -840,4 +843,110 @@ function autodecl(x::Vmodule, env::Vmodenv, instinterfaces::VinstInterfaces)::Tu
         x.assigns, 
         x.always
     )
+end
+
+function extractVmoduleNameAll_ad(x::Vector{Vmodule})
+    nameSet = Set{String}()
+    for m in x
+        push!(nameSet, getname(m))
+        for inst in m.insts
+            push!(nameSet, inst.vmodname)
+        end
+    end
+    return nameSet
+end
+
+"""
+    autodeclVmodlist(x::Vector{Vmodule}, getFixedPoint::Bool)
+
+Apply [`autodecl`](@ref) to each `Vmodule` object in `x`.
+Port width inferred in one `Vmodule` object (say A) is considered when
+inferring wire width of another `Vmodule` object in which A is instantiated.
+"""
+function autodeclVmodlist(x::Vector{Vmodule}, getFixedPoint::Bool)
+    vmodDictByName = Dict([getname(item) => item for item in x])
+
+    vmodNameToIndex = Dict([item => ind for (ind, item) in enumerate(extractVmoduleNameAll_ad(x))])
+
+    indexToVmodName = Dict([v => k for (k, v) in vmodNameToIndex])
+    vmodNameWithDefinition = Set([getname(m) for m in x]) # needed?
+    vmodIndexWithDefinition = Set([vmodNameToIndex[n] for n in vmodNameWithDefinition])
+    
+    vmodIndexToVmodule = Dict([ind => vmodDictByName[indexToVmodName[ind]] for ind in vmodIndexWithDefinition])
+
+    updatedVmods = Dict{Int, Tuple{WidthInferenceStatus, Vmodule}}()
+
+    adjacency = Dict{Int,Set{Int}}()
+    for item in x
+        s = Set([vmodNameToIndex[inst.vmodname] for inst in item.insts])
+        adjacency[vmodNameToIndex[getname(item)]] = s
+    end
+
+    seen = Vector{Bool}(undef, length(vmodNameToIndex))
+    finished = Vector{Bool}(undef, length(vmodNameToIndex))
+
+    function autodeclRecurseInternal(index::Int)
+        seen[index] = true
+        # return if Vmodule declaration for module represented by `index` is not available
+        if !(index in vmodIndexWithDefinition)
+            finished[index] = true
+            return nothing
+        end
+
+        for child in adjacency[index]
+            # not visit if already visited
+            if finished[child]
+                continue
+            end
+
+            if seen[child] && !finished[child]
+                error("instance loop detected")
+            end
+
+            autodeclRecurseInternal(child)
+        end
+
+        instInterfaces = Dict([
+            (indexToVmodName[child]
+            => VinstInterfaceFinder(vmodIndexToVmodule[child]))
+            for child in adjacency[index] if child in vmodIndexWithDefinition
+        ]) |> VinstInterfaces
+        currentVmod = vmodIndexToVmodule[index]
+        
+        status, newVmod = autodecl(currentVmod, Vmodenv(), instInterfaces)
+        updatedVmods[index] = (status, newVmod)
+
+        finished[index] = true
+        return nothing
+    end
+
+    loopCount = 0
+    while true
+        fill!(seen, false)
+        fill!(finished, false)
+
+        for ind in 1:length(vmodNameToIndex)
+            if !finished[ind]
+                autodeclRecurseInternal(ind)
+            end
+        end
+
+        statusList = [status for (status, _) in values(updatedVmods)]
+        inferenceAllDone = all([widthInferenceCompleted(s) for s in statusList])
+        anyProgressMade = any([widthInferenceMadeProgress(s) for s in statusList])
+
+        loopCount += 1
+        println("At $loopCount th iteration, inferenceAllDone = $inferenceAllDone, anyProgressMade = $anyProgressMade")
+
+        if getFixedPoint && (!inferenceAllDone && anyProgressMade)
+            # continue
+            for (index, (_, vmod)) in updatedVmods
+                vmodIndexToVmodule[index] = vmod
+            end
+        else
+            break
+        end
+    end
+
+    return [(status, mod) for (_, (status, mod)) in updatedVmods]
 end
