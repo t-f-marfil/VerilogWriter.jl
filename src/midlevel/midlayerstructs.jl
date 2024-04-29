@@ -12,7 +12,8 @@ end
 struct Layerconn
     # pid::Int
     # port names as wireexpr
-    ports::OrderedSet{Pair{Oneport, Oneport}}
+    # ports::OrderedSet{Pair{Oneport, Oneport}}
+    ports::Vector{Pair{String, String}}
 end
 
 struct Midport

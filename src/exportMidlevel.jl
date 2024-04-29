@@ -1,6 +1,6 @@
 export
     Midmoduletype, Midmodule, 
-    Layerconn, Midport, Mmodgraph,
+    Layerconn, Midport, Mmodgraph, @pconnect,
     defaultMidPid,
     IntermmodSigtype
 

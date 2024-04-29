@@ -71,7 +71,7 @@ export
     wireextract, wireextract!,
     lhsextract, lhsunify, autoreset, autoreset!, isreset,
     defclk, defrst,
-    Vmodenv, autodecl, autodeclCore, 
+    Vmodenv, autodecl, autodeclCore, autodeclVmodlist,
     #  mergedeclenv
     WidthRemainUnresolved, WireWidthConflict, SliceOnTwoDemensionalLogic,
     WidthInfereceStatus, widthInferenceCompleted, widthInferenceMadeProgress, throwIfInferenceIsIncomplete

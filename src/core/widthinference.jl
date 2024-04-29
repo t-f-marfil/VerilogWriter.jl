@@ -948,5 +948,12 @@ function autodeclVmodlist(x::Vector{Vmodule}, getFixedPoint::Bool)
         end
     end
 
-    return [(status, mod) for (_, (status, mod)) in updatedVmods]
+    statusAll = Vector{WidthInferenceStatus}(undef, length(updatedVmods))
+    vmodAll = Vector{Vmodule}(undef, length(updatedVmods))
+    for (i, vmod) in enumerate(x)
+        vmodInd = vmodNameToIndex[getname(vmod)]
+        statusAll[i], vmodAll[i] = updatedVmods[vmodInd]
+    end
+    return statusAll, vmodAll
 end
+autodeclVmodlist(vmods) = autodeclVmodlist(vmods, true)

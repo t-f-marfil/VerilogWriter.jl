@@ -316,7 +316,7 @@ May be needed when MUSL behavior is modified.
 """
 function ildatabuffer(lay::Midmodule, conn::Layerconn)
     m = Vmodule("ildatabuf_$(getname(lay))")
-    prts = Ports([p for (p, _) in conn.ports])
+    prts = Ports([(@oneport @out -1 $p) for (p, _) in conn.ports])
     ilprts = @ports (
         @in $(nametolower(imvalid, defaultMidPid)), $(nametolower(imupdate, defaultMidPid))
     )

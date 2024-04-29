@@ -75,15 +75,15 @@ Using, for example, Graphviz, the graph below would be generated.
 
 ## Connect Ports between Verilog Modules
 
-The connection in the example above connected Midmodule `a` and `b`. However, there is no data transaction available between the modules. You may explicitly register ports to be connected between `Midmodule`s. Here we construct new connection from Midmodule `a` to `c` with an eight-bits wide data line.
+The connection in the example above connected Midmodule `a` and `b`. However, there is no data transaction available between the modules. You may explicitly register name of ports to be connected between `Midmodule`s. Here we construct new connection from Midmodule `a` to `c`.
 
 ```jldoctest m1
 julia> @Randmmod c;
 
-julia> g(a => c, [(@oneport @out 8 dout) => (@oneport @in 8 din)]);
+julia> g(a => c, @pconnect dout => din);
 ```
 
-We declare the connection between `a` and `c` using `Oneport`. Note that at this time the Midmodules do not contain ports declared here. You also need to add the ports to each Midmodule object.
+Here we declared the connection between `a` and `c`. Note that at this time the Midmodules do not contain ports declared here. You also need to add the ports to each Midmodule object.
 
 ```jldoctest m1
 julia> vpush!(a, @ports @out @logic 8 dout);
@@ -92,6 +92,7 @@ julia> vpush!(c, @ports @in 8 din);
 ```
 
 ### Automatically-Generated Connections
+
 When adding connection to `Mmodgraph`s, VerilogWriter.jl automatically adds to both upstream and downstream module two ports, which are `valid` and `update` lines.
 
 These ports can be used to control timing when a transaction between `Midmodule`s occurs.
@@ -160,8 +161,7 @@ The same applies to cases where a single downstream `Midmodule` is connected to 
 ```jldoctest m1
 julia> @Randmmod d;
 
-julia> g(d => c, [(@oneport @out 32 douttoC) => (@oneport @in 32 dinfromD)]
-       ); # must not connect to `din` in `c`, which is already connected to `a`
+julia> g(d => c, @pconnect douttoC => dinfromD); # must not connect to `din` in `c`, which is already connected to `a`
 
 julia> vpush!(c, @oneport @in 32 dinfromD); vpush!(d, @oneport @out 32 douttoC);
 
@@ -182,8 +182,7 @@ julia> @assert 1 != defaultMidPid; # currently defaultMidPid == 0
 julia> vpush!(e, @oneport @in 8 dinfroma);
 
 julia> g(Midport(1, a) => Midport(defaultMidPid, e), 
-       [(@oneport @out 8 dout) => (@oneport @in 8 dinfroma)]
-       ); # connect `a` at Midport id 1 to `e`
+       @pconnect dout => dinfroma); # connect `a` at Midport id 1 to `e`
 ```
 
 Currently `g` generates the graph below:
@@ -203,6 +202,7 @@ julia> vpush!(a, @always (
 ```
 
 ## Generate Vmodule Objects
+
 After adding logics to each `Midmodule`, you may generate a list of `Vmodule`s exported from `Mmodgraph`.
 
 ```jldoctest m1
@@ -215,4 +215,5 @@ Vector{Vmodule}
 At the head of the exported list of `Vmodule`s is the top level `Vmodule` which represents the whole `Mmodgraph`, and the rest are the modules which are instanciated inside the top module. You may call `vfinalize.(vmods)` to further conduct wire width inferences and wire declarations.
 
 ### Port Lifting
+
 Each `Midmodule` objects can have (verilog) ports that are not connected to other `Midmodule`s. These ports are automatically added to the top level `Vmodule` when calling `layer2vmod!` and is accessible from outer verilog modules.

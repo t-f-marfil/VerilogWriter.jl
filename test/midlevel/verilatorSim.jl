@@ -9,7 +9,8 @@ function intermmodSimpleTest()
     lay(A=>C)
     p1 = @oneport @in @logic 4 d1
     p2 = @oneport @out @logic 4 d2
-    lay(B=>C, Layerconn([p2 => p1]))
+    # lay(B=>C, Layerconn([p2 => p1]))
+    lay(B => C, @pconnect d2 => d1)
     vpush!(C, p1)
     vpush!(B, p2)
     al = @always (
@@ -103,16 +104,14 @@ function intermmodSimpleTest()
         g(m, c)
     end
 
-    for m in ms
-        try
-            vfinalize(m)
-        catch
-            vshow(m)
-            rethrow()
-        end
+    duts = nothing
+    try
+        duts = vfinalize(ms)
+    catch
+        # debug print
+        vshow(ms)
+        rethrow()
     end
-
-    duts = vfinalize.(ms)
 
     debuggraph = Mmodgraph()
     mdut = Midmodule(duts[begin])
@@ -120,13 +119,14 @@ function intermmodSimpleTest()
     debuggraph(
         mdut => debugcore, 
         [
-            [invport(p) => p for p in values(imvalids)];
-            [invport(p) => p for p in values(imupdates)]
+            [getname(p) => getname(p) for p in values(imvalids)];
+            [getname(p) => getname(p) for p in values(imupdates)]
         ]
     )
 
     debugs = layer2vmod!(debuggraph, name="dut")
-    debugs = vfinalize.(debugs)
+    debugs = vfinalize(debugs)
+    vexport("debug.sv", debugs)
     dbgpvec = getports(debugs[begin]).val
     for i in eachindex(dbgpvec)
         pnow = dbgpvec[i]
