@@ -362,7 +362,7 @@ function addDeclarationInfo!(constraint::WidthConstraint, declarations::T) where
                 vshow(item)
                 error("unknown error")
             end
-            println("Width for $(string(item)) has already been registered, updated without conflict with value $(string(mergedWidth))")
+            println("[INFO] Width for $(string(item)) has already been registered, updated without conflict with value $(string(mergedWidth))")
             width = mergedWidth
         end
 
@@ -935,7 +935,7 @@ function autodeclVmodlist(x::Vector{Vmodule}, getFixedPoint::Bool)
         anyProgressMade = any([widthInferenceMadeProgress(s) for s in statusList])
 
         loopCount += 1
-        println("At $loopCount th iteration, inferenceAllDone = $inferenceAllDone, anyProgressMade = $anyProgressMade")
+        println("[INFO] At $loopCount th iteration, inferenceAllDone = $inferenceAllDone, anyProgressMade = $anyProgressMade")
 
         if getFixedPoint && (!inferenceAllDone && anyProgressMade)
             # continue
