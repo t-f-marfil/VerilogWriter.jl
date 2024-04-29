@@ -89,7 +89,7 @@ function acceptableInVerilatorTest(v::Vmodule, tplen::Integer)::Bool
     dutportset = Set([i for i in dutports])
 
     if getname(v) != expectedname
-        println("name of Vmodule should be 'dut', '$getname(v)' given.")
+        println("name of Vmodule should be 'dut', '$(getname(v))' given.")
         return false
     end
     for p in expectedbitports
