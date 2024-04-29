@@ -151,11 +151,10 @@ function extractConstraintsCore!(x::Wireexpr, constraint::WidthConstraint)::Int
         push!(constraint.id2wireAll, x)
         return widvarId
     elseif op == ipselm
-        extractConstraintsCore!.(x.subnodes[2:3], constraint)
+        extractConstraintsCore!.(x.subnodes, constraint)
         
         widvarId = generateWidvarId()
-        # leave consequent processing to preprocess phase
-        constraint.id2wire[widvarId] = x
+        constraint.id2wid[widvarId] = x.subnodes[3]
         push!(constraint.id2wireAll, x)
         return widvarId
     elseif op == literal
@@ -261,7 +260,7 @@ end
 """
     resolveSliceWidth!(constraint::WidthConstraint, info::Reg2dInfo)
 
-Determine the width of slices (e.g. `wire1[A], reg2[4:1]`) in `constraint.id2wire` 
+Determine the width of slices (e.g. `wire1[A], reg2[4:1], logic[A-:2]`) in `constraint.id2wire` 
 """
 function resolveSliceWidth!(constraint::WidthConstraint, info::Reg2dInfo)
     id2wid = constraint.id2wid

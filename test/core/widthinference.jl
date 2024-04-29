@@ -111,3 +111,11 @@ alempty = @always (
 )
 _, dempty = autodecl(alempty)
 @test string(dempty) == "logic a;"
+
+# inference on ipselm
+_, ret = autodecl(@always (a = b[A-:B]))
+@test string(ret) == """
+logic [unknown] B;
+logic [unknown] A;
+logic [unknown] b;
+logic [B-1:0] a;"""
