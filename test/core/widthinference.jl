@@ -119,3 +119,52 @@ logic [unknown] B;
 logic [unknown] A;
 logic [unknown] b;
 logic [B-1:0] a;"""
+
+
+# Inference accross multiple modules
+let 
+    v0 = Vmodule("mod0")
+    v1 = Vmodule("mod1")
+    v2  =Vmodule("mod2")
+    v3 = Vmodule("mod3")
+    inst1 = Vmodinst(
+        "mod1",
+        "inst1",
+        ["p1" => @wireexpr w1]
+    )
+    inst2 = Vmodinst(
+        "mod2",
+        "inst2",
+        ["p2" => @wireexpr p1]
+    )
+    inst3 = Vmodinst(
+        "mod3",
+        "inst3",
+        ["p3" => @wireexpr p2]
+    )
+
+    vpush!(v0, inst1)
+    vpush!(v1, inst2)
+    vpush!(v2, inst3)
+    vpush!(v3, @ports @out 3 p3)
+    vpush!(v2, @ports @out -1 p2)
+    vpush!(v1, @ports @out -1 p1)
+
+    vmods = [v2, v0, v1, v3]
+    ss, vmods = autodeclVmodlist(vmods)
+    v2, v0, v1, v3 = vmods
+    
+    @test all(widthInferenceCompleted, ss)
+    
+    @test string(v2.ports) == """
+    (
+        output [2:0] p2
+    );"""
+
+    @test string(v1.ports) == """
+    (
+        output [2:0] p1
+    );"""
+
+    @test string(v0.decls) == "logic [2:0] w1;"
+end
