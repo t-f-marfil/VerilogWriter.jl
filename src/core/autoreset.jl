@@ -137,20 +137,19 @@ Sensitivity list in the original `Alwayscontent` will be ignored.
 
 # Example 
 ```jldoctest
-c = @always (
-    r1 <= r2;
-    if b1 
-        r2 <= 0
-        r3 <= r3 + r4
-    else 
-        r3 <= 0
-    end
-) 
-r = autoreset(c; clk=(@wireexpr clk), rst=(@wireexpr ~resetn))
-vshow(r)
+julia> c = @always (
+            r1 <= r2;
+            if b1 
+                r2 <= 0
+                r3 <= r3 + r4
+            else 
+                r3 <= 0
+            end
+       );
 
-# output
+julia> r = autoreset(c; clk=(@wireexpr clk), rst=(@wireexpr ~resetn));
 
+julia> vshow(r);
 always_ff @( posedge clk ) begin
     if ((~resetn)) begin
         r1 <= 0;
@@ -189,11 +188,31 @@ function extract2dreg_autoreset(x::Vmodule)
 end
 
 """
-    autoreset(x::Vmodule; clk=defclk, rst=defrst, reg2d::Dict{String, Wireexpr}=Dict{String, Wireexpr}())
+    autoreset(x::Vmodule; clk=defclk, rst=defrst, edge=posedge)
 
 Return a new `Vmodule` object whose `Alwayscontent`s are all reset.
 """
-function autoreset(x::Vmodule; clk=defclk, rst=defrst)
+function autoreset(x::Vmodule; clk=defclk, rst=defrst, edge=posedge)
+    # Vmodule(
+    #     x.name, 
+
+    #     x.params,
+    #     x.ports, 
+    #     x.lparams, 
+    #     x.decls,
+
+    #     x.insts,
+    #     x.assigns,
+    #     autoreset.(x.always, clk=clk, rst=rst, reg2d=extract2dreg_autoreset(x))
+    # )
+    autoresetVmoduleInternal(x, clk, rst, edge, extract2dreg_autoreset(x))
+end
+
+function autoreset(x::Vmodule, reg2d::Dict{String, Wireexpr}; clk=defclk, rst=defrst, edge=posedge)
+    autoresetVmoduleInternal(x, clk, rst, edge, reg2d)
+end
+
+function autoresetVmoduleInternal(x::Vmodule, clk::Wireexpr, rst::Wireexpr, edge::Edge, reg2d::Dict{String, Wireexpr})
     Vmodule(
         x.name, 
 
@@ -204,7 +223,7 @@ function autoreset(x::Vmodule; clk=defclk, rst=defrst)
 
         x.insts,
         x.assigns,
-        autoreset.(x.always, clk=clk, rst=rst, reg2d=extract2dreg_autoreset(x))
+        autoreset.(x.always, clk=clk, rst=rst, edge=edge, reg2d=reg2d)
     )
 end
 

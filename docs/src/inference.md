@@ -1,4 +1,4 @@
-# Basic Automation
+# Automatic Inference
 
 ```@meta 
 CurrentModule = VerilogWriter
@@ -22,9 +22,12 @@ autoreset
 
 ```@docs
 autodecl
-```
+autodeclVmodlist
 
-`env` in an argument for `autodecl` is of type `Vmodenv`.
+WidthInferenceStatus
+widthInferenceCompleted
+throwIfInferenceIsIncomplete
+```
 
 ```@docs
 vfinalize

@@ -142,16 +142,14 @@ You must put `@posegde/@negedge` statement at the beginning, and only once.
 # Examples
 
 ```jldoctest
-a1 = @always (
-    w1 = w2;
-    if b2 
-        w1 = w3 
-    end
-)
-vshow(a1)
+julia> a1 = @always (
+       w1 = w2;
+       if b2 
+           w1 = w3 
+       end
+       );
 
-# output
-
+julia> vshow(a1);
 always_comb begin
     w1 = w2;
     if (b2) begin
@@ -162,19 +160,17 @@ type: Alwayscontent
 ```
 
 ```jldoctest
-a1 = @always (
-    @posedge clk;
-    
-    if b1 == b2
-        w1 <= w2 + w3 
-    else
-        w1 <= ~w1 
-    end
-)
-vshow(a1)
+julia> a1 = @always (
+            @posedge clk;
+            
+            if b1 == b2
+                w1 <= w2 + w3 
+            else
+                w1 <= ~w1 
+            end
+       );
 
-# output
-
+julia> vshow(a1);
 always_ff @( posedge clk ) begin
     if ((b1 == b2)) begin
         w1 <= (w2 + w3);

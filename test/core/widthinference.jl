@@ -1,11 +1,11 @@
 # inference on shift operator
-# e.g. in `w = x << y` width of y is unknown
+# e.g. in `w = x << y`, width of y is independent on x
 c = @always (
     reg1 = $(Wireexpr(32, 5)) << reg2;
     reg2 = $(Wireexpr(10, 5))
 )
 
-d, _ = autodeclCore(c)
+_, (d, _) = autodeclCore(c)
 
 @test string(d) == """
 logic [31:0] reg1;
@@ -17,7 +17,7 @@ c = @always (
     reg2 = ~($(Wireexpr(10, 6)))
 )
 
-d, _ = autodeclCore(c)
+_, (d, _) = autodeclCore(c)
 
 @test string(d) == """
 logic reg1;
@@ -30,7 +30,7 @@ env = Vmodenv(
         @reg A+B reg2
     )
 )
-d, _ = autodeclCore(
+_, (d, _) = autodeclCore(
     (@always (
         reg1 <= reg2;
         reg3 <= reg2;
@@ -51,7 +51,7 @@ c = @always (
         a <= &(b == c)
     end
 )
-d, nenv = autodeclCore(c)
+_, (d, _) = autodeclCore(c)
 @test string(d) == """
 logic c;
 logic b;
@@ -81,7 +81,7 @@ c = @always (
     end
 )
 
-dc, _ = autodeclCore(c, Vmodenv(d))
+_, (dc, _) = autodeclCore(c, Vmodenv(d))
 
 @test string(dc) == """
 logic [9:0] c;"""
@@ -109,5 +109,62 @@ alempty = @always (
         a <= $(Wireexpr(1, 1))
     end
 )
-dempty = autodecl(alempty)
+_, dempty = autodecl(alempty)
 @test string(dempty) == "logic a;"
+
+# inference on ipselm
+_, ret = autodecl(@always (a = b[A-:B]))
+@test string(ret) == """
+logic [unknown] B;
+logic [unknown] A;
+logic [unknown] b;
+logic [B-1:0] a;"""
+
+
+# Inference accross multiple modules
+let 
+    v0 = Vmodule("mod0")
+    v1 = Vmodule("mod1")
+    v2  =Vmodule("mod2")
+    v3 = Vmodule("mod3")
+    inst1 = Vmodinst(
+        "mod1",
+        "inst1",
+        ["p1" => @wireexpr w1]
+    )
+    inst2 = Vmodinst(
+        "mod2",
+        "inst2",
+        ["p2" => @wireexpr p1]
+    )
+    inst3 = Vmodinst(
+        "mod3",
+        "inst3",
+        ["p3" => @wireexpr p2]
+    )
+
+    vpush!(v0, inst1)
+    vpush!(v1, inst2)
+    vpush!(v2, inst3)
+    vpush!(v3, @ports @out 3 p3)
+    vpush!(v2, @ports @out -1 p2)
+    vpush!(v1, @ports @out -1 p1)
+
+    vmods = [v2, v0, v1, v3]
+    ss, vmods = autodeclVmodlist(vmods)
+    v2, v0, v1, v3 = vmods
+    
+    @test all(widthInferenceCompleted, ss)
+    
+    @test string(v2.ports) == """
+    (
+        output [2:0] p2
+    );"""
+
+    @test string(v1.ports) == """
+    (
+        output [2:0] p1
+    );"""
+
+    @test string(v0.decls) == "logic [2:0] w1;"
+end

@@ -13,7 +13,7 @@ function docgen(prettyurls)
                 "Introduction" => "index.md",
                 "Quick Start" => "qstart.md",
                 "Basic Types" => "types.md",
-                "Basic Automation" => "inference.md",
+                "Automatic Inference" => "inference.md",
                 "Finite State Machines" => "fsm.md", 
                 "Mid-Level Synthesis" => "midlevel.md",
                 "Reference" => "reference.md",

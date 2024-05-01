@@ -1,15 +1,7 @@
 "Value which indicates that the `Wirewid` object does not have a valid value."
 const WWINVALID::Wireexpr = Wireexpr(-1)
 
-eachfieldconstruct(Vmodenv)
 
-"""
-    Vmodenv()
-
-Create an empty `Vmodenv` object.
-"""
-Vmodenv() = Vmodenv(Parameters(), Ports(), Localparams(), Decls())
-Vmodenv(m::Vmodule) = Vmodenv(m.params, m.ports, m.lparams, m.decls)
 
 """
     extract2dreg(x::Vector{Onedecl})
@@ -159,11 +151,10 @@ function extractConstraintsCore!(x::Wireexpr, constraint::WidthConstraint)::Int
         push!(constraint.id2wireAll, x)
         return widvarId
     elseif op == ipselm
-        extractConstraintsCore!.(x.subnodes[2:3], constraint)
+        extractConstraintsCore!.(x.subnodes, constraint)
         
         widvarId = generateWidvarId()
-        # leave consequent processing to preprocess phase
-        constraint.id2wire[widvarId] = x
+        constraint.id2wid[widvarId] = x.subnodes[3]
         push!(constraint.id2wireAll, x)
         return widvarId
     elseif op == literal
@@ -228,6 +219,11 @@ function extractConstraints!(x::Onelocalparam, constraint)
     return nothing
 end
 
+function extractConstraints!(x::VmodBody, constraint)
+    extractConstraints!.((x.assigns, x.always), constraint)
+    return nothing
+end
+
 function extractConstraints(x)
     constraint = WidthConstraint()
     initializeWidvarId()
@@ -264,7 +260,7 @@ end
 """
     resolveSliceWidth!(constraint::WidthConstraint, info::Reg2dInfo)
 
-Determine the width of slices (e.g. `wire1[A], reg2[4:1]`) in `constraint.id2wire` 
+Determine the width of slices (e.g. `wire1[A], reg2[4:1], logic[A-:2]`) in `constraint.id2wire` 
 """
 function resolveSliceWidth!(constraint::WidthConstraint, info::Reg2dInfo)
     id2wid = constraint.id2wid
@@ -305,6 +301,47 @@ function resolveSliceWidth!(constraint::WidthConstraint, info::Reg2dInfo)
     return nothing
 end
 
+function getPortWidth(portName::S, interfaceFinder::VinstInterfaceFinder) where {S <: AbstractString}
+    foundPort = get(interfaceFinder.ports, portName, @oneport @in $WWINVALID sample)
+    return getwidth(foundPort)
+end
+function addInstPortInfo!(constraint::WidthConstraint, x::Vmodinst, instInterfaces::VinstInterfaces)
+    interfaceFinder = get(instInterfaces.value, x.vmodname, VinstInterfaceFinder())
+    # TODO: return widvarId for each port to caller, and then
+    # upper function can figure out the widvarId of each port in Vmodinst
+    for (portName, connectedWire) in x.ports
+        widvarId = extractConstraintsCore!(connectedWire, constraint)
+        portWidth = getPortWidth(portName, interfaceFinder)
+        if !isequal(portWidth, WWINVALID)
+            registeredWidthForWidvar = get(constraint.id2wid, widvarId, WWINVALID)
+            if !(isequal(registeredWidthForWidvar, WWINVALID))
+                isequal(portWidth, registeredWidthForWidvar) || error("Width discrepancy, $portWidth <=> $registeredWidthForWidvar")
+            end
+            constraint.id2wid[widvarId] = portWidth
+        end
+    end
+    return nothing
+end
+function addInstPortInfo!(constraint::WidthConstraint, x::VmodBody, instInterfaces::VinstInterfaces)
+    for inst in x.insts
+        addInstPortInfo!(constraint, inst, instInterfaces)
+    end
+    return nothing
+end
+function addInstPortInfo!(constraint::WidthConstraint, x, instInterfaces::VinstInterfaces)
+    return nothing
+end
+
+function noWidthConflict(x::Wireexpr, y::Wireexpr)
+    if isequal(x, WWINVALID)
+        return true, y
+    elseif isequal(y, WWINVALID)
+        return true, x
+    else
+        return isequal(x, y), x
+    end
+end
+
 """
     addDeclarationInfo!(constraint::WidthConstraint, declarations::T) where {T<:Union{Ports,Decls}}
 
@@ -319,7 +356,16 @@ function addDeclarationInfo!(constraint::WidthConstraint, declarations::T) where
 
         # TODO: generate warning when declaring wires which is not used at all
 
-        @assert isnothing(widId) || !(widId in keys(constraint.id2wid))
+        if !isnothing(widId) && (widId in keys(constraint.id2wid))
+            noConflict, mergedWidth = noWidthConflict(constraint.id2wid[widId], getwidth(item))
+            if !noConflict
+                vshow(item)
+                error("unknown error")
+            end
+            println("[INFO] Width for $(string(item)) has already been registered, updated without conflict with value $(string(mergedWidth))")
+            width = mergedWidth
+        end
+
         if !isnothing(widId)
             constraint.id2wid[widId] = width
         else
@@ -555,14 +601,67 @@ function errorUnlessWidthResolved(unresolved::Vector{Int}, tree, widthGroup, con
     return nothing
 end
 
+"Status to be returned after width inference."
+struct WidthInferenceStatus
+    # Fields may be further extended to return 
+    # intermediate data on width inference
+    initialPortCount_UnknownWidth::Int
+    initialDeclCount_UnknownWidth::Int
+
+    finalPortCount_UnknownWidth::Int
+    finalDeclCount_UnknownWidth::Int
+
+    autoGeneratedCount::Int
+
+    wireWithUnresolvedWidthCount::Int
+
+    errorToThrow::WidthRemainUnresolved
+end
+
+"""
+    widthInferenceCompleted(status::WidthInferenceStatus)
+
+Return `true` if width inference is fully done, `false` otherwise (i.e. width of some wires / ports remain unresolved).
+"""
+function widthInferenceCompleted(status::WidthInferenceStatus)
+    status.wireWithUnresolvedWidthCount == 0
+end
+function widthInferenceMadeProgress(status::WidthInferenceStatus)
+    (
+        (status.finalPortCount_UnknownWidth < status.initialPortCount_UnknownWidth)
+        || (status.finalDeclCount_UnknownWidth < status.initialDeclCount_UnknownWidth)
+        || (status.autoGeneratedCount > 0)
+    )
+end
+"""
+    throwIfInferenceIsIncomplete(status::WidthInferenceStatus)
+
+Throw some error according to `status` if width inference is not complete.
+"""
+function throwIfInferenceIsIncomplete(status::WidthInferenceStatus)
+    if !widthInferenceCompleted(status)
+        throw(status.errorToThrow)
+    end
+end
+
 """
     autodeclCore(x, env::Vmodenv)
 
 Core of `autodecl`, return `Decls` object of automatically declared wires, 
 and `env::Vmodenv` all of whose unknown width value is filled in through width inference.
 """
-function autodeclCore(x, env::Vmodenv)
+function autodeclCore(x, env::Vmodenv, instInterfaces::VinstInterfaces)
     constraint = extractConstraints(x)
+
+    function countUnknownWidthItem(container)
+        count(item -> isequal(getwidth(item), WWINVALID), container)
+    end
+    initialItemCountWithUnknownWidth = countUnknownWidthItem.((env.prts, env.dcls))
+
+    # TODO: maybe get widId -> portname mapping here, 
+    # and later update Oneport in instInterfaces with concrete width
+    addInstPortInfo!(constraint, x, instInterfaces)
+
     reg2d = extract2dreg(env.dcls)
     info = Reg2dInfo(Dict([k => v.width for (k, v) in reg2d]))
     
@@ -575,13 +674,24 @@ function autodeclCore(x, env::Vmodenv)
 
     groupToWid = mapGroupToWidth(widthGroup, constraint)
     unresolved = filter(x -> isWidthUnresolved(x, tree, groupToWid), [x[2] for x in constraint.name2id])
-    errorUnlessWidthResolved(unresolved, tree, widthGroup, constraint)
+    # errorUnlessWidthResolved(unresolved, tree, widthGroup, constraint)
+    errorToThrow = WidthRemainUnresolved(unresolved, tree, widthGroup, constraint)
 
-    nprts = (updateUnknownWidth(tree, env.prts, constraint.name2id, groupToWid))
-    ndcls = (updateUnknownWidth(tree, env.dcls, constraint.name2id, groupToWid))
+    newprts = (updateUnknownWidth(tree, env.prts, constraint.name2id, groupToWid))
+    newdcls = (updateUnknownWidth(tree, env.dcls, constraint.name2id, groupToWid))
 
     autoGenerated = generateUndeclaredLogic(env, tree, constraint.name2id, groupToWid)
-    return autoGenerated, Vmodenv(env.prms, nprts, env.lprms, ndcls)
+
+    finalItemCountWithUnknownWidth = countUnknownWidthItem.((newprts, newdcls))
+    inferenceStatus = WidthInferenceStatus(
+        initialItemCountWithUnknownWidth...,
+        finalItemCountWithUnknownWidth...,
+        length(autoGenerated),
+        length(unresolved),
+        errorToThrow
+    )
+
+    return inferenceStatus, (autoGenerated, Vmodenv(env.prms, newprts, env.lprms, newdcls))
 end
 
 """
@@ -593,10 +703,13 @@ For debug (test) use.
 function autodeclCore(x)
     autodeclCore(x, Vmodenv())
 end
+function autodeclCore(x, env::Vmodenv)
+    autodeclCore(x, env, VinstInterfaces())
+end
 
 
 """
-    autodecl(x, env::Vmodenv)::Vmodenv
+    autodecl(x, env::Vmodenv, instInterfaces::VinstInterfaces)::Tuple{WidthInferenceStatus, Vmodenv}
 
 Declare wires in `x` which are not yet declared in `env`.
 Raise error when not enough information to determine width of all wires is given.
@@ -606,31 +719,31 @@ Raise error when not enough information to determine width of all wires is given
 ## Inference Success 
 
 ```jldoctest
-pts = @ports (
-        @in 16 din;
-        @in b1
-)
-env = Vmodenv(pts)
+julia> pts = @ports (
+       @in 16 din;
+       @in b1
+       );
 
-c = @ifcontent (
-    reg1 = 0;
-    reg2 = din;
-    if b1 
-        reg1 = din[10:7]
-    end
-) 
+julia> env = Vmodenv(pts);
 
-venv = autodecl(c, env)
-vshow(venv)
+julia> c = @ifcontent (
+       reg1 = 0;
+       reg2 = din;
+       if b1 
+       reg1 = din[10:7]
+       end
+       ); 
 
-# output
-
+julia> status, venv = autodecl(c, env); vshow(venv);
 input [15:0] din
 input b1
 
 logic [3:0] reg1;
 logic [15:0] reg2;
 type: Vmodenv
+
+julia> widthInferenceCompleted(status)
+true
 ```
 
 You may also declare ports/wires beforehand
@@ -659,7 +772,7 @@ julia> ab = @always (
 
 julia> env = Vmodenv(Parameters(), ps, Localparams(), ds);
 
-julia> nenv = autodecl(ab.content, env);
+julia> status, nenv = autodecl(ab.content, env);
 
 julia> vshow(nenv);
 input [1:0] x
@@ -674,6 +787,9 @@ logic [B-1:0] r5;
 logic [A-1:0] r3;
 logic [B-1:0] r4;
 type: Vmodenv
+
+julia> widthInferenceCompleted(status)
+true
 ```
 
 
@@ -688,43 +804,178 @@ julia> c = @always (
        end
        );
 
-julia> autodecl(c);
+julia> status, _ = autodecl(c); throwIfInferenceIsIncomplete(status);
 ERROR: Wire width cannot be inferred for the following wires.
 1. b1
 2. reg2 = din
 ```
 """
-function autodecl(x, env::Vmodenv)::Vmodenv
-    d, nenv = autodeclCore(x, env)
+function autodecl(x, env::Vmodenv, instInterfaces::VinstInterfaces)::Tuple{WidthInferenceStatus, Vmodenv}
+    status, (d, nenv) = autodeclCore(x, env, instInterfaces)
     vpush!(nenv.dcls, d)
-    return nenv
+    return status, nenv
 end
 
 """
-    autodecl(x)::Vmodenv
+    autodecl(x)
 
 Conduct wire width inference under an empty environment.
 """
-function autodecl(x)::Vmodenv
+function autodecl(x)
     autodecl(x, Vmodenv())
+end
+function autodecl(x, env::Vmodenv)
+    autodecl(x, env, VinstInterfaces())
+end
+function autodecl(x, instInterfaces::VinstInterfaces)
+    autodecl(x, Vmodenv(), instInterfaces)
 end
 
 """
-    autodecl(x::Vmodule)::Vmodule
+    autodecl(x::Vmodule)::Tuple{WidthInferenceStatus, Vmodule}
 
 Using ports, parameters, localparams, decls in `x::Vmodule` 
 as an environment, conduct wire width inference and 
 return a new `Vmodule` object with inferred wires.
 """
-function autodecl(x::Vmodule)::Vmodule
-    env = Vmodenv(x)
+function autodecl(x::Vmodule, env::Vmodenv, instinterfaces::VinstInterfaces)::Tuple{WidthInferenceStatus, Vmodule}
+    defaultEnv = Vmodenv(x)
+    # TODO: merge env
+
+    if (length(x.assigns) > 0)
+        error("Width inference for assign statement is not yet implemented")
+    end
     
-    nenv = autodecl(x.always, env)
-    Vmodule(
+    status, nenv = autodecl(VmodBody(x), defaultEnv, instinterfaces)
+    return status, Vmodule(
         x.name, 
         nenv, 
         x.insts,
         x.assigns, 
         x.always
     )
+end
+
+function extractVmoduleNameAll_ad(x::Vector{Vmodule})
+    nameSet = Set{String}()
+    for m in x
+        push!(nameSet, getname(m))
+        for inst in m.insts
+            push!(nameSet, inst.vmodname)
+        end
+    end
+    return nameSet
+end
+
+"""
+    autodeclVmodlist(x::Vector{Vmodule}, getFixedPoint::Bool)
+
+Apply [`autodecl`](@ref) to each [`Vmodule`](@ref) object in `x`.
+Port width inferred in one [`Vmodule`](@ref) object (say A) is considered when
+inferring wire width of another `Vmodule` object in which A is instantiated.
+
+When `getFixedPoint` is `false`, port width which can actually be inferred
+from nested module instantiation may not be fully inferred.
+"""
+function autodeclVmodlist(x::Vector{Vmodule}, getFixedPoint::Bool)
+    vmodDictByName = Dict([getname(item) => item for item in x])
+
+    vmodNameToIndex = Dict([item => ind for (ind, item) in enumerate(extractVmoduleNameAll_ad(x))])
+
+    indexToVmodName = Dict([v => k for (k, v) in vmodNameToIndex])
+    vmodNameWithDefinition = Set([getname(m) for m in x]) # needed?
+    vmodIndexWithDefinition = Set([vmodNameToIndex[n] for n in vmodNameWithDefinition])
+    
+    vmodIndexToVmodule = Dict([ind => vmodDictByName[indexToVmodName[ind]] for ind in vmodIndexWithDefinition])
+
+    updatedVmods = Dict{Int, Tuple{WidthInferenceStatus, Vmodule}}()
+
+    adjacency = Dict{Int,Set{Int}}()
+    for item in x
+        s = Set([vmodNameToIndex[inst.vmodname] for inst in item.insts])
+        adjacency[vmodNameToIndex[getname(item)]] = s
+    end
+
+    seen = Vector{Bool}(undef, length(vmodNameToIndex))
+    finished = Vector{Bool}(undef, length(vmodNameToIndex))
+
+    function autodeclRecurseInternal(index::Int)
+        seen[index] = true
+        # return if Vmodule declaration for module represented by `index` is not available
+        if !(index in vmodIndexWithDefinition)
+            finished[index] = true
+            return nothing
+        end
+
+        for child in adjacency[index]
+            # not visit if already visited
+            if finished[child]
+                continue
+            end
+
+            if seen[child] && !finished[child]
+                error("instance loop detected")
+            end
+
+            autodeclRecurseInternal(child)
+        end
+
+        instInterfaces = Dict([
+            (indexToVmodName[child]
+            => VinstInterfaceFinder(vmodIndexToVmodule[child]))
+            for child in adjacency[index] if child in vmodIndexWithDefinition
+        ]) |> VinstInterfaces
+        currentVmod = vmodIndexToVmodule[index]
+        
+        status, newVmod = autodecl(currentVmod, Vmodenv(), instInterfaces)
+        updatedVmods[index] = (status, newVmod)
+
+        finished[index] = true
+        return nothing
+    end
+
+    loopCount = 0
+    while true
+        fill!(seen, false)
+        fill!(finished, false)
+
+        for ind in 1:length(vmodNameToIndex)
+            if !finished[ind]
+                autodeclRecurseInternal(ind)
+            end
+        end
+
+        statusList = [status for (status, _) in values(updatedVmods)]
+        inferenceAllDone = all([widthInferenceCompleted(s) for s in statusList])
+        anyProgressMade = any([widthInferenceMadeProgress(s) for s in statusList])
+
+        loopCount += 1
+        println("[INFO] At $loopCount th iteration, inferenceAllDone = $inferenceAllDone, anyProgressMade = $anyProgressMade")
+
+        if getFixedPoint && (!inferenceAllDone && anyProgressMade)
+            # continue
+            for (index, (_, vmod)) in updatedVmods
+                vmodIndexToVmodule[index] = vmod
+            end
+        else
+            break
+        end
+    end
+
+    statusAll = Vector{WidthInferenceStatus}(undef, length(updatedVmods))
+    vmodAll = Vector{Vmodule}(undef, length(updatedVmods))
+    for (i, vmod) in enumerate(x)
+        vmodInd = vmodNameToIndex[getname(vmod)]
+        statusAll[i], vmodAll[i] = updatedVmods[vmodInd]
+    end
+    return statusAll, vmodAll
+end
+
+"""
+    autodeclVmodlist(vmods)
+
+When not specified otherwise `getFixedPoint` is set to `true`.
+"""
+function autodeclVmodlist(vmods)
+    autodeclVmodlist(vmods, true)
 end

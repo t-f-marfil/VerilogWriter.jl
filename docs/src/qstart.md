@@ -117,7 +117,7 @@ julia> vpush!(m, a1); vpush!(m, a2);
 ## Finalize Verilog Module
 
 In the codes above some output was not completely of Verilog syntax (e.g. `@( unknownedge )`), and lacked some wire declarations (e.g. `duminfer` was not declared).
-You may automatically deal with these problems, for detailed information see also [Basic Automation](@ref).
+You may automatically deal with these problems, for detailed information see also [Automatic Inference](@ref).
 
 ```jldoctest t1
 julia> m = vfinalize(m); vshow(m); # not `finalize`

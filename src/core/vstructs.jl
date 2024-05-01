@@ -304,21 +304,19 @@ end
 Represents module instantiation.
 
 ```jldoctest
-i = Vmodinst(
-    "mod1",
-    "u1",
-    [
-        "A" => Wireexpr(15)
-    ],
-    [
-        "p1" => (@wireexpr x << 1),
-        "p2" => (@wireexpr y)
-    ]
-)
-vshow(i)
+julia> i = Vmodinst(
+            "mod1",
+            "u1",
+            [
+                "A" => Wireexpr(15)
+            ],
+            [
+                "p1" => (@wireexpr x << 1),
+                "p2" => (@wireexpr y)
+            ]
+       );
 
-# output
-
+julia> vshow(i);
 mod1 #(
     .A(15)
 ) u1 (
@@ -358,6 +356,11 @@ struct Vmodule
     always::Vector{Alwayscontent}
 end
 
+struct VinstInterfaceFinder
+    ports::Dict{String, Oneport}
+end
+VinstInterfaceFinder() = VinstInterfaceFinder(Dict{String, Oneport}())
+VinstInterfaceFinder(v::Vmodule) = VinstInterfaceFinder(Dict([getname(p) => p for p in v.ports]))
 
 "Environment in which wire width inference is done."
 struct Vmodenv
@@ -365,4 +368,21 @@ struct Vmodenv
     prts::Ports
     lprms::Localparams
     dcls::Decls
+
+    # # maps name of modules which are instantiated 
+    # # to VinstInterfaceFinder objects
+    # instInterfaces::Dict{String, VinstInterfaceFinder}
+end
+
+struct VinstInterfaces
+    # maps name of modules which are instantiated 
+    # to VinstInterfaceFinder objects
+    value::Dict{String, VinstInterfaceFinder}
+end
+
+struct VmodBody
+    insts::Vector{Vmodinst}
+
+    assigns::Vector{Assign}
+    always::Vector{Alwayscontent}
 end

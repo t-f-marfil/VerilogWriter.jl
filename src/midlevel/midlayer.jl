@@ -277,7 +277,9 @@ function unconnectedports_mlay(x::Mmodgraph)
     ])
 
     for ((dfp::Midport, ufp::Midport), conn) in x.edges 
-        for (ppre, ppost) in conn.ports
+        for (_ppre, _ppost) in conn.ports
+            ppre = @oneport @out -1 $_ppre
+            ppost = @oneport @in -1 $_ppost
             # update pconnected
             # ppre in keys(pconnected[uno])
             prefil = [filter(p -> portmatch_uc(ppre, p[1]), pconnected[getmmod(dfp)])...]
@@ -303,7 +305,7 @@ Push data in Layerconn objects into Vmodule in a form of Verilog codes.
 """
 function layerconnInstantiate_mlay!(v::Vmodule, x::Mmodgraph)
     mvec = Vmodule[]
-    layVisited = Dict{Midmodule, Layerconn}()
+    # layVisited = Dict{Midmodule, Layerconn}()
     # # generate always_comb that connects ports 
     # # as described in Layerconn
     # qvec = Expr[]
@@ -313,7 +315,7 @@ function layerconnInstantiate_mlay!(v::Vmodule, x::Mmodgraph)
         uno, dos = getmmod.((_uno, _dos))
         # what is needed below: 
         #  function: <connection_name>, <modulename> -> <wirename_in_mother_module>
-        layVisited[uno] = vmerge(conn, get(layVisited, uno, Layerconn()))
+        # layVisited[uno] = vmerge(conn, get(layVisited, uno, Layerconn()))
         db = ildatabuffer(uno, conn)
 
         smod = wirenamemodgen(db)
@@ -344,15 +346,17 @@ function layerconnInstantiate_mlay!(v::Vmodule, x::Mmodgraph)
             #   <ppost_name>_<dos_name> = <ppre_name>_<uno_name>
             # end
             # at the top level module
-            postwire = wireAddSuffix(getname(ppost), dos)
-            prewire = wireAddSuffix(getname(ppre), uno)
+            postwire = wireAddSuffix(ppost, dos)
+            prewire = wireAddSuffix(ppre, uno)
             q = @alassign_comb $postwire = $prewire
             push!(qvec, q)
 
-            # same pre may be connected to multiple ports, thus to avoid 
-            # duplicate, not added here
-            dcl = @decls @logic $(getwidth(ppost)) $(postwire)
-            vpush!(v, dcl) 
+            # width inference for module instance is now implemented,
+            # no manual declaration needed from now on
+            # # same pre may be connected to multiple ports, thus to avoid 
+            # # duplicate, not added here
+            # dcl = @decls @logic $(getwidth(ppost)) $(postwire)
+            # vpush!(v, dcl) 
         end
 
     end

@@ -52,15 +52,19 @@ function arpreq()
     vpush!(Waddr, awports)
     vpush!(Wdata, wports)
 
-    g(v => Waddr, 1, (@oneport @out $addrlen awaddr) => @oneport @in $addrlen awaddr_in)
-    g(v => Wdata, 1, [
-        (@oneport @out $datalen wdata) => (@oneport @in $datalen wdata_in),
-        (@oneport @out $strblen wstrb) => @oneport @in $strblen wstrb_in
-    ])
-    g(v => Raddr, 2, (@oneport @out $addrlen araddr) => (@oneport @in $addrlen araddr_in))
-    g(Rdata => v, 2, [
-        (@oneport @out $datalen rdata_out) => (@oneport @in $datalen rdata)
-    ])
+    g(v => Waddr, 1, @pconnect awaddr => awaddr_in)# (@oneport @out $addrlen awaddr) => @oneport @in $addrlen awaddr_in)
+    g(v => Wdata, 1, @pconnect (wdata => wdata_in, wstrb => wstrb_in)
+    # [
+    #     (@oneport @out $datalen wdata) => (@oneport @in $datalen wdata_in),
+    #     (@oneport @out $strblen wstrb) => @oneport @in $strblen wstrb_in
+    # ]
+    )
+    g(v => Raddr, 2, @pconnect araddr => araddr_in)# (@oneport @out $addrlen araddr) => (@oneport @in $addrlen araddr_in))
+    g(Rdata => v, 2, @pconnect rdata_out => rdata
+    # [
+    #     (@oneport @out $datalen rdata_out) => (@oneport @in $datalen rdata)
+    # ]
+    )
     waddral = @always (
         awaddr = awaddr_in;
         $(nametoupper(imupdate, 1)) = awready;
@@ -347,7 +351,7 @@ function arpreq()
     vpush!.(v, (@ports @in transinit))
 
 
-    v1 = vfinalize.(layer2vmod!(g, name="arpreq"))
+    v1 = vfinalize(layer2vmod!(g, name="arpreq"))
     wrapper = wrappergen(v1[begin])
     axiformat(s) = replace(s, r"((aw|w|b|ar|r)[a-zA-Z0-9_]+)_[a-zA-Z0-9_]+" => s"\1")
     newports = [Oneport(getdirec(i), wire, getwidth(i), axiformat(getname(i))) for i in getports(wrapper)] |> Ports
