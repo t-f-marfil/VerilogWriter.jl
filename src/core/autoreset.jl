@@ -137,20 +137,19 @@ Sensitivity list in the original `Alwayscontent` will be ignored.
 
 # Example 
 ```jldoctest
-c = @always (
-    r1 <= r2;
-    if b1 
-        r2 <= 0
-        r3 <= r3 + r4
-    else 
-        r3 <= 0
-    end
-) 
-r = autoreset(c; clk=(@wireexpr clk), rst=(@wireexpr ~resetn))
-vshow(r)
+julia> c = @always (
+            r1 <= r2;
+            if b1 
+                r2 <= 0
+                r3 <= r3 + r4
+            else 
+                r3 <= 0
+            end
+       );
 
-# output
+julia> r = autoreset(c; clk=(@wireexpr clk), rst=(@wireexpr ~resetn));
 
+julia> vshow(r);
 always_ff @( posedge clk ) begin
     if ((~resetn)) begin
         r1 <= 0;
