@@ -278,7 +278,7 @@ end
 """
     isAtRisingEdge(w::Wireexpr, name::AbstractString)
 
-Return wire whose value is 1 iff the wire is at the rising edge.
+Return wire whose value is 1 iff the wire `w` is at the rising edge.
 
 ## Return Wire
 + (0): 1 at the cycle at which a rising edge is detected.
@@ -313,3 +313,124 @@ Should be careful on the critical path on using this buffer.
 + (length(data)-1:0): Buffer output
 """
 interceptBuffer
+
+
+"""
+    readOnlyQueue(width::Int, data::V, update, restart, name::AbstractString) where {T,V<:AbstractVector{T}}
+
+Generate queue which outputs value in `data` in the order which they are aligned in `data`.
+
+Each item in `data` is converted to a wire in verilog with width `width`.
+
+## Input Wires
++ `update` : Wire to be asserted to request next data to the queue.
++ `restart` : When asserted the queue starts outputting value in `data` from the first item.
+
+## Return Wires
+
+### dataValid
++ (0): High indicates that the output from the queue is valid.
+
+### outData
++ (`width`-1:0): Data from the queue.
+"""
+function readOnlyQueue(width::Int, data::V, update, restart, name::AbstractString) where {T,V<:AbstractVector{T}}
+    wireId = string("_readOnlyQueue_", name)
+    pvg = PrivateWireNameGen(wireId)
+
+    totalBitWidth = width * length(data)
+    dataReadOnly = pvg("data")
+    dataVecDecl = @decls @logic $totalBitWidth $dataReadOnly
+    dataAssignList = Vector{Alassign}(undef, length(data))
+
+    for i in eachindex(data)
+        msbIndex = width * i - 1
+        asgn = @alassign_comb $(dataReadOnly)[($msbIndex)-:($width)] = $(Wireexpr(width, data[i]))
+        dataAssignList[i] = asgn
+    end
+
+    dataAssignAlways = Alwayscontent(comb, dataAssignList)
+
+    counter = pvg("counter")
+    counterWidth = (
+        (ceil(log(2, length(data)) + 1) |> Int)
+        # allocate enough width for indexed part select
+        # (counter width should be equal to index for part select below)
+        + (ceil(log(2, width) + 1) |> Int)
+    )
+    dataValid = pvg("valid")
+    alvalid = @always (
+        $dataValid = ~($counter == $(Wireexpr(counterWidth, length(data))))
+    )
+    alCounter = @always (
+        if $restart
+            $counter <= 0
+        elseif $update
+            if $dataValid
+                $counter <= $counter + 1
+            end
+        end
+    )
+
+    outData = pvg("outData")
+    dataSliceIndex = pvg("sliceIndex")
+    alSliceIndex = @always ( 
+        $dataSliceIndex = 0;
+        if ~$dataValid
+            $dataSliceIndex = $counter
+        else
+            $dataSliceIndex = $counter + 1
+        end;
+    )
+    alOutData = @always (
+        $outData = $dataReadOnly[($dataSliceIndex * $width - 1)-:($width)]
+    )
+    
+    patch = Vpatch(
+        dataVecDecl,
+        alvalid,
+        alCounter,
+        alSliceIndex,
+        alOutData,
+        dataAssignAlways
+    )
+    return (dataValid, outData), patch
+end
+readOnlyQueueCounter::Int = 0
+function readOnlyQueue(width::Int, data::V, update, restart) where {T,V<:AbstractVector{T}}
+    readOnlyQueue(width, data, update, restart, string(global readOnlyQueueCounter += 1))
+end
+
+@vstdpatch function onceHigh(wire::Wireexpr, restart::Wireexpr, name::AbstractString)
+    pvg = PrivateWireNameGen(string("_onceAtRisingEdge_", name))
+    ans = pvg("_ans")
+    buf = pvg("_buf")
+    al = @cpalways (
+        $ans = $buf | $wire;
+        if $restart
+            $buf <= 0
+        else
+            $buf <= $buf | $wire
+        end
+    )
+    return @wireexpr($ans), Vpatch(al...)
+end
+
+@vstdpatch function zipSpike(wires::Vector{Wireexpr}, name::AbstractString)
+    spikeName = string("_zippedSpike_", name)
+    pvg = PrivateWireNameGen(spikeName)
+
+    zipped = pvg("_zipped")
+    prevZipped = pvg("_prevzipped")
+
+    highs = [onceHigh(w, @wireexpr($zipped)) for w in wires]
+
+    bundled, pbundled = bitbundle([w for (w, _) in highs])
+    
+    al = @cpalways (
+        $prevZipped <= $zipped;
+        $zipped = &($bundled)
+    )
+
+    return @wireexpr($zipped), Vpatch([p for (_, p) in highs]..., pbundled, al...)
+end
