@@ -1,0 +1,46 @@
+module ArpProbe_wrapper (
+    input CLK,
+    input rstn,
+    output [12:0] araddr,
+    input arready,
+    output arvalid,
+    output [12:0] awaddr,
+    input awready,
+    output awvalid,
+    output bready,
+    input [1:0] bresp,
+    input bvalid,
+    output [31:0] wdata,
+    output [3:0] wstrb,
+    output wvalid,
+    input wready,
+    output rready,
+    input rvalid,
+    input [31:0] rdata,
+    input [1:0] rresp,
+    input btn
+);
+    ArpProbe uArpProbe (
+        .CLK(CLK),
+        .rstn(rstn),
+        .araddr(araddr),
+        .arready(arready),
+        .arvalid(arvalid),
+        .awaddr(awaddr),
+        .awready(awready),
+        .awvalid(awvalid),
+        .bready(bready),
+        .bresp(bresp),
+        .bvalid(bvalid),
+        .wdata(wdata),
+        .wstrb(wstrb),
+        .wvalid(wvalid),
+        .wready(wready),
+        .rready(rready),
+        .rvalid(rvalid),
+        .rdata(rdata),
+        .rresp(rresp),
+        .btn(btn)
+    );
+
+endmodule
