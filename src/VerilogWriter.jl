@@ -67,6 +67,10 @@ export
     posedgePrec, bitbundle, nonegedge, posedgeSync,
     isAtRisingEdge, interceptBuffer, readOnlyQueue, onceHigh, zipSpike
 
+# axi
+export
+    addAxiLitePort!
+
 export
     wireextract, wireextract!,
     lhsextract, lhsunify, autoreset, autoreset!, isreset,

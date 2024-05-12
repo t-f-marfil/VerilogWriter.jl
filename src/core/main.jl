@@ -18,6 +18,8 @@ const pathbasic = [
     "accessor.jl",
     "verilator.jl",
     "stdpatch.jl",
+
+    "axi.jl",
 ]
 
 for p in pathbasic
