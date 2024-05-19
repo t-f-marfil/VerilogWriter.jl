@@ -34,7 +34,7 @@ export
     # @oneblock, 
     @ifcontent, 
     @alassign_comb, @alassign_ff,
-    @always,
+    @always, @nralways,
     @cpalways,
     @ralways
 
