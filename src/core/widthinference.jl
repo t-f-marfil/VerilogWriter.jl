@@ -850,6 +850,7 @@ function autodecl(x::Vmodule, env::Vmodenv, instinterfaces::VinstInterfaces)::Tu
     return status, Vmodule(
         x.name, 
         nenv, 
+        x.readmems,
         x.insts,
         x.assigns, 
         x.always

@@ -7,3 +7,5 @@
 + Start building documents with github actions
 + Refactored width inference
 + Inference accross multiple verilog modules is implemented
++ [`Readmemh`](@ref) is available to initialize reg / logic with Verilog `readmemh` statement.
+    + [`@nralways`](@ref) that gerates `Alwayscontent` that is not reset by `autoreset` is also available.

@@ -169,8 +169,11 @@ type: Alwayscontent
 ```
 """
 function autoreset(x::Alwayscontent; clk=defclk, rst=defrst, edge=posedge, reg2d::Dict{String, Wireexpr}=Dict{String, Wireexpr}())
-    if x.atype == comb 
+    if x.atype == comb
         x
+    elseif x.noreset
+        sens = Sensitivity(edge, clk)
+        Alwayscontent(ff, sens, x.content, x.noreset)
     else
         autoreset(x.content, clk=clk, rst=rst, edge=edge, reg2d=reg2d)
     end
@@ -219,7 +222,9 @@ function autoresetVmoduleInternal(x::Vmodule, clk::Wireexpr, rst::Wireexpr, edge
         x.params,
         x.ports, 
         x.lparams, 
+
         x.decls,
+        x.readmems,
 
         x.insts,
         x.assigns,

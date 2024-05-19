@@ -18,7 +18,8 @@ export
     Assign,
     Onedecl, Decls,
     Vmodinst, 
-    Vmodule
+    Vmodule,
+    Readmemh
 
 export
     oneparam, parameters, @oneparam, @parameters,
@@ -34,7 +35,7 @@ export
     # @oneblock, 
     @ifcontent, 
     @alassign_comb, @alassign_ff,
-    @always,
+    @always, @nralways,
     @cpalways,
     @ralways
 
@@ -65,7 +66,11 @@ export
 export 
     PrivateWireNameGen, Vpatch, @vstdpatch,
     posedgePrec, bitbundle, nonegedge, posedgeSync,
-    isAtRisingEdge
+    isAtRisingEdge, interceptBuffer, readOnlyQueue, readOnlyQueueComb, onceHigh, zipSpike
+
+# axi
+export
+    addAxiLitePort!
 
 export
     wireextract, wireextract!,

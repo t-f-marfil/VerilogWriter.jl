@@ -18,6 +18,12 @@ Given a content of always blocks, you may automatically reset all wires which ap
 autoreset
 ```
 
+In some cases reg/logic should not be reset (e.g. 2d array is initialized with \$readmemh and must not initialized in always block). To generate `Alwayscontent` that should not be reset by `autoreset` you may call `@nralways`.
+
+```@docs
+@nralways
+```
+
 ## Automatic Wire Declaration
 
 ```@docs

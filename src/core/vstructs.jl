@@ -292,6 +292,8 @@ mutable struct Alwayscontent
     # sensitive::Wireexpr
     sens::Sensitivity
     content::Ifcontent
+    # when true autoreset should not add reset statements into this always block.
+    noreset::Bool
 end
 
 "Assign one statement."
@@ -341,6 +343,16 @@ struct Vmodinst
     wildconn::Bool
 end
 
+"""
+`\$readmemh` statements, which are placed in Verilog initial blocks.
+"""
+struct Readmemh
+    fileName::String
+    ramName::String
+    headIndex::Int
+    tailIndex::Int
+end
+
 "Represents one verilog module."
 struct Vmodule 
     name::String
@@ -349,6 +361,8 @@ struct Vmodule
 
     lparams::Localparams
     decls::Decls
+
+    readmems::Vector{Readmemh}
     
     insts::Vector{Vmodinst}
 

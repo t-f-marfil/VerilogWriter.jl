@@ -33,6 +33,7 @@ This module offers several types that contain a structure of Verilog components,
 + [Vmodinst](@ref)
 + [Vmodule](@ref)
 + [Vmodenv](@ref)
++ [Readmemh](@ref)
   
 ```@setup 1
 push!(LOAD_PATH,"../../src/")
@@ -210,6 +211,14 @@ println(showfield(Vmodenv)) # hide
 ```
 ```@docs
 Vmodenv
+```
+
+### Readmemh
+```@example 1
+println(showfield(Readmemh)) # hide
+```
+```@docs
+Readmemh
 ```
 
 ## Converter Macros

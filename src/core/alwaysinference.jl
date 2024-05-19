@@ -196,7 +196,7 @@ end
 """
     @always(arg)
 
-Macro version of `always`
+Internally call `always`.
 """
 macro always(arg)
     return always(arg)
@@ -204,4 +204,39 @@ end
 
 function always(expr::Ref{T}) where {T}
     always(expr[])
+end
+
+"""
+    @nralways(arg)
+
+Generate `Alwayscontent` whose `noreset` field is set to `true`.
+
+```jldoctest
+julia> alReset = @always (
+            mem[inindex] <= din;
+       );
+
+julia> autoreset(alReset) |> vshow;
+always_ff @( posedge CLK ) begin
+    if (RST) begin
+        mem <= 0;
+    end else begin
+        mem[inindex] <= din;
+    end
+end
+type: Alwayscontent
+
+julia> alNoreset = @nralways (
+            mem[inindex] <= din;
+       );
+
+julia> autoreset(alNoreset) |> vshow;
+always_ff @( posedge CLK ) begin
+    mem[inindex] <= din;
+end
+type: Alwayscontent
+```
+"""
+macro nralways(arg)
+    return :(al = $(always(arg)); al.noreset = true; al)
 end
