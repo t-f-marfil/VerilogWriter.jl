@@ -18,7 +18,8 @@ export
     Assign,
     Onedecl, Decls,
     Vmodinst, 
-    Vmodule
+    Vmodule,
+    Readmemh
 
 export
     oneparam, parameters, @oneparam, @parameters,

@@ -343,6 +343,9 @@ struct Vmodinst
     wildconn::Bool
 end
 
+"""
+`\$readmemh` statements, which are placed in Verilog initial blocks.
+"""
 struct Readmemh
     fileName::String
     ramName::String
