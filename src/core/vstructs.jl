@@ -343,6 +343,13 @@ struct Vmodinst
     wildconn::Bool
 end
 
+struct Readmemh
+    fileName::String
+    ramName::String
+    headIndex::Int
+    tailIndex::Int
+end
+
 "Represents one verilog module."
 struct Vmodule 
     name::String
@@ -351,6 +358,8 @@ struct Vmodule
 
     lparams::Localparams
     decls::Decls
+
+    readmems::Vector{Readmemh}
     
     insts::Vector{Vmodinst}
 

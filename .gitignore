@@ -21,3 +21,5 @@ test.ipynb
 /src/*.v
 !samples/**.sv
 !samples/**.v
+
+*.mem

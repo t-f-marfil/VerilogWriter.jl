@@ -222,7 +222,9 @@ function autoresetVmoduleInternal(x::Vmodule, clk::Wireexpr, rst::Wireexpr, edge
         x.params,
         x.ports, 
         x.lparams, 
+
         x.decls,
+        x.readmems,
 
         x.insts,
         x.assigns,

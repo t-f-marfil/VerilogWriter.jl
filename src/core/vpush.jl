@@ -133,6 +133,12 @@ function vpush!(coll::Vmodule, x::FSM...)
     end
 end
 
+function vpush!(coll::Vmodule, x::Readmemh...)
+    for r in x
+        push!(coll.readmems, r)
+    end
+end
+
 """
     vpush!(coll::Vmodule, x::Vector{T}...) where {T}
 

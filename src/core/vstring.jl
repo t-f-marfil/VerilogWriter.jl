@@ -301,6 +301,10 @@ function Base.string(x::Vmodinst)
     ans
 end
 
+function Base.string(x::Readmemh)
+    "\$readmemh(\"$(x.fileName)\", $(x.ramName), $(x.headIndex), $(x.tailIndex));"
+end
+
 function Base.string(x::Vmodule, systemverilog)
     txt1 = string("module ", x.name, " ", string(x.params),
                  string(x.ports), "\n")
@@ -326,6 +330,11 @@ function Base.string(x::Vmodule, systemverilog)
         # indent(string(x.decls)), 
         # "\n\n"
     )
+
+    if length(x.readmems) > 0
+        subtxt = string(indent(reduce(newlineconcat, string.(x.readmems))), "\n")
+        txt1 *= string(indent(string("initial begin\n", subtxt, "end")), "\n\n")
+    end
 
     if length(x.insts) > 0
         txt1 *= string(indent(reduce(newlineconcat, string.(x.insts))), "\n")

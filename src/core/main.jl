@@ -20,6 +20,7 @@ const pathbasic = [
     "stdpatch.jl",
 
     "axi.jl",
+    "memfile.jl",
 ]
 
 for p in pathbasic
