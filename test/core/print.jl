@@ -79,6 +79,12 @@ d = @decloneline (@wire 2 << 1 xy SEN+HYAKU)
 @test string(d[]) == """
 wire [(2 << 1)-1:0] xy [(SEN + HYAKU)-1:0];"""
 
+# force packed dimension to be displayed as [0:0],
+# otherwise some CAD handle `reg x [n:0]` same as `reg [n:0] x`.
+d = @decloneline @logic 1 bitram 10
+@test string(d[]) == """
+logic [0:0] bitram [9:0];"""
+
 # Wireexpr
 
 w = @wireexpr (a + b) << (c - d) >> e & f

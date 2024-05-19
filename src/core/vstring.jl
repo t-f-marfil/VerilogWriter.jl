@@ -23,12 +23,12 @@ function Base.string(x::Portdirec)
     return x == pin ? "input" : "output"
 end
 
-function widtxtgen(wid::Wireexpr)
+function widtxtgen(wid::Wireexpr, forceVector::Bool)
     # space at the tail
     if isequal(wid, WWINVALID)
         widtxt = "[unknown] "
     elseif wid.operation == literal 
-        if wid.value == 1
+        if wid.value == 1 && !forceVector
             widtxt = ""
         else
             widtxt = "[$(wid.value-1):0] "
@@ -38,20 +38,11 @@ function widtxtgen(wid::Wireexpr)
     end
     widtxt
 end
+function widtxtgen(wid::Wireexpr)
+    widtxtgen(wid, false)
+end
 
 function Base.string(p::Oneport)
-    # x = p.decl
-    # if x.wtype == wire 
-    #     swtype = ""
-    # else
-    #     swtype = string(" ", string(x.wtype))
-    # end
-
-    # widtxt = widtxtgen(x.width)
-    # txt = string(string(p.direc), swtype, " ", widtxt, x.name)
-
-    # return txt
-    
     if p.wtype == wire 
         swtype = ""
     else
@@ -262,14 +253,13 @@ function Base.string(x::Assign)
 end
 
 function Base.string(x::Onedecl)
-    widtxt = widtxtgen(x.width)
     if !x.is2d
-        return string(string(x.wtype), " ", string(widtxt), x.name, ";")
+        return string(string(x.wtype), " ", widtxtgen(x.width), x.name, ";")
     else
         return string(
             string(x.wtype), 
             " ", 
-            widtxt, 
+            widtxtgen(x.width, true), 
             x.name, 
             " ",
             rstrip(widtxtgen(x.wid2d), [' ']), 
