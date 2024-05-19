@@ -43,11 +43,22 @@ let
     addrlen, datalen = 13, 32
 
     @sym2wire updateReqData, updateReqAddr, restart
-    addrWires, addrPatch = readOnlyQueue(addrlen, addrList, updateReqAddr, restart)
-    dataWires, dataPatch = readOnlyQueue(datalen, dataList, updateReqData, restart)
-    opcodeAddrWires, opcodeAddrPatch = readOnlyQueue(1, opcodeList, updateReqAddr, restart)
-    opcodeDataWires, opcodeDataPatch = readOnlyQueue(1, opcodeList, updateReqData, restart)
-
+    addrmemfile = "arpProbeAddr.mem"
+    datamemfile = "arpProbeData.mem"
+    opcodememfile = "arpProbeOpcode.mem"
+    open(addrmemfile, "w") do io
+        dumpMemfile(io, addrList, addrlen)
+    end
+    open(datamemfile, "w") do io
+        dumpMemfile(io, dataList, datalen)
+    end
+    open(opcodememfile, "w") do io
+        dumpMemfile(io, opcodeList, 1)
+    end
+    addrWires, addrPatch = readOnlyQueue(addrlen, length(addrList), updateReqAddr, restart, addrmemfile)
+    dataWires, dataPatch = readOnlyQueue(datalen, length(dataList), updateReqData, restart, datamemfile)
+    opcodeAddrWires, opcodeAddrPatch = readOnlyQueue(1, length(opcodeList), updateReqAddr, restart, opcodememfile)
+    opcodeDataWires, opcodeDataPatch = readOnlyQueue(1, length(opcodeList), updateReqData, restart, opcodememfile)
 
     v = Vmodule("ArpProbe")
     vpush!.(v, (addrPatch, dataPatch))
@@ -129,6 +140,9 @@ let
     )
 
     constAl = @always (
+        # araddr = 0;
+        # arvalid = 0;
+
         bready = 1;
         rready = 1;
     )

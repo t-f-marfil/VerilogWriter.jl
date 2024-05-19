@@ -20,295 +20,402 @@ module ArpProbe (
     input [1:0] rresp,
     input btn
 );
-    logic [168:0] data_readOnlyQueue_13;
-    logic [415:0] data_readOnlyQueue_14;
-    logic [12:0] data_readOnlyQueue_15;
-    logic [12:0] data_readOnlyQueue_16;
-    logic [2:0] _bitbundle_4;
+    reg [12:0] _reg_readonlyqueue_1 [12:0];
+    reg [31:0] _reg_readonlyqueue_2 [12:0];
+    reg [0:0] _reg_readonlyqueue_3 [12:0];
+    reg [0:0] _reg_readonlyqueue_4 [12:0];
+    logic [2:0] _bitbundle_1;
     logic addrIsRead;
-    logic [10:0] sliceIndex_readOnlyQueue_14;
-    logic _ans_onceAtRisingEdge_11;
-    logic updateReqRead;
-    logic _ans_onceAtRisingEdge_12;
-    logic [31:0] spikeCount;
-    logic restart;
-    logic _buf_onceAtRisingEdge_10;
-    logic startCount;
-    logic updateReqData;
-    logic waccepted;
-    logic valid_readOnlyQueue_13;
-    logic _ans_onceAtRisingEdge_10;
-    logic dataIsWrite;
-    logic [5:0] sliceIndex_readOnlyQueue_15;
-    logic [9:0] counter_readOnlyQueue_13;
-    logic _prevzipped_zippedSpike_4;
-    logic _buf_onceAtRisingEdge_11;
-    logic [5:0] counter_readOnlyQueue_16;
-    logic [31:0] outData_readOnlyQueue_14;
-    logic valid_readOnlyQueue_16;
-    logic rstCleared;
-    logic outData_readOnlyQueue_16;
+    logic _ans_onceAtRisingEdge_3;
+    logic [3:0] _preindex_readonlyqueue_1;
+    logic [3:0] _preindex_readonlyqueue_4;
+    logic [3:0] _index_readonlyqueue_3;
+    logic _iterdone_readonlyqueue_2;
+    logic [31:0] _outdata_readonlyqueue_2;
+    logic _valid_readonlyqueue_1;
+    logic _valid_readonlyqueue_4;
+    logic _initWait_readonlyqueue_2;
+    logic [12:0] _outdata_readonlyqueue_1;
+    logic _ans_onceAtRisingEdge_1;
+    logic _zipped_zippedSpike_1;
     logic updateReqAddrWrite;
-    logic [9:0] sliceIndex_readOnlyQueue_13;
+    logic [3:0] _index_readonlyqueue_1;
+    logic _outdata_readonlyqueue_4;
+    logic _prevzipped_zippedSpike_1;
+    logic [3:0] _index_readonlyqueue_4;
+    logic updateReqRead;
+    logic _initWait_readonlyqueue_1;
+    logic _ans_onceAtRisingEdge_2;
+    logic waccepted;
+    logic [3:0] _index_readonlyqueue_2;
+    logic _buf_onceAtRisingEdge_2;
+    logic rstCleared;
+    logic [3:0] _preindex_readonlyqueue_3;
+    logic _valid_readonlyqueue_3;
     logic dataIsRead;
-    logic _zipped_zippedSpike_4;
+    logic _valid_readonlyqueue_2;
+    logic addrIsWrite;
+    logic _initWait_readonlyqueue_4;
+    logic [31:0] spikeCount;
+    logic startCount;
+    logic _initWait_readonlyqueue_3;
+    logic [3:0] _preindex_readonlyqueue_2;
     logic awaccepted;
-    logic [5:0] sliceIndex_readOnlyQueue_16;
-    logic [12:0] outData_readOnlyQueue_13;
-    logic valid_readOnlyQueue_15;
     logic spike;
-    logic _buf_onceAtRisingEdge_12;
-    logic valid_readOnlyQueue_14;
+    logic _iterdone_readonlyqueue_4;
     logic updateReqDataWrite;
     logic updateReqAddr;
-    logic addrIsWrite;
-    logic [10:0] counter_readOnlyQueue_14;
-    logic [5:0] counter_readOnlyQueue_15;
-    logic outData_readOnlyQueue_15;
+    logic _buf_onceAtRisingEdge_3;
+    logic restart;
+    logic _buf_onceAtRisingEdge_1;
+    logic updateReqData;
+    logic dataIsWrite;
+    logic _outdata_readonlyqueue_3;
+    logic _iterdone_readonlyqueue_1;
+    logic _iterdone_readonlyqueue_3;
+
+    initial begin
+        $readmemh("arpProbeAddr.mem", _reg_readonlyqueue_1, 0, 12);
+        $readmemh("arpProbeData.mem", _reg_readonlyqueue_2, 0, 12);
+        $readmemh("arpProbeOpcode.mem", _reg_readonlyqueue_3, 0, 12);
+        $readmemh("arpProbeOpcode.mem", _reg_readonlyqueue_4, 0, 12);
+    end
 
     always_comb begin
-        valid_readOnlyQueue_13 = (~(counter_readOnlyQueue_13 == 10'd13));
-    end
-    always_ff @( posedge CLK ) begin
-        if ((~rstn)) begin
-            counter_readOnlyQueue_13 <= 0;
-        end else begin
-            if (restart) begin
-                counter_readOnlyQueue_13 <= 0;
-            end else if (updateReqAddr) begin
-                if (valid_readOnlyQueue_13) begin
-                    counter_readOnlyQueue_13 <= (counter_readOnlyQueue_13 + 1);
-                end
-            end
-        end
-    end
-    always_comb begin
-        sliceIndex_readOnlyQueue_13 = 0;
-        if ((~valid_readOnlyQueue_13)) begin
-            sliceIndex_readOnlyQueue_13 = counter_readOnlyQueue_13;
-        end else begin
-            sliceIndex_readOnlyQueue_13 = (counter_readOnlyQueue_13 + 1);
-        end
-    end
-    always_comb begin
-        outData_readOnlyQueue_13 = data_readOnlyQueue_13[((sliceIndex_readOnlyQueue_13 * 13) - 1) -: 13];
-    end
-    always_comb begin
-        data_readOnlyQueue_13[12 -: 13] = 13'd0;
-        data_readOnlyQueue_13[25 -: 13] = 13'd4;
-        data_readOnlyQueue_13[38 -: 13] = 13'd8;
-        data_readOnlyQueue_13[51 -: 13] = 13'd12;
-        data_readOnlyQueue_13[64 -: 13] = 13'd16;
-        data_readOnlyQueue_13[77 -: 13] = 13'd20;
-        data_readOnlyQueue_13[90 -: 13] = 13'd24;
-        data_readOnlyQueue_13[103 -: 13] = 13'd28;
-        data_readOnlyQueue_13[116 -: 13] = 13'd32;
-        data_readOnlyQueue_13[129 -: 13] = 13'd36;
-        data_readOnlyQueue_13[142 -: 13] = 13'd40;
-        data_readOnlyQueue_13[155 -: 13] = 13'd2036;
-        data_readOnlyQueue_13[168 -: 13] = 13'd2044;
-    end
-    always_comb begin
-        valid_readOnlyQueue_14 = (~(counter_readOnlyQueue_14 == 11'd13));
-    end
-    always_ff @( posedge CLK ) begin
-        if ((~rstn)) begin
-            counter_readOnlyQueue_14 <= 0;
-        end else begin
-            if (restart) begin
-                counter_readOnlyQueue_14 <= 0;
-            end else if (updateReqData) begin
-                if (valid_readOnlyQueue_14) begin
-                    counter_readOnlyQueue_14 <= (counter_readOnlyQueue_14 + 1);
-                end
-            end
-        end
-    end
-    always_comb begin
-        sliceIndex_readOnlyQueue_14 = 0;
-        if ((~valid_readOnlyQueue_14)) begin
-            sliceIndex_readOnlyQueue_14 = counter_readOnlyQueue_14;
-        end else begin
-            sliceIndex_readOnlyQueue_14 = (counter_readOnlyQueue_14 + 1);
-        end
-    end
-    always_comb begin
-        outData_readOnlyQueue_14 = data_readOnlyQueue_14[((sliceIndex_readOnlyQueue_14 * 32) - 1) -: 32];
-    end
-    always_comb begin
-        data_readOnlyQueue_14[31 -: 32] = 32'd4294967295;
-        data_readOnlyQueue_14[63 -: 32] = 32'd65535;
-        data_readOnlyQueue_14[95 -: 32] = 32'd3472490590;
-        data_readOnlyQueue_14[127 -: 32] = 32'd16778760;
-        data_readOnlyQueue_14[159 -: 32] = 32'd67502088;
-        data_readOnlyQueue_14[191 -: 32] = 32'd256;
-        data_readOnlyQueue_14[223 -: 32] = 32'd3472490590;
-        data_readOnlyQueue_14[255 -: 32] = 32'd0;
-        data_readOnlyQueue_14[287 -: 32] = 32'd0;
-        data_readOnlyQueue_14[319 -: 32] = 32'd4272488448;
-        data_readOnlyQueue_14[351 -: 32] = 32'd2570;
-        data_readOnlyQueue_14[383 -: 32] = 32'd42;
-        data_readOnlyQueue_14[415 -: 32] = 32'd1;
-    end
-    always_comb begin
-        valid_readOnlyQueue_15 = (~(counter_readOnlyQueue_15 == 6'd13));
-    end
-    always_ff @( posedge CLK ) begin
-        if ((~rstn)) begin
-            counter_readOnlyQueue_15 <= 0;
-        end else begin
-            if (restart) begin
-                counter_readOnlyQueue_15 <= 0;
-            end else if (updateReqAddr) begin
-                if (valid_readOnlyQueue_15) begin
-                    counter_readOnlyQueue_15 <= (counter_readOnlyQueue_15 + 1);
-                end
-            end
-        end
-    end
-    always_comb begin
-        sliceIndex_readOnlyQueue_15 = 0;
-        if ((~valid_readOnlyQueue_15)) begin
-            sliceIndex_readOnlyQueue_15 = counter_readOnlyQueue_15;
-        end else begin
-            sliceIndex_readOnlyQueue_15 = (counter_readOnlyQueue_15 + 1);
-        end
-    end
-    always_comb begin
-        outData_readOnlyQueue_15 = data_readOnlyQueue_15[((sliceIndex_readOnlyQueue_15 * 1) - 1) -: 1];
-    end
-    always_comb begin
-        data_readOnlyQueue_15[0 -: 1] = 1'd1;
-        data_readOnlyQueue_15[1 -: 1] = 1'd1;
-        data_readOnlyQueue_15[2 -: 1] = 1'd1;
-        data_readOnlyQueue_15[3 -: 1] = 1'd1;
-        data_readOnlyQueue_15[4 -: 1] = 1'd1;
-        data_readOnlyQueue_15[5 -: 1] = 1'd1;
-        data_readOnlyQueue_15[6 -: 1] = 1'd1;
-        data_readOnlyQueue_15[7 -: 1] = 1'd1;
-        data_readOnlyQueue_15[8 -: 1] = 1'd1;
-        data_readOnlyQueue_15[9 -: 1] = 1'd1;
-        data_readOnlyQueue_15[10 -: 1] = 1'd1;
-        data_readOnlyQueue_15[11 -: 1] = 1'd1;
-        data_readOnlyQueue_15[12 -: 1] = 1'd1;
-    end
-    always_comb begin
-        valid_readOnlyQueue_16 = (~(counter_readOnlyQueue_16 == 6'd13));
-    end
-    always_ff @( posedge CLK ) begin
-        if ((~rstn)) begin
-            counter_readOnlyQueue_16 <= 0;
-        end else begin
-            if (restart) begin
-                counter_readOnlyQueue_16 <= 0;
-            end else if (updateReqData) begin
-                if (valid_readOnlyQueue_16) begin
-                    counter_readOnlyQueue_16 <= (counter_readOnlyQueue_16 + 1);
-                end
-            end
-        end
-    end
-    always_comb begin
-        sliceIndex_readOnlyQueue_16 = 0;
-        if ((~valid_readOnlyQueue_16)) begin
-            sliceIndex_readOnlyQueue_16 = counter_readOnlyQueue_16;
-        end else begin
-            sliceIndex_readOnlyQueue_16 = (counter_readOnlyQueue_16 + 1);
-        end
-    end
-    always_comb begin
-        outData_readOnlyQueue_16 = data_readOnlyQueue_16[((sliceIndex_readOnlyQueue_16 * 1) - 1) -: 1];
-    end
-    always_comb begin
-        data_readOnlyQueue_16[0 -: 1] = 1'd1;
-        data_readOnlyQueue_16[1 -: 1] = 1'd1;
-        data_readOnlyQueue_16[2 -: 1] = 1'd1;
-        data_readOnlyQueue_16[3 -: 1] = 1'd1;
-        data_readOnlyQueue_16[4 -: 1] = 1'd1;
-        data_readOnlyQueue_16[5 -: 1] = 1'd1;
-        data_readOnlyQueue_16[6 -: 1] = 1'd1;
-        data_readOnlyQueue_16[7 -: 1] = 1'd1;
-        data_readOnlyQueue_16[8 -: 1] = 1'd1;
-        data_readOnlyQueue_16[9 -: 1] = 1'd1;
-        data_readOnlyQueue_16[10 -: 1] = 1'd1;
-        data_readOnlyQueue_16[11 -: 1] = 1'd1;
-        data_readOnlyQueue_16[12 -: 1] = 1'd1;
-    end
-    always_comb begin
-        _ans_onceAtRisingEdge_10 = (_buf_onceAtRisingEdge_10 | (wvalid & wready));
-        if (_zipped_zippedSpike_4) begin
-            
-        end else begin
-            
-        end
-    end
-    always_ff @( posedge CLK ) begin
-        if ((~rstn)) begin
-            _buf_onceAtRisingEdge_10 <= 0;
-        end else begin
-            if (_zipped_zippedSpike_4) begin
-                _buf_onceAtRisingEdge_10 <= 0;
+        _index_readonlyqueue_1 = 0;
+        if (restart) begin
+            _index_readonlyqueue_1 = 0;
+        end else if ((updateReqAddr & _valid_readonlyqueue_1)) begin
+            if ((_preindex_readonlyqueue_1 == 12)) begin
+                _index_readonlyqueue_1 = 0;
             end else begin
-                _buf_onceAtRisingEdge_10 <= (_buf_onceAtRisingEdge_10 | (wvalid & wready));
+                _index_readonlyqueue_1 = (_preindex_readonlyqueue_1 + 1);
             end
-        end
-    end
-    always_comb begin
-        _ans_onceAtRisingEdge_11 = (_buf_onceAtRisingEdge_11 | (awvalid & awready));
-        if (_zipped_zippedSpike_4) begin
-            
         end else begin
-            
+            _index_readonlyqueue_1 = _preindex_readonlyqueue_1;
         end
-    end
-    always_ff @( posedge CLK ) begin
-        if ((~rstn)) begin
-            _buf_onceAtRisingEdge_11 <= 0;
-        end else begin
-            if (_zipped_zippedSpike_4) begin
-                _buf_onceAtRisingEdge_11 <= 0;
+        if (restart) begin
+            
+        end else if ((updateReqAddr & _valid_readonlyqueue_1)) begin
+            if ((_preindex_readonlyqueue_1 == 12)) begin
+                
             end else begin
-                _buf_onceAtRisingEdge_11 <= (_buf_onceAtRisingEdge_11 | (awvalid & awready));
+                
             end
-        end
-    end
-    always_comb begin
-        _ans_onceAtRisingEdge_12 = (_buf_onceAtRisingEdge_12 | (bready & bvalid));
-        if (_zipped_zippedSpike_4) begin
-            
-        end else begin
-            
         end
     end
     always_ff @( posedge CLK ) begin
         if ((~rstn)) begin
-            _buf_onceAtRisingEdge_12 <= 0;
+            _iterdone_readonlyqueue_1 <= 0;
+            _preindex_readonlyqueue_1 <= 0;
         end else begin
-            if (_zipped_zippedSpike_4) begin
-                _buf_onceAtRisingEdge_12 <= 0;
+            if (restart) begin
+                
+            end else if ((updateReqAddr & _valid_readonlyqueue_1)) begin
+                if ((_preindex_readonlyqueue_1 == 12)) begin
+                    
+                end else begin
+                    
+                end
             end else begin
-                _buf_onceAtRisingEdge_12 <= (_buf_onceAtRisingEdge_12 | (bready & bvalid));
+                
+            end
+            if (restart) begin
+                _preindex_readonlyqueue_1 <= 0;
+                _iterdone_readonlyqueue_1 <= 0;
+            end else if ((updateReqAddr & _valid_readonlyqueue_1)) begin
+                if ((_preindex_readonlyqueue_1 == 12)) begin
+                    _preindex_readonlyqueue_1 <= 4'd0;
+                    _iterdone_readonlyqueue_1 <= 1'd1;
+                end else begin
+                    _preindex_readonlyqueue_1 <= (_preindex_readonlyqueue_1 + 1);
+                end
             end
         end
     end
     always_comb begin
-        _bitbundle_4[0] = _ans_onceAtRisingEdge_10;
-        _bitbundle_4[1] = _ans_onceAtRisingEdge_11;
-        _bitbundle_4[2] = _ans_onceAtRisingEdge_12;
-    end
-    always_comb begin
-        _zipped_zippedSpike_4 = (&(_bitbundle_4));
+        _valid_readonlyqueue_1 = (_initWait_readonlyqueue_1 & (~_iterdone_readonlyqueue_1));
     end
     always_ff @( posedge CLK ) begin
         if ((~rstn)) begin
-            _prevzipped_zippedSpike_4 <= 0;
+            _initWait_readonlyqueue_1 <= 0;
         end else begin
-            _prevzipped_zippedSpike_4 <= _zipped_zippedSpike_4;
+            _initWait_readonlyqueue_1 <= 1'd1;
+        end
+    end
+    always_ff @( posedge CLK ) begin
+        _outdata_readonlyqueue_1 <= _reg_readonlyqueue_1[_index_readonlyqueue_1];
+    end
+    always_comb begin
+        _index_readonlyqueue_2 = 0;
+        if (restart) begin
+            _index_readonlyqueue_2 = 0;
+        end else if ((updateReqData & _valid_readonlyqueue_2)) begin
+            if ((_preindex_readonlyqueue_2 == 12)) begin
+                _index_readonlyqueue_2 = 0;
+            end else begin
+                _index_readonlyqueue_2 = (_preindex_readonlyqueue_2 + 1);
+            end
+        end else begin
+            _index_readonlyqueue_2 = _preindex_readonlyqueue_2;
+        end
+        if (restart) begin
+            
+        end else if ((updateReqData & _valid_readonlyqueue_2)) begin
+            if ((_preindex_readonlyqueue_2 == 12)) begin
+                
+            end else begin
+                
+            end
+        end
+    end
+    always_ff @( posedge CLK ) begin
+        if ((~rstn)) begin
+            _iterdone_readonlyqueue_2 <= 0;
+            _preindex_readonlyqueue_2 <= 0;
+        end else begin
+            if (restart) begin
+                
+            end else if ((updateReqData & _valid_readonlyqueue_2)) begin
+                if ((_preindex_readonlyqueue_2 == 12)) begin
+                    
+                end else begin
+                    
+                end
+            end else begin
+                
+            end
+            if (restart) begin
+                _preindex_readonlyqueue_2 <= 0;
+                _iterdone_readonlyqueue_2 <= 0;
+            end else if ((updateReqData & _valid_readonlyqueue_2)) begin
+                if ((_preindex_readonlyqueue_2 == 12)) begin
+                    _preindex_readonlyqueue_2 <= 4'd0;
+                    _iterdone_readonlyqueue_2 <= 1'd1;
+                end else begin
+                    _preindex_readonlyqueue_2 <= (_preindex_readonlyqueue_2 + 1);
+                end
+            end
+        end
+    end
+    always_comb begin
+        _valid_readonlyqueue_2 = (_initWait_readonlyqueue_2 & (~_iterdone_readonlyqueue_2));
+    end
+    always_ff @( posedge CLK ) begin
+        if ((~rstn)) begin
+            _initWait_readonlyqueue_2 <= 0;
+        end else begin
+            _initWait_readonlyqueue_2 <= 1'd1;
+        end
+    end
+    always_ff @( posedge CLK ) begin
+        _outdata_readonlyqueue_2 <= _reg_readonlyqueue_2[_index_readonlyqueue_2];
+    end
+    always_comb begin
+        _index_readonlyqueue_3 = 0;
+        if (restart) begin
+            _index_readonlyqueue_3 = 0;
+        end else if ((updateReqAddr & _valid_readonlyqueue_3)) begin
+            if ((_preindex_readonlyqueue_3 == 12)) begin
+                _index_readonlyqueue_3 = 0;
+            end else begin
+                _index_readonlyqueue_3 = (_preindex_readonlyqueue_3 + 1);
+            end
+        end else begin
+            _index_readonlyqueue_3 = _preindex_readonlyqueue_3;
+        end
+        if (restart) begin
+            
+        end else if ((updateReqAddr & _valid_readonlyqueue_3)) begin
+            if ((_preindex_readonlyqueue_3 == 12)) begin
+                
+            end else begin
+                
+            end
+        end
+    end
+    always_ff @( posedge CLK ) begin
+        if ((~rstn)) begin
+            _iterdone_readonlyqueue_3 <= 0;
+            _preindex_readonlyqueue_3 <= 0;
+        end else begin
+            if (restart) begin
+                
+            end else if ((updateReqAddr & _valid_readonlyqueue_3)) begin
+                if ((_preindex_readonlyqueue_3 == 12)) begin
+                    
+                end else begin
+                    
+                end
+            end else begin
+                
+            end
+            if (restart) begin
+                _preindex_readonlyqueue_3 <= 0;
+                _iterdone_readonlyqueue_3 <= 0;
+            end else if ((updateReqAddr & _valid_readonlyqueue_3)) begin
+                if ((_preindex_readonlyqueue_3 == 12)) begin
+                    _preindex_readonlyqueue_3 <= 4'd0;
+                    _iterdone_readonlyqueue_3 <= 1'd1;
+                end else begin
+                    _preindex_readonlyqueue_3 <= (_preindex_readonlyqueue_3 + 1);
+                end
+            end
+        end
+    end
+    always_comb begin
+        _valid_readonlyqueue_3 = (_initWait_readonlyqueue_3 & (~_iterdone_readonlyqueue_3));
+    end
+    always_ff @( posedge CLK ) begin
+        if ((~rstn)) begin
+            _initWait_readonlyqueue_3 <= 0;
+        end else begin
+            _initWait_readonlyqueue_3 <= 1'd1;
+        end
+    end
+    always_ff @( posedge CLK ) begin
+        _outdata_readonlyqueue_3 <= _reg_readonlyqueue_3[_index_readonlyqueue_3];
+    end
+    always_comb begin
+        _index_readonlyqueue_4 = 0;
+        if (restart) begin
+            _index_readonlyqueue_4 = 0;
+        end else if ((updateReqData & _valid_readonlyqueue_4)) begin
+            if ((_preindex_readonlyqueue_4 == 12)) begin
+                _index_readonlyqueue_4 = 0;
+            end else begin
+                _index_readonlyqueue_4 = (_preindex_readonlyqueue_4 + 1);
+            end
+        end else begin
+            _index_readonlyqueue_4 = _preindex_readonlyqueue_4;
+        end
+        if (restart) begin
+            
+        end else if ((updateReqData & _valid_readonlyqueue_4)) begin
+            if ((_preindex_readonlyqueue_4 == 12)) begin
+                
+            end else begin
+                
+            end
+        end
+    end
+    always_ff @( posedge CLK ) begin
+        if ((~rstn)) begin
+            _iterdone_readonlyqueue_4 <= 0;
+            _preindex_readonlyqueue_4 <= 0;
+        end else begin
+            if (restart) begin
+                
+            end else if ((updateReqData & _valid_readonlyqueue_4)) begin
+                if ((_preindex_readonlyqueue_4 == 12)) begin
+                    
+                end else begin
+                    
+                end
+            end else begin
+                
+            end
+            if (restart) begin
+                _preindex_readonlyqueue_4 <= 0;
+                _iterdone_readonlyqueue_4 <= 0;
+            end else if ((updateReqData & _valid_readonlyqueue_4)) begin
+                if ((_preindex_readonlyqueue_4 == 12)) begin
+                    _preindex_readonlyqueue_4 <= 4'd0;
+                    _iterdone_readonlyqueue_4 <= 1'd1;
+                end else begin
+                    _preindex_readonlyqueue_4 <= (_preindex_readonlyqueue_4 + 1);
+                end
+            end
+        end
+    end
+    always_comb begin
+        _valid_readonlyqueue_4 = (_initWait_readonlyqueue_4 & (~_iterdone_readonlyqueue_4));
+    end
+    always_ff @( posedge CLK ) begin
+        if ((~rstn)) begin
+            _initWait_readonlyqueue_4 <= 0;
+        end else begin
+            _initWait_readonlyqueue_4 <= 1'd1;
+        end
+    end
+    always_ff @( posedge CLK ) begin
+        _outdata_readonlyqueue_4 <= _reg_readonlyqueue_4[_index_readonlyqueue_4];
+    end
+    always_comb begin
+        _ans_onceAtRisingEdge_1 = (_buf_onceAtRisingEdge_1 | (wvalid & wready));
+        if (_zipped_zippedSpike_1) begin
+            
+        end else begin
+            
+        end
+    end
+    always_ff @( posedge CLK ) begin
+        if ((~rstn)) begin
+            _buf_onceAtRisingEdge_1 <= 0;
+        end else begin
+            if (_zipped_zippedSpike_1) begin
+                _buf_onceAtRisingEdge_1 <= 0;
+            end else begin
+                _buf_onceAtRisingEdge_1 <= (_buf_onceAtRisingEdge_1 | (wvalid & wready));
+            end
+        end
+    end
+    always_comb begin
+        _ans_onceAtRisingEdge_2 = (_buf_onceAtRisingEdge_2 | (awvalid & awready));
+        if (_zipped_zippedSpike_1) begin
+            
+        end else begin
+            
+        end
+    end
+    always_ff @( posedge CLK ) begin
+        if ((~rstn)) begin
+            _buf_onceAtRisingEdge_2 <= 0;
+        end else begin
+            if (_zipped_zippedSpike_1) begin
+                _buf_onceAtRisingEdge_2 <= 0;
+            end else begin
+                _buf_onceAtRisingEdge_2 <= (_buf_onceAtRisingEdge_2 | (awvalid & awready));
+            end
+        end
+    end
+    always_comb begin
+        _ans_onceAtRisingEdge_3 = (_buf_onceAtRisingEdge_3 | (bready & bvalid));
+        if (_zipped_zippedSpike_1) begin
+            
+        end else begin
+            
+        end
+    end
+    always_ff @( posedge CLK ) begin
+        if ((~rstn)) begin
+            _buf_onceAtRisingEdge_3 <= 0;
+        end else begin
+            if (_zipped_zippedSpike_1) begin
+                _buf_onceAtRisingEdge_3 <= 0;
+            end else begin
+                _buf_onceAtRisingEdge_3 <= (_buf_onceAtRisingEdge_3 | (bready & bvalid));
+            end
+        end
+    end
+    always_comb begin
+        _bitbundle_1[0] = _ans_onceAtRisingEdge_1;
+        _bitbundle_1[1] = _ans_onceAtRisingEdge_2;
+        _bitbundle_1[2] = _ans_onceAtRisingEdge_3;
+    end
+    always_comb begin
+        _zipped_zippedSpike_1 = (&(_bitbundle_1));
+    end
+    always_ff @( posedge CLK ) begin
+        if ((~rstn)) begin
+            _prevzipped_zippedSpike_1 <= 0;
+        end else begin
+            _prevzipped_zippedSpike_1 <= _zipped_zippedSpike_1;
         end
     end
     always_comb begin
         spike = 0;
-        if (_zipped_zippedSpike_4) begin
+        if (_zipped_zippedSpike_1) begin
             
         end else if ((spikeCount == 50)) begin
             spike = 1;
@@ -324,7 +431,7 @@ module ArpProbe (
             spikeCount <= 0;
             startCount <= 0;
         end else begin
-            if (_zipped_zippedSpike_4) begin
+            if (_zipped_zippedSpike_1) begin
                 startCount <= 1'd1;
             end else if ((spikeCount == 50)) begin
                 startCount <= 0;
@@ -337,10 +444,10 @@ module ArpProbe (
         end
     end
     always_comb begin
-        addrIsWrite = (valid_readOnlyQueue_15 & (outData_readOnlyQueue_15 == 1));
-        addrIsRead = (valid_readOnlyQueue_15 & (outData_readOnlyQueue_15 == 0));
-        dataIsWrite = (valid_readOnlyQueue_16 & (outData_readOnlyQueue_16 == 1));
-        dataIsRead = (valid_readOnlyQueue_16 & (outData_readOnlyQueue_16 == 0));
+        addrIsWrite = (_valid_readonlyqueue_3 & (_outdata_readonlyqueue_3 == 1));
+        addrIsRead = (_valid_readonlyqueue_3 & (_outdata_readonlyqueue_3 == 0));
+        dataIsWrite = (_valid_readonlyqueue_4 & (_outdata_readonlyqueue_4 == 1));
+        dataIsRead = (_valid_readonlyqueue_4 & (_outdata_readonlyqueue_4 == 0));
         updateReqAddr = (updateReqAddrWrite | updateReqRead);
         updateReqData = (updateReqDataWrite | updateReqRead);
     end
@@ -354,9 +461,9 @@ module ArpProbe (
         end
     end
     always_comb begin
-        awvalid = (((valid_readOnlyQueue_13 & addrIsWrite) & rstCleared) & (~awaccepted));
+        awvalid = (((_valid_readonlyqueue_1 & addrIsWrite) & rstCleared) & (~awaccepted));
         updateReqAddrWrite = spike;
-        awaddr = outData_readOnlyQueue_13;
+        awaddr = _outdata_readonlyqueue_1;
         restart = 1'd0;
         if (spike) begin
             
@@ -376,9 +483,9 @@ module ArpProbe (
         end
     end
     always_comb begin
-        wvalid = (((valid_readOnlyQueue_14 & dataIsWrite) & rstCleared) & (~waccepted));
+        wvalid = (((_valid_readonlyqueue_2 & dataIsWrite) & rstCleared) & (~waccepted));
         updateReqDataWrite = spike;
-        wdata = outData_readOnlyQueue_14;
+        wdata = _outdata_readonlyqueue_2;
         wstrb = (~0);
         if (spike) begin
             
@@ -398,8 +505,8 @@ module ArpProbe (
         end
     end
     always_comb begin
-        arvalid = ((valid_readOnlyQueue_13 & addrIsRead) & rstCleared);
-        araddr = outData_readOnlyQueue_13;
+        arvalid = ((_valid_readonlyqueue_1 & addrIsRead) & rstCleared);
+        araddr = _outdata_readonlyqueue_1;
         updateReqRead = (arvalid & arready);
     end
     always_comb begin
