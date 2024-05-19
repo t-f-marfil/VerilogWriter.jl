@@ -205,3 +205,7 @@ end
 function always(expr::Ref{T}) where {T}
     always(expr[])
 end
+
+macro nralways(arg)
+    return :(al = $(always(arg)); al.noreset = true; al)
+end

@@ -1389,8 +1389,15 @@ function decloneline(expr::Expr)::Vector{Expr}
         decloneline_inner(wt, Meta.quot(Wireexpr(1)), targs[2])
     elseif length(targs) == 4 
         # 2d reg declaration
-        targs[3] isa Symbol || error("only a symbol is allowed for 2d array declaration, given $(targs[3]).")
-        [:(Onedecl($wt, $(wireexpr(targs[2])), $(Meta.quot(targs[3])), true, $(wireexpr(targs[4]))))]
+        declName = targs[3]
+        if declName isa Symbol
+            regExpr = Meta.quot(targs[3])
+        elseif declName isa Expr && declName.head == :$
+            regExpr = esc(declName.args[])
+        else
+            error("only a symbol or an interpolated object is allowed for 2d array declaration, given $(targs[3]).")
+        end
+        [:(Onedecl($wt, $(wireexpr(targs[2])), $(regExpr), true, $(wireexpr(targs[4]))))]
     else 
         length(targs) == 3 || error("$(length(targs)) arguments for 'decloneline'.")
         decloneline_inner(wt, wireexpr(targs[2]), targs[3])

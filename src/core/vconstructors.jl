@@ -169,7 +169,7 @@ Alwayscontent(case::Case...) = Alwayscontent(Alassign[], Ifelseblock[], [case...
 
 Alwayscontent() = Alwayscontent(aunknown)
 Alwayscontent(atype::Atype, assigns::Vector{Alassign}) = Alwayscontent(atype, Sensitivity(), Ifcontent(assigns))
-
+Alwayscontent(atype::Atype, sens::Sensitivity, cont::Ifcontent) = Alwayscontent(atype, sens, cont, false)
 
 Vmodinst(vname, iname, pts, wild::Bool=false) = Vmodinst(vname, iname, Pair{String, Wireexpr}[], pts, wild)
 Vmodinst(vname, iname, ps, pts) = Vmodinst(vname, iname, ps, pts, false)
@@ -180,7 +180,8 @@ Vmodule(n, env::Vmodenv) = Vmodule(n, env, Alwayscontent[])
 Vmodule(n, env::Vmodenv, als) = Vmodule(n, env, Assign[], als)
 Vmodule(n, env::Vmodenv, ass::Vector{Assign}, als::Vector{Alwayscontent}) = Vmodule(n, env, Vmodinst[], ass, als)
 Vmodule(n, env::Vmodenv, insts::Vector{Vmodinst}, als::Vector{Alwayscontent}) = Vmodule(n, env, insts, Assign[], als)
-Vmodule(n, env::Vmodenv, insts, ass, als) = Vmodule(n, env.prms, env.prts, env.lprms, env.dcls, insts, ass, als)
+Vmodule(n, env::Vmodenv, insts, ass, als) = Vmodule(n, env::Vmodenv, Readmemh[], insts, ass, als)
+Vmodule(n, env::Vmodenv, readmems, insts, ass, als) = Vmodule(n, env.prms, env.prts, env.lprms, env.dcls, readmems, insts, ass, als)
 
 Vmodule(n::String, pas::Parameters, ps::Ports, lpas::Localparams,
 decls::Decls, ass::Vector{Assign}, als::Vector{Alwayscontent}
@@ -200,6 +201,9 @@ Vmodule(n::String, ps::Ports, decls::Decls, als::Vector{Alwayscontent}
 Vmodule(n::AbstractString, env::Vmodenv, body::VmodBody
 ) = Vmodule(n, env, body.insts, body.assigns, body.always)
 
+Vmodule(n::String, pas::Parameters, ps::Ports, lparams::Localparams, decls::Decls, 
+insts::Vector{Vmodinst}, ass::Vector{Assign}, als::Vector{Alwayscontent}
+) = Vmodule(n, pas, ps, lparams, decls, Readmemh[], insts, ass, als)
 
 eachfieldconstruct(Vmodenv)
 

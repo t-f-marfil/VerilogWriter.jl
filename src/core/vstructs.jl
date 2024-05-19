@@ -292,6 +292,8 @@ mutable struct Alwayscontent
     # sensitive::Wireexpr
     sens::Sensitivity
     content::Ifcontent
+    # when true autoreset should not add reset statements into this always block.
+    noreset::Bool
 end
 
 "Assign one statement."
