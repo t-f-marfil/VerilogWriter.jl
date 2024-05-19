@@ -33,8 +33,7 @@ function extractTypedArguments(expr::Expr)
             argname, argtype = arg.args
             push!(ans, (argname, argtype))
         else
-            println(arg)
-            error("not a typed argument")
+            push!(ans, (arg, :Any))
         end
     end
 
@@ -93,7 +92,7 @@ macro vstdpatch(expr)
     qgenerated = quote
         $expr
         $countername::Int = 0
-        function $funname($([:($i::$j) for (i, j) in args[begin:end-1]]...))
+        function $funname($([j == :Any ? :($i) : :($i::$j) for (i, j) in args[begin:end-1]]...))
             return $funname($(argnames[begin:end-1]...), string(global $countername += 1))
         end
     end
