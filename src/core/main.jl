@@ -21,6 +21,8 @@ const pathbasic = [
 
     "axi.jl",
     "memfile.jl",
+
+    "uartDebug/ascii.jl",
 ]
 
 for p in pathbasic
