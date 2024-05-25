@@ -1,7 +1,7 @@
-export nibbleToHexAscii
+export nibbleToHexAscii, binaryToHexAscii
 
 @vstdpatch function nibbleToHexAscii(nibbleWire, name::AbstractString)
-    pvg = PrivateWireNameGen(name)
+    pvg = PrivateWireNameGen(string("_nibbleToHex_", name))
     extended = pvg("_extended")
     ans = pvg("_ans")
 
@@ -16,4 +16,29 @@ export nibbleToHexAscii
         end
     )
     return @wireexpr($ans), Vpatch(al)
+end
+
+@vstdpatch function binaryToHexAscii(wire, width, name::AbstractString)
+    pvg = PrivateWireNameGen(string("_binaryToHex_", name))
+
+    extended = pvg("_extended")
+    extendedWidth = width + ((4 - (width % 4)) % 4)
+    alextend = @always (
+        $extended = $(Wireexpr(extendedWidth, 0));
+        $extended[$(width-1):0] = $wire
+    )
+
+    plist = Vector{Vpatch{Tuple{Alwayscontent}}}(undef, extendedWidth >> 2)
+    allist = Vector{Alwayscontent}(undef, extendedWidth >> 2)
+    result = pvg("_result")
+    for i in 1:(extendedWidth >> 2)
+        nibble, p = nibbleToHexAscii(@wireexpr($extended[$(4i-1):$(4*(i-1))]))
+        alnibble = @always (
+            $result[$(8i-1):$(8*(i-1))] = $nibble
+        )
+        plist[i] = p
+        allist[i] = alnibble
+    end
+
+    return @wireexpr($result), Vpatch(alextend, plist..., allist..., @decls @logic $(8*(extendedWidth >> 2)) $result)
 end

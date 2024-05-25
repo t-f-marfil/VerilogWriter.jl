@@ -1,4 +1,4 @@
-
+# nibbleToHexAscii
 let 
     v = Vmodule("dut")
     
@@ -20,4 +20,36 @@ let
 
     v = vfinalize(v)
     @test verilatorSimrun(v, 0x10, 100, option = VerilatorOption(["Unused"]))
+end
+
+# binaryToHexAscii
+let
+    v = Vmodule("dut")
+    vpush!(v, @ports (@in CLK, RST))
+    
+    function strToAsciiBinary(text)
+        result = 0
+        for c in text
+            result <<= 8
+            result |= Int(c)
+        end
+        return result
+    end
+
+    w1, p1 = binaryToHexAscii("din1", 11)
+    w2, p2 = binaryToHexAscii("din2", 16)
+    tplen = 2
+    vpush!(v, @ports @out @logic $tplen tp)
+
+    vpush!.(v, (p1, p2))
+
+    vpush!(v, @always (
+        din1 = 0x3FC;
+        tp[0] = $w1 == $(strToAsciiBinary("3FC"));
+
+        din2 = 0xCD23;
+        tp[1] = $w2 == $(strToAsciiBinary("CD23"))
+    ))
+
+    @test verilatorSimrun(vfinalize(v), tplen, 100, option=VerilatorOption(["Unused"]))
 end
