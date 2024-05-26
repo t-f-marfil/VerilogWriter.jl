@@ -27,8 +27,18 @@ arguments with type.
 function extractTypedArguments(expr::Expr)
     ans = Vector{Tuple{Symbol, Union{Symbol, Expr}}}()
     funarguments = expr.args[begin]
-    funarguments.head == :call || error("parametric type and return type not implemented yet")
-    for arg in funarguments.args[2:end]
+    args = nothing
+    parametric = nothing
+    if funarguments.head == :call
+        args = funarguments.args
+    else
+        # parametric type
+        funarguments.head == :where || error("Unknown arg: $(dump(funarguments))")
+        args = funarguments.args[begin].args
+        parametric = funarguments.args[2:end]
+    end
+
+    for arg in args[2:end]
         if arg isa Expr && arg.head == :(::)
             argname, argtype = arg.args
             push!(ans, (argname, argtype))
@@ -37,7 +47,7 @@ function extractTypedArguments(expr::Expr)
         end
     end
 
-    return ans
+    return ans, parametric
 end
 
 """
@@ -46,7 +56,12 @@ end
 Extract the name of a function from the whole function expression.
 """
 function extractFunName(expr::Expr)
-    return expr.args[begin].args[begin]
+    if expr.args[begin].head == :where
+        # parametric type
+        return expr.args[begin].args[begin].args[begin]
+    else
+        return expr.args[begin].args[begin]
+    end
 end
 
 """
@@ -82,18 +97,29 @@ end
 """
 macro vstdpatch(expr)
     funname = extractFunName(expr)
-    args = extractTypedArguments(expr)
+    args, parametric = extractTypedArguments(expr)
     if args[end] != (:name, :AbstractString)
         error("the last argument should be name::AbstractString, given $(args[end])")
     end
     argnames = [i for (i, j) in args]
     countername = Symbol(funname, "Counter")
 
-    qgenerated = quote
-        $expr
-        $countername::Int = 0
-        function $funname($([j == :Any ? :($i) : :($i::$j) for (i, j) in args[begin:end-1]]...))
-            return $funname($(argnames[begin:end-1]...), string(global $countername += 1))
+    qgenerated = nothing
+    if isnothing(parametric)
+        qgenerated = quote
+            $expr
+            $countername::Int = 0
+            function $funname($([j == :Any ? :($i) : :($i::$j) for (i, j) in args[begin:end-1]]...))
+                return $funname($(argnames[begin:end-1]...), string(global $countername += 1))
+            end
+        end
+    else
+        qgenerated = quote
+            $expr
+            $countername::Int = 0
+            function $funname($([j == :Any ? :($i) : :($i::$j) for (i, j) in args[begin:end-1]]...)) where {$(parametric...)}
+                return $funname($(argnames[begin:end-1]...), string(global $countername += 1))
+            end
         end
     end
     return esc(qgenerated)
@@ -312,161 +338,6 @@ Should be careful on the critical path on using this buffer.
 + (length(data)-1:0): Buffer output
 """
 interceptBuffer
-
-
-"""
-    readOnlyQueueComb(width::Int, data::V, update, restart, name::AbstractString) where {T,V<:AbstractVector{T}}
-
-Generate queue which outputs value in `data` in the order which they are aligned in `data`.
-Implemented with 1d reg and always_comb.
-
-Each item in `data` is converted to a wire in verilog with width `width`.
-
-## Input Wires
-+ `update` : Wire to be asserted to request next data to the queue.
-+ `restart` : When asserted the queue starts outputting value in `data` from the first item.
-
-## Return Wires
-
-### dataValid
-+ (0): High indicates that the output from the queue is valid.
-
-### outData
-+ (`width`-1:0): Data from the queue.
-"""
-function readOnlyQueueComb(width::Int, data::V, update, restart, name::AbstractString) where {T,V<:AbstractVector{T}}
-    wireId = string("_readOnlyQueueComb_", name)
-    pvg = PrivateWireNameGen(wireId)
-
-    totalBitWidth = width * length(data)
-    dataReadOnly = pvg("data")
-    dataVecDecl = @decls @logic $totalBitWidth $dataReadOnly
-    dataAssignList = Vector{Alassign}(undef, length(data))
-
-    for i in eachindex(data)
-        msbIndex = width * i - 1
-        asgn = @alassign_comb $(dataReadOnly)[($msbIndex)-:($width)] = $(Wireexpr(width, data[i]))
-        dataAssignList[i] = asgn
-    end
-
-    dataAssignAlways = Alwayscontent(comb, dataAssignList)
-
-    counter = pvg("counter")
-    counterWidth = (
-        (ceil(log(2, length(data)) + 1) |> Int)
-        # allocate enough width for indexed part select
-        # (counter width should be equal to index for part select below)
-        + (ceil(log(2, width) + 1) |> Int)
-    )
-    dataValid = pvg("valid")
-    alvalid = @always (
-        $dataValid = ~($counter == $(Wireexpr(counterWidth, length(data))))
-    )
-    alCounter = @always (
-        if $restart
-            $counter <= 0
-        elseif $update
-            if $dataValid
-                $counter <= $counter + 1
-            end
-        end
-    )
-
-    outData = pvg("outData")
-    dataSliceIndex = pvg("sliceIndex")
-    alSliceIndex = @always ( 
-        $dataSliceIndex = 0;
-        if ~$dataValid
-            $dataSliceIndex = $counter
-        else
-            $dataSliceIndex = $counter + 1
-        end;
-    )
-    alOutData = @always (
-        $outData = $dataReadOnly[($dataSliceIndex * $width - 1)-:($width)]
-    )
-    
-    patch = Vpatch(
-        dataVecDecl,
-        alvalid,
-        alCounter,
-        alSliceIndex,
-        alOutData,
-        dataAssignAlways
-    )
-    return (dataValid, outData), patch
-end
-readOnlyQueueCombCounter::Int = 0
-function readOnlyQueueComb(width::Int, data::V, update, restart) where {T,V<:AbstractVector{T}}
-    readOnlyQueueComb(width, data, update, restart, string(global readOnlyQueueCombCounter += 1))
-end
-
-"""
-    readOnlyQueue(width::Int, depth::Int, update, restart, memfilename, name::AbstractString)
-
-Generate a buffer queue whose data is initalized with `memfile` using initial statement.
-
-Output is same as that of [`readOnlyQueueComb`](@ref).
-"""
-function readOnlyQueue(width::Int, depth::Int, update, restart, memfilename, name::AbstractString)
-    pvg = PrivateWireNameGen(string("_readonlyqueue_", name))
-    reg = pvg("_reg")
-
-    d = @decls @reg $(width) $reg $depth
-
-    outData = pvg("_outdata")
-    index = pvg("_index")
-    preindex = pvg("_preindex")
-    indexWidth = Int(log(2, depth) |> ceil)
-
-    valid = pvg("_valid")
-    iterdone = pvg("_iterdone")
-
-    accepted = @wireexpr $update & $valid
-
-    alIndex = @cpalways (
-        $index = 0;
-        if $restart
-            $index = 0
-        elseif $accepted
-            if $preindex == $(depth - 1)
-                $index = 0
-            else
-                $index = $preindex + 1
-            end
-        else
-            $index = $preindex
-        end;
-
-        if $restart
-            $preindex <= 0
-            $iterdone <= 0
-        elseif $accepted
-            if ($preindex == $(depth - 1))
-                $preindex <= $(Wireexpr(indexWidth, 0))
-                $iterdone <= $(Wireexpr(1, 1))
-            else
-                $preindex <= $preindex + 1
-            end
-        end
-    )
-    initWait = pvg("_initWait")
-
-    alValid = @cpalways (
-        $initWait <= $(Wireexpr(1, 1));
-        $valid = $initWait & ~$iterdone
-    )
-    alReg = @nralways (
-        $outData <= $reg[$index]
-    )
-    readmem = Readmemh(memfilename, reg, 0, depth - 1)
-
-    return (valid, outData), Vpatch(d, alIndex..., alValid..., alReg, readmem)
-end
-readOnlyQueueCounter::Int = 0
-function readOnlyQueue(width::Int, depth::Int, update, restart, memfilename)
-    readOnlyQueue(width, depth, update, restart, memfilename, string(global readOnlyQueueCounter += 1))
-end
 
 @vstdpatch function onceHigh(wire::Wireexpr, restart::Wireexpr, name::AbstractString)
     pvg = PrivateWireNameGen(string("_onceAtRisingEdge_", name))
