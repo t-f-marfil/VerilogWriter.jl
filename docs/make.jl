@@ -16,6 +16,7 @@ function docgen(prettyurls)
                 "Automatic Inference" => "inference.md",
                 "Finite State Machines" => "fsm.md", 
                 "Patch" => "patch.md",
+                "Simulation with Verilator" => "verilator.md",
                 "Mid-Level Synthesis" => "midlevel.md",
                 "Reference" => "reference.md",
             ],

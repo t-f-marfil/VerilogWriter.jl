@@ -1,3 +1,5 @@
+export VerilatorOption, verilatorSimrun, acceptableInVerilatorTest
+
 function verilatorTestbenchGen(io::IO, tplen::Integer, cycles::Integer)
     body = """
     module testbench (
@@ -79,6 +81,12 @@ end
 function acceptableInVerilatorTest(v::Vector{Vmodule}, tplen)
     return acceptableInVerilatorTest(v[begin], tplen)
 end
+"""
+    acceptableInVerilatorTest(v::Vmodule, tplen::Integer)::Bool
+
+Check that ports in `v` are one bit wide `CLK` and `RST`, and `tplen` wide `tp`.
+Additionally, name of `v` should be `dut`.
+"""
 function acceptableInVerilatorTest(v::Vmodule, tplen::Integer)::Bool
     expectedname = "dut"
     expectedbitports = [
@@ -143,6 +151,9 @@ function parseVerilatorSimResult(simoutput::IO, tplen)::Bool
     return parseVerilatorSimResult(stdout, simoutput, tplen)
 end
 
+"""
+Represents options passed to verilator.
+"""
 struct VerilatorOption
     wall::Bool
     disabledWarning::Vector{String}
@@ -164,8 +175,15 @@ const DEFAULT_VERILATOR_OPTION = VerilatorOption(true, String[])
 
 Run simulation using Verilator.
 
-`dut` must pass `acceptableInVerilatorTest`.
+`dut` must pass [`acceptableInVerilatorTest`](@ref).
 Simulation is run for `cycles` cycles, for `tplen`-many test points.
+Active-high reset signal `RST` is currently set to 0 20 clock cycles after starting the simulation.
+
+Bits in the port named `tp` in `dut` is supposed to be all high at the end of simulation.
+`true` is returned if `tp == '1`, `false` otherwise.
+
+Files that contain test codes for a simulation with verilator is generated in a temporary directory `tmpverilatorsim`,
+which is automatically generated in the current directory when the simulation is run.
 """
 function verilatorSimrun(resultbuf::IO, dut::V, tplen::Integer, cycles::Integer; option::VerilatorOption=DEFAULT_VERILATOR_OPTION) where {V <: Union{Vmodule, Vector{Vmodule}}}
     @assert acceptableInVerilatorTest(dut, tplen)
@@ -217,6 +235,11 @@ function verilatorSimrun(resultbuf::IO, dut::V, tplen::Integer, cycles::Integer;
         rethrow()
     end
 end
+"""
+    verilatorSimrun(dut, tplen, cycles; option::VerilatorOption=DEFAULT_VERILATOR_OPTION)
+
+Run `verilatorSimrun` with the result being output to STDOUT.
+"""
 function verilatorSimrun(dut, tplen, cycles; option::VerilatorOption=DEFAULT_VERILATOR_OPTION)
     return verilatorSimrun(stdout, dut, tplen, cycles, option=option)
 end
