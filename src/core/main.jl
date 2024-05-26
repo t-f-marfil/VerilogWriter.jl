@@ -17,11 +17,12 @@ const pathbasic = [
     "vpush.jl", 
     "accessor.jl",
     "verilator.jl",
-    "stdpatch.jl",
 
     "axi.jl",
     "memfile.jl",
 
+    "patch/stdpatch.jl",
+    "patch/ram.jl",
     "uartDebug/ascii.jl",
 ]
 

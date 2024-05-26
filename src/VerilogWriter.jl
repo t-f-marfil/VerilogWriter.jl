@@ -66,7 +66,7 @@ export
 export 
     PrivateWireNameGen, Vpatch, @vstdpatch,
     posedgePrec, bitbundle, nonegedge, posedgeSync,
-    isAtRisingEdge, interceptBuffer, readOnlyQueue, readOnlyQueueComb, onceHigh, zipSpike
+    isAtRisingEdge, interceptBuffer, onceHigh, zipSpike
 
 # axi
 export

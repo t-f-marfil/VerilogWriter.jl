@@ -193,7 +193,7 @@ function verilatorSimrun(resultbuf::IO, dut::V, tplen::Integer, cycles::Integer;
         end
 
         compilecmd = `verilator --cc $(option()) $tbfile $dutfile --exe $tbcpp`
-        println("compile command: ", compilecmd)
+        println("checking $tplen test points, compile command: ", compilecmd)
         run(compilecmd)
 
         cd("obj_dir")

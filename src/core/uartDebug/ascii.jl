@@ -20,6 +20,7 @@ end
 
 @vstdpatch function binaryToHexAscii(wire, width, name::AbstractString)
     pvg = PrivateWireNameGen(string("_binaryToHex_", name))
+    width > 0 || error("width should be larger than 0, $width given.")
 
     extended = pvg("_extended")
     extendedWidth = width + ((4 - (width % 4)) % 4)
@@ -29,16 +30,16 @@ end
     )
 
     plist = Vector{Vpatch{Tuple{Alwayscontent}}}(undef, extendedWidth >> 2)
-    allist = Vector{Alwayscontent}(undef, extendedWidth >> 2)
+    allist = Vector{Alassign}(undef, extendedWidth >> 2)
     result = pvg("_result")
     for i in 1:(extendedWidth >> 2)
         nibble, p = nibbleToHexAscii(@wireexpr($extended[$(4i-1):$(4*(i-1))]))
-        alnibble = @always (
+        alnibble = @alassign_comb (
             $result[$(8i-1):$(8*(i-1))] = $nibble
         )
         plist[i] = p
         allist[i] = alnibble
     end
 
-    return @wireexpr($result), Vpatch(alextend, plist..., allist..., @decls @logic $(8*(extendedWidth >> 2)) $result)
+    return @wireexpr($result), Vpatch(alextend, plist..., Alwayscontent(comb, allist), @decls @logic $(8*(extendedWidth >> 2)) $result)
 end

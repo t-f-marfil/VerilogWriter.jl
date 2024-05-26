@@ -1,22 +1,4 @@
 """
-    pow2check(x::Int)::Bool
-
-Check if x is the power of two. Called in [`fifogen`](@ref).
-"""
-function pow2check(x::Int)::Bool
-    if x < 1
-        false
-    else
-        sample = 1
-        while sample < x 
-            sample <<= 1
-        end
-
-        sample == x 
-    end
-end
-
-"""
     fifogen(depth=8, width=32; name="")
 
 Generate FIFO whose depth is `depth` and width is `width`, with its name `name`.

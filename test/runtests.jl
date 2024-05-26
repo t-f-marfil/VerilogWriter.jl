@@ -6,6 +6,7 @@ include("testutils.jl")
 
 tpaths = [
     readdir(joinpath(@__DIR__, "core"), join=true);
+    readdir(joinpath(@__DIR__, "core/patch"), join=true);
     readdir(joinpath(@__DIR__, "core/uartDebug"), join=true);
     readdir(joinpath(@__DIR__, "midlevel"), join=true)
 ]
