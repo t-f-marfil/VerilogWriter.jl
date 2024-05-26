@@ -15,6 +15,7 @@ function docgen(prettyurls)
                 "Basic Types" => "types.md",
                 "Automatic Inference" => "inference.md",
                 "Finite State Machines" => "fsm.md", 
+                "Patch" => "patch.md",
                 "Mid-Level Synthesis" => "midlevel.md",
                 "Reference" => "reference.md",
             ],

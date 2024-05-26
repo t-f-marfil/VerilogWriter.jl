@@ -67,10 +67,10 @@ end
 """
     @vstdpatch(expr)
 
-Attached at methods generating a pair of `Wireexpr` and `Vpatch`.
+Attached at methods generating a pair of something (usually wires) and `Vpatch`.
 Methods should take `name::AbstractString` as the last argument.
 The macro additionally defines the method which does not take `name` argument,
-and which internally passes as `name` an `Int` value which is incremented
+and which internally passes to `name` an `Int` value which is incremented
 everytime the method without `name` argument is called.
 
 To summarize, when this macro takes
@@ -283,6 +283,14 @@ function invertBitOrder(w::Wireexpr, wid::Int, name::AbstractString)
     return answire, Vpatch((@decls @logic $wid $answire), @always $(assigns...))
 end
 invertBitOrderCounter::Int = 0
+"""
+    invertBitOrder(w::Wireexpr, wid::Int)
+
+Invert bit order of wire `w`.
+
+## Return Wire
++ (`wid`-1:0): Bit order of `w` is inverted.
+"""
 function invertBitOrder(w::Wireexpr, wid::Int)
     return invertBitOrder(w, wid, string(global invertBitOrderCounter+=1))
 end
@@ -340,19 +348,33 @@ Should be careful on the critical path on using this buffer.
 interceptBuffer
 
 @vstdpatch function onceHigh(wire::Wireexpr, restart::Wireexpr, name::AbstractString)
-    pvg = PrivateWireNameGen(string("_onceAtRisingEdge_", name))
+    pvg = PrivateWireNameGen(string("_onceHigh_", name))
     ans = pvg("_ans")
     buf = pvg("_buf")
     al = @cpalways (
         $ans = $buf | $wire;
         if $restart
-            $buf <= 0
+            $buf <= $(Wireexpr(1, 0))
         else
             $buf <= $buf | $wire
         end
     )
     return @wireexpr($ans), Vpatch(al...)
 end
+"""
+    onceHigh(wire::Wireexpr, restart::Wireexpr)
+
+Check if `wire` is once asserted.
+
+## Input Wires
+
+### restart
++ (0): Restart checking if `wire` is asserted.
+
+## Return wire
++ (0): 1 if wire is asserted once after restart is deasserted.
+"""
+onceHigh
 
 @vstdpatch function zipSpike(wires::Vector{Wireexpr}, name::AbstractString)
     spikeName = string("_zippedSpike_", name)
@@ -372,3 +394,12 @@ end
 
     return @wireexpr($zipped), Vpatch([p for (_, p) in highs]..., pbundled, al...)
 end
+"""
+    zipSpike(wires::Vector{Wireexpr})
+
+Zip rising edges of wires in `wires`.
+
+## Return Wire
++ (0): 1 if all wire in `wires` experienced rising edge after this wire is previously asserted.
+"""
+zipSpike
