@@ -181,3 +181,8 @@ end
 #     Ref(x)
 # end
 @nonIternonBcast Vmodule
+
+function Base.Int(w::Wireexpr)
+    w.operation == literal || error(string(w), " cannot be converted to Int")
+    return w.value
+end

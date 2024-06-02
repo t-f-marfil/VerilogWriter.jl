@@ -43,7 +43,13 @@ function fifoTest()
     vpush!(v, @ports @out @logic $(dataSize + tpMisc) tp)
     vpush!.(v, (alSender..., alRecv..., alTp...))
 
-    @test verilatorSimrun(vfinalize(v), dataSize+tpMisc, 200)
+    return verilatorSimrun(vfinalize(v), dataSize+tpMisc, 200)
 end
 
-fifoTest()
+function ramPatchTest()
+    if !Sys.islinux()
+        return
+    end
+
+    @test fifoTest()
+end

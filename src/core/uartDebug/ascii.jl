@@ -1,4 +1,5 @@
 export nibbleToHexAscii, binaryToHexAscii
+export widthToAsciiEncodedWidth
 
 @vstdpatch function nibbleToHexAscii(nibbleWire, name::AbstractString)
     pvg = PrivateWireNameGen(string("_nibbleToHex_", name))
@@ -18,7 +19,14 @@ export nibbleToHexAscii, binaryToHexAscii
     return @wireexpr($ans), Vpatch(al)
 end
 
-@vstdpatch function binaryToHexAscii(wire, width, name::AbstractString)
+"""
+    widthToAsciiEncodedWidth(width)
+
+Convert width of wire to width of its ascii hex representation
+"""
+widthToAsciiEncodedWidth(width) = (width >> 2) * 8 + ((width % 4 > 0) ? 8 : 0)
+
+@vstdpatch function binaryToHexAscii(wire, width, invertByteOrder::Bool, name::AbstractString)
     pvg = PrivateWireNameGen(string("_binaryToHex_", name))
     width > 0 || error("width should be larger than 0, $width given.")
 
@@ -34,8 +42,10 @@ end
     result = pvg("_result")
     for i in 1:(extendedWidth >> 2)
         nibble, p = nibbleToHexAscii(@wireexpr($extended[$(4i-1):$(4*(i-1))]))
+        # invert endian, msb may have to appear at the beginning of string
+        index = invertByteOrder ? (extendedWidth >> 2) - i + 1 : i
         alnibble = @alassign_comb (
-            $result[$(8i-1):$(8*(i-1))] = $nibble
+            $result[$(8index-1):$(8*(index-1))] = $nibble
         )
         plist[i] = p
         allist[i] = alnibble

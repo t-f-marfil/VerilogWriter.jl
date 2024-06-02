@@ -1,5 +1,5 @@
 # nibbleToHexAscii
-let 
+function nibbleToHexAsciiTest()
     v = Vmodule("dut")
     
     vpush!(v, @ports (
@@ -19,11 +19,11 @@ let
     end
 
     v = vfinalize(v)
-    @test verilatorSimrun(v, 0x10, 100, option = VerilatorOption(["Unused"]))
+    return verilatorSimrun(v, 0x10, 100, option = VerilatorOption(["Unused"]))
 end
 
 # binaryToHexAscii
-let
+function binaryToAsciiHexTest()
     v = Vmodule("dut")
     vpush!(v, @ports (@in CLK, RST))
     
@@ -36,20 +36,37 @@ let
         return result
     end
 
-    w1, p1 = binaryToHexAscii("din1", 11)
-    w2, p2 = binaryToHexAscii("din2", 16)
-    tplen = 2
+    w1, p1 = binaryToHexAscii("din1", 11, false)
+    w2, p2 = binaryToHexAscii("din2", 16, false)
+
+    w3, p3 = binaryToHexAscii("din1", 11, true)
+    w4, p4 = binaryToHexAscii("din2", 16, true)
+
+    tplen = 4
     vpush!(v, @ports @out @logic $tplen tp)
 
-    vpush!.(v, (p1, p2))
+    vpush!.(v, (p1, p2, p3, p4))
 
     vpush!(v, @always (
         din1 = 0x3FC;
         tp[0] = $w1 == $(strToAsciiBinary("3FC"));
 
         din2 = 0xCD23;
-        tp[1] = $w2 == $(strToAsciiBinary("CD23"))
+        tp[1] = $w2 == $(strToAsciiBinary("CD23"));
+
+        
+        tp[2] = $w3 == $(strToAsciiBinary("CF3"));
+        tp[3] = $w4 == $(strToAsciiBinary("32DC"))
     ))
 
-    @test verilatorSimrun(vfinalize(v), tplen, 100, option=VerilatorOption(["Unused"]))
+    return verilatorSimrun(vfinalize(v), tplen, 100, option=VerilatorOption(["Unused"]))
+end
+
+function asciiTest()
+    if !Sys.islinux()
+        return
+    end
+
+    @test nibbleToHexAsciiTest()
+    @test binaryToAsciiHexTest()
 end
