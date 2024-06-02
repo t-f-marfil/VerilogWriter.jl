@@ -179,11 +179,12 @@ end
     # rptr == entry to read next
     ram = pvg("_ram")
     wptr, rptr = pvg.(["_wptr", "_rptr"])
+    prevwptr = pvg("_prevwptr")
     rptrComb = pvg("_rptrComb")
     wincr, rincr = pvg.(["_wincr", "_rincr"])
     empty, full = pvg.(["_empty", "_full"])
 
-    dout = pvg("_dout")
+    dout, doutRam, doutBypassed = pvg.(["_dout", "_doutRam", "_doutBypassed"])
     outValid = pvg("_outvalid")
     inReady = pvg("_inready")
 
@@ -201,6 +202,8 @@ end
             $wptr <= ($wptr + $ptrincr)
         end;
 
+        $prevwptr <= $wptr;
+
         $rptrComb = $rptr;
         if $rincr && ~$empty 
             $rptr <= ($rptr + $ptrincr)
@@ -208,10 +211,18 @@ end
         end
     )
 
-    alDout = @always(
-        $dout <= $ram[$rptrComb]
+    alDoutRam = @always (
+        $doutRam <= $ram[$rptrComb]
     )
-    alDin = @nralways(
+    alDout = @cpalways (
+        $doutBypassed <= $inputData;
+        if $prevwptr == $rptr
+            $dout = $doutBypassed
+        else
+            $dout = $doutRam
+        end
+    )
+    alDin = @nralways (
         if $wincr && ~$full 
             $ram[$wptr] <= $inputData
         end
@@ -225,7 +236,7 @@ end
         $wincr = $inputValid
     )
 
-    return (inReady, outValid, dout), Vpatch(bufram, flags, ptrlogic..., alDout, alDin, alcontrol)
+    return (inReady, outValid, dout), Vpatch(bufram, flags, ptrlogic..., alDoutRam, alDout..., alDin, alcontrol)
 end
 """
     fifoPatch(depth, width, inputData, inputValid, updateOutput, name::AbstractString)
