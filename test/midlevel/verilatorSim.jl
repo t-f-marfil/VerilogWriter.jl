@@ -14,7 +14,7 @@ function intermmodSimpleTest()
     vpush!(C, p1)
     vpush!(B, p2)
     al = @always (
-        if $(nametolower(imupdate)) & $(nametolower(imvalid))
+        if $(imcontrolDownstream(imupdate)) & $(imcontrolDownstream(imvalid))
             d2 <= d2 + 1
         end
     )
@@ -27,12 +27,12 @@ function intermmodSimpleTest()
     imupdates = Dict{Midmodule, Oneport}()
 
     for m in (A,B,E)
-        imvalids[m] = debugAdd!(m, nametolower(imvalid), 1) |> invport
-        imupdates[m] = debugAdd!(m, nametolower(imupdate), 1) |> invport
+        imvalids[m] = debugAdd!(m, imcontrolDownstream(imvalid), 1) |> invport
+        imupdates[m] = debugAdd!(m, imcontrolDownstream(imupdate), 1) |> invport
     end
     for m in (C, D)
-        imvalids[m] = debugAdd!(m, nametoupper(imvalid), 1) |> invport
-        imupdates[m] = debugAdd!(m, nametoupper(imupdate), 1) |> invport
+        imvalids[m] = debugAdd!(m, imcontrolUpstream(imvalid), 1) |> invport
+        imupdates[m] = debugAdd!(m, imcontrolUpstream(imupdate), 1) |> invport
     end
 
     for ((_, vp), (_, up)) in zip(imvalids, imupdates)
@@ -72,8 +72,8 @@ function intermmodSimpleTest()
             end
         )
         al2 = @always (
-            $(nametolower(imvalid)) = counter == $waitcount;
-            acc = $(nametolower(imvalid)) & $(nametolower(imupdate))
+            $(imcontrolDownstream(imvalid)) = counter == $waitcount;
+            acc = $(imcontrolDownstream(imvalid)) & $(imcontrolDownstream(imupdate))
         )
         vpush!(m, al1, al2)
 
@@ -89,8 +89,8 @@ function intermmodSimpleTest()
             end
         )
         al2 = @always (
-            $(nametoupper(imupdate)) = $waitcount == counter;
-            acc = $(nametoupper(imvalid)) & $(nametoupper(imupdate))
+            $(imcontrolUpstream(imupdate)) = $waitcount == counter;
+            acc = $(imcontrolUpstream(imvalid)) & $(imcontrolUpstream(imupdate))
         )
         vpush!(m, al1, al2)
     end

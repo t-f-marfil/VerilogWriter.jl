@@ -146,46 +146,46 @@ const portdir4ilst_upper = Dict([
 ])
 
 """
-    nametolower(st::IntermmodSigtype)
+    imcontrolDownstream(st::IntermmodSigtype)
 
 Return the name of a wire connected to downstream verilog modules.
 """
-function nametolower(st::IntermmodSigtype)
-    nametolower(st, defaultMidPid)
+function imcontrolDownstream(st::IntermmodSigtype)
+    imcontrolDownstream(st, defaultMidPid)
 end
 """
-    nametoupper(st::IntermmodSigtype)
+    imcontrolUpstream(st::IntermmodSigtype)
 
 Return the name of a wire connected to upstream verilog modules.
 """
-function nametoupper(st::IntermmodSigtype)
-    nametoupper(st, defaultMidPid)
+function imcontrolUpstream(st::IntermmodSigtype)
+    imcontrolUpstream(st, defaultMidPid)
 end
-function nametolower(st::IntermmodSigtype, pid::Int)
+function imcontrolDownstream(st::IntermmodSigtype, pid::Int)
     "$(string(st)[3:end])_$(prep4ilst_lower[st])_lower_port$pid"
 end
-function nametoupper(st::IntermmodSigtype, pid::Int)
+function imcontrolUpstream(st::IntermmodSigtype, pid::Int)
     "$(string(st)[3:end])_$(prep4ilst_upper[st])_upper_port$pid"
 end
 
-# function nametolower(st::IntermmodSigtype, suffix::Midmodule)
-#     string(nametolower(st), "_", getname(suffix))
+# function imcontrolDownstream(st::IntermmodSigtype, suffix::Midmodule)
+#     string(imcontrolDownstream(st), "_", getname(suffix))
 # end
-# function nametoupper(st::IntermmodSigtype, suffix::Midmodule)
-#     string(nametoupper(st), "_", getname(suffix))
+# function imcontrolUpstream(st::IntermmodSigtype, suffix::Midmodule)
+#     string(imcontrolUpstream(st), "_", getname(suffix))
 # end
 
-function nametolower(st::IntermmodSigtype, suffix::Midport)
-    string(nametolower(st, getpid(suffix)), "_", getname(getmmod(suffix)))
+function imcontrolDownstream(st::IntermmodSigtype, suffix::Midport)
+    string(imcontrolDownstream(st, getpid(suffix)), "_", getname(getmmod(suffix)))
 end
-function nametoupper(st::IntermmodSigtype, suffix::Midport)
-    string(nametoupper(st, getpid(suffix)), "_", getname(getmmod(suffix)))
+function imcontrolUpstream(st::IntermmodSigtype, suffix::Midport)
+    string(imcontrolUpstream(st, getpid(suffix)), "_", getname(getmmod(suffix)))
 end
 
 # function lowerportsgen(lowername::String)
 #     ports(:(
-#         @out @logic $(Symbol(nametolower(lowername, imvalid)));
-#         @in $(Symbol(nametolower(lowername, imupdate)))
+#         @out @logic $(Symbol(imcontrolDownstream(lowername, imvalid)));
+#         @in $(Symbol(imcontrolDownstream(lowername, imupdate)))
 #     ))
 # end
 # function upperportsgen(uppername::String)
@@ -222,8 +222,8 @@ function addIlPortEachLayer(x::Mmodgraph)
         vpre, vpost = getmmod(pre).vmod, getmmod(post).vmod
 
         for ilattr in instances(IntermmodSigtype)
-            get(preadded[getmmod(pre)], getpid(pre), false) || vpush!(vpre, Oneport(portdir4ilst_lower[ilattr], logic, nametolower(ilattr, getpid(pre))))
-            get(postadded[getmmod(post)], getpid(post), false) || vpush!(vpost, Oneport(portdir4ilst_upper[ilattr], logic, nametoupper(ilattr, getpid(post))))
+            get(preadded[getmmod(pre)], getpid(pre), false) || vpush!(vpre, Oneport(portdir4ilst_lower[ilattr], logic, imcontrolDownstream(ilattr, getpid(pre))))
+            get(postadded[getmmod(post)], getpid(post), false) || vpush!(vpost, Oneport(portdir4ilst_upper[ilattr], logic, imcontrolUpstream(ilattr, getpid(post))))
         end
 
         preadded[getmmod(pre)][getpid(pre)] = postadded[getmmod(post)][getpid(post)] = true
@@ -363,8 +363,8 @@ function ilconndecl_mlay!(v::Vmodule, x::Mmodgraph)
 
     for ((dfp::Midport, ufp::Midport), _) in x.edges 
         for ilattr in instances(IntermmodSigtype)
-            rufp = nametoupper(ilattr, ufp)
-            rdfp = nametolower(ilattr, dfp)
+            rufp = imcontrolUpstream(ilattr, ufp)
+            rdfp = imcontrolDownstream(ilattr, dfp)
             
             ddfp = dfpregistered[getmmod(dfp)]
             if getpid(dfp) in keys(ddfp)
@@ -425,8 +425,8 @@ function imconnect_mlay!(v::Vmodule, lay::Mmodgraph)
     # Connection between upstream layer and SUML hub
     qs = Vector{Alassign}(undef, length(suml)*2)
     for (ind, (upper, _)) in enumerate(suml)
-        qupdate = @alassign_comb ($(nametolower(imupdate, upper)) = $(wirenameMlayToSuml(imupdate, upper)))
-        qvalid = @alassign_comb ($(wirenameMlayToSuml(imvalid, upper)) = $(nametolower(imvalid, upper)))
+        qupdate = @alassign_comb ($(imcontrolDownstream(imupdate, upper)) = $(wirenameMlayToSuml(imupdate, upper)))
+        qvalid = @alassign_comb ($(wirenameMlayToSuml(imvalid, upper)) = $(imcontrolDownstream(imvalid, upper)))
         qs[2ind-1] = qupdate
         qs[2ind] = qvalid
     end
@@ -435,8 +435,8 @@ function imconnect_mlay!(v::Vmodule, lay::Mmodgraph)
     # Connection between downstream layer and MUSL hub
     qs = Vector{Alassign}(undef, length(musl)*2)
     for (ind, (lower, _)) in enumerate(musl)
-        qupdate = @alassign_comb ($(wirenameMuslToMlay(imupdate, lower)) = $(nametoupper(imupdate, lower)))
-        qvalid = @alassign_comb ($(nametoupper(imvalid, lower)) = $(wirenameMuslToMlay(imvalid, lower)))
+        qupdate = @alassign_comb ($(wirenameMuslToMlay(imupdate, lower)) = $(imcontrolUpstream(imupdate, lower)))
+        qvalid = @alassign_comb ($(imcontrolUpstream(imvalid, lower)) = $(wirenameMuslToMlay(imvalid, lower)))
         qs[2ind-1] = qupdate
         qs[2ind] = qvalid
     end
@@ -565,9 +565,9 @@ macro layerconn(arg)
 end
 
 function imacceptedLower(pid=defaultMidPid)
-    @wireexpr $(nametolower(imvalid, pid)) & $(nametolower(imupdate, pid))
+    @wireexpr $(imcontrolDownstream(imvalid, pid)) & $(imcontrolDownstream(imupdate, pid))
 end
 
 function imacceptedUpper(pid=defaultMidPid)
-    @wireexpr $(nametoupper(imvalid, pid)) & $(nametoupper(imupdate, pid))
+    @wireexpr $(imcontrolUpstream(imvalid, pid)) & $(imcontrolUpstream(imupdate, pid))
 end

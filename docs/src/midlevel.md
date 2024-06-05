@@ -109,12 +109,12 @@ As is often the case with handshaking signals, `valid` signals **must not** wait
 
 Note that VerilogWriter.jl only adds the ports to `Midmodule`s, and thus you need to add to each `Midmodule` object logics that properly handle the `valid` and `update` signals. This also means that you may completely ignore the `update` and `valid` signals even when using `Mmodgraph` (you may need to connect the signals to `0` or `1` to suppress warnings from compilers, though).
 
-To get the name of `valid` and `update` ports, you may call `nametolower` (for downstream facing ports) or `nametoupper` (for upstream facing ports) method with enum value `imupdate` or `imvalid`.
+To get the name of `valid` and `update` ports, you may call `imcontrolDownstream` (for downstream facing ports) or `imcontrolUpstream` (for upstream facing ports) method with enum value `imupdate` or `imvalid`.
 
 ```jldoctest m1
 julia> alb = @always (
-       $(nametoupper(imupdate)) <= 1; # always update
-       if $(nametoupper(imupdate)) & $(nametoupper(imvalid))
+       $(imcontrolUpstream(imupdate)) <= 1; # always update
+       if $(imcontrolUpstream(imupdate)) & $(imcontrolUpstream(imvalid))
            recv_count <= recv_count + $(Wireexpr(8, 1))
        end
        );
@@ -133,8 +133,8 @@ When connecting more than one downstream `Midmodule` to one upstream `Midmodule`
 
 ```jldoctest m1
 julia> ala = @always (
-       $(nametolower(imvalid)) <= 1;
-       if $(nametolower(imvalid)) & $(nametolower(imupdate))
+       $(imcontrolDownstream(imvalid)) <= 1;
+       if $(imcontrolDownstream(imvalid)) & $(imcontrolDownstream(imupdate))
            send_count <= send_count + $(Wireexpr(7, 1))
        end
        ); # the same `valid` and `update` wire is connected to both `b` and `c`
@@ -166,7 +166,7 @@ julia> g(d => c, @pconnect douttoC => dinfromD); # must not connect to `din` in 
 julia> vpush!(c, @oneport @in 32 dinfromD); vpush!(d, @oneport @out 32 douttoC);
 
 julia> vpush!(c, @always (
-       $(nametoupper(imupdate)) = 1
+       $(imcontrolUpstream(imupdate)) = 1
        )); # connected to `update` of both `a` and `d`
 ```
 
@@ -193,10 +193,10 @@ Connections between `Midport`s is not synchronized if they have different `Midpo
 
 ```jldoctest m1
 julia> vpush!(a, @always (
-       if $(nametolower(imvalid, 1)) & $(nametolower(imupdate, 1))
-           $(nametolower(imvalid, 1)) <= 0;
+       if $(imcontrolDownstream(imvalid, 1)) & $(imcontrolDownstream(imupdate, 1))
+           $(imcontrolDownstream(imvalid, 1)) <= 0;
        else
-           $(nametolower(imvalid, 1)) <= 1
+           $(imcontrolDownstream(imvalid, 1)) <= 1
        end
        )); # valid and update associated with Midport(1, a)
 ```

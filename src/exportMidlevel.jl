@@ -16,7 +16,7 @@ for myenum in [Midmoduletype, IntermmodSigtype]
 end
 
 export 
-    nametoupper, nametolower,
+    imcontrolUpstream, imcontrolDownstream,
     layer2vmod!,
     imacceptedLower, imacceptedUpper
 

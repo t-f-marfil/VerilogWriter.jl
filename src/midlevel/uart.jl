@@ -66,7 +66,7 @@ function uartRecv(baudrate, clkfreq; name="UARTRecv")
         end
     )
     alil = @always (
-        $(nametolower(imvalid)) = (recvstate == sstop) & $counthalf
+        $(imcontrolDownstream(imvalid)) = (recvstate == sstop) & $counthalf
     )
 
     vpush!.(m, (rxprts, rxfsm, alnextbyte, alcounters, aldout, alil))
@@ -90,7 +90,7 @@ function uartSend(baudrate, clkfreq; name="UARTSend")
 
     txfsm = @FSM sendstate sidle, sstart, sdata, sstop
     transadd!(txfsm, [
-        (Wireexpr(nametoupper(imvalid)), @tstate sidle => sstart),
+        (Wireexpr(imcontrolUpstream(imvalid)), @tstate sidle => sstart),
         (countfull, @tstate sstart => sdata),
         (countfull & (bitcount == Wireexpr(3, 7)), @tstate sdata => sstop),
         (countfull & acceptNext, @tstate sstop => sstart),
@@ -112,7 +112,7 @@ function uartSend(baudrate, clkfreq; name="UARTSend")
     )
     alaccept = @always (
         acceptNext = 0;
-        if $(nametoupper(imvalid))
+        if $(imcontrolUpstream(imvalid))
             if sendstate == sidle
                 acceptNext = 1
             elseif (sendstate == sstop) && (cyclecount == $cycleperbit)
@@ -134,7 +134,7 @@ function uartSend(baudrate, clkfreq; name="UARTSend")
         end
     )
     alupdate = @always (
-        $(nametoupper(imupdate)) = (
+        $(imcontrolUpstream(imupdate)) = (
             ((sendstate == sstop) && (cyclecount == $cycleperbit))
             || sendstate == sidle
         )

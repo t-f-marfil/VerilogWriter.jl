@@ -45,11 +45,11 @@ function fifogen(depth=8, width=32; name="")
     )
 
     ilconn = @always (
-        $(nametolower(imvalid)) = ~empty;
-        rincr = $(nametolower(imupdate));
+        $(imcontrolDownstream(imvalid)) = ~empty;
+        rincr = $(imcontrolDownstream(imupdate));
 
-        $(nametoupper(imupdate)) = ~full;
-        wincr = $(nametoupper(imvalid))
+        $(imcontrolUpstream(imupdate)) = ~full;
+        wincr = $(imcontrolUpstream(imvalid))
     )
 
     # vshow.((bufram, flags, ptrlogic))
