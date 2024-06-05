@@ -70,3 +70,5 @@ function asciiTest()
     @test nibbleToHexAsciiTest()
     @test binaryToAsciiHexTest()
 end
+
+asciiTest()

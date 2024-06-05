@@ -53,3 +53,5 @@ function ramPatchTest()
 
     @test fifoTest()
 end
+
+ramPatchTest()
