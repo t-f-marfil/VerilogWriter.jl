@@ -18,6 +18,8 @@ Vpatch
 Example of using patch methods:
 
 ```jldoctest
+julia> resetStdpatchCounter(); # Restart suffix of generated wire from one
+
 julia> w, p = isAtRisingEdge(@wireexpr(data)); vshow(w); # returns a wire and a `Vpatch` object. `w` is a wire which is set to 1 iff `data` is at rising edge.
 _risingEdge_1
 type: Wireexpr

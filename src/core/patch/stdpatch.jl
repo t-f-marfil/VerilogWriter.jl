@@ -86,9 +86,6 @@ function Foo(arg1::T1, arg2::T2, name::AbstractString)
     ...
 end
 
-# Int value
-FooCounter::Int = 0
-
 # Additional method without `name`
 function Foo(arg1::T1, arg2::T2)
     return Foo(arg1, arg2, string(global FooCounter += 1))
@@ -102,13 +99,12 @@ macro vstdpatch(expr)
         error("the last argument should be name::AbstractString, given $(args[end])")
     end
     argnames = [i for (i, j) in args]
-    countername = Symbol(funname, "Counter")
+    countername = Symbol("StdpatchCounter")
 
     qgenerated = nothing
     if isnothing(parametric)
         qgenerated = quote
             $expr
-            $countername::Int = 0
             function $funname($([j == :Any ? :($i) : :($i::$j) for (i, j) in args[begin:end-1]]...))
                 return $funname($(argnames[begin:end-1]...), string(global $countername += 1))
             end
@@ -116,7 +112,6 @@ macro vstdpatch(expr)
     else
         qgenerated = quote
             $expr
-            $countername::Int = 0
             function $funname($([j == :Any ? :($i) : :($i::$j) for (i, j) in args[begin:end-1]]...)) where {$(parametric...)}
                 return $funname($(argnames[begin:end-1]...), string(global $countername += 1))
             end
@@ -125,21 +120,17 @@ macro vstdpatch(expr)
     return esc(qgenerated)
 end
 
+StdpatchCounter::Int = 0
+
+export resetStdpatchCounter
+
+function resetStdpatchCounter()
+    global StdpatchCounter = 0
+end
+
 # methods here return a tuple of wire and Vpatch
-"""
-    posedgePrec(earlier::Wireexpr, later::Wireexpr, name::AbstractString)
 
-Return wireexpr which indicates if a rising edge in `earlier` occured 
-earlier than that of `later`.
-
-The wires `earlier` and `later` being high from the beginning 
-is regarded as an edge at the beginning.
-
-## Return Wire
-+ (1): 1 if edge detected in either of two wires
-+ (0): 1 if edge in `earlier` was earlier than `later`
-"""
-function posedgePrec(earlier::Wireexpr, later::Wireexpr, name::AbstractString)
+@vstdpatch function posedgePrec(earlier::Wireexpr, later::Wireexpr, name::AbstractString)
     answire = string("_posedgePrec_", name)
     pvg = PrivateWireNameGen(answire)
 
@@ -172,19 +163,23 @@ function posedgePrec(earlier::Wireexpr, later::Wireexpr, name::AbstractString)
 
     return Wireexpr(answire), Vpatch(als..., @decls @logic 2 $answire)
 end
-posedgePrecCounter::Int = 0
-function posedgePrec(earlier::Wireexpr, later::Wireexpr)
-    posedgePrec(earlier, later, string(global posedgePrecCounter+=1))
-end
-
 """
-    bitbundle(wvec::Vector{Wireexpr}, name::AbstractString)
+    posedgePrec(earlier::Wireexpr, later::Wireexpr, name::AbstractString)
 
-Return wire which bundles `Wireexpr`s in wvec.
+Return wireexpr which indicates if a rising edge in `earlier` occured 
+earlier than that of `later`.
 
-Width of wires in `wvec` are supposed to be all one.
+The wires `earlier` and `later` being high from the beginning 
+is regarded as an edge at the beginning.
+
+## Return Wire
++ (1): 1 if edge detected in either of two wires
++ (0): 1 if edge in `earlier` was earlier than `later`
 """
-function bitbundle(wvec::Vector{Wireexpr}, name::AbstractString)
+posedgePrec
+
+
+@vstdpatch function bitbundle(wvec::Vector{Wireexpr}, name::AbstractString)
     bundlename = string("_bitbundle_", name)
     buf = Vector{Alassign}(undef, length(wvec))
     for (i, w) in enumerate(wvec)
@@ -193,23 +188,17 @@ function bitbundle(wvec::Vector{Wireexpr}, name::AbstractString)
     
     return Wireexpr(bundlename), Vpatch((@decls @logic $(length(wvec)) $bundlename), Alwayscontent(comb, Ifcontent(buf)))
 end
-bitbundleCounter::Int = 0
-function bitbundle(wvec)
-    bitbundle(wvec, string(global bitbundleCounter+=1))
-end
-
 """
-    nonegedge(uno::Wireexpr, name::AbstractString)
+    bitbundle(wvec::Vector{Wireexpr}, name::AbstractString)
 
-Return wire which shows whether wire `uno` underwent a
-falling edge.
+Return wire which bundles `Wireexpr`s in wvec.
 
-Wire `uno` must be single-bit wide or fails in width inference.
-
-## Return Wire
-+ (0): 1 if wire `uno` has never encountered a falling edge
+Width of wires in `wvec` are supposed to be all one.
 """
-function nonegedge(uno::Wireexpr, name::AbstractString)
+bitbundle
+
+
+@vstdpatch function nonegedge(uno::Wireexpr, name::AbstractString)
     ans = string("_nonegedge_", name)
     pvg = PrivateWireNameGen(ans)
 
@@ -226,22 +215,21 @@ function nonegedge(uno::Wireexpr, name::AbstractString)
 
     return Wireexpr(ans), Vpatch(al)
 end
-nonegedgeCounter::Int = 0
-function nonegedge(uno::Wireexpr)
-    nonegedge(uno, string(global nonegedgeCounter+=1))
-end
-
 """
-    posedgeSync(uno::Wireexpr, dos::Wireexpr, name::AbstractString)
+    nonegedge(uno::Wireexpr, name::AbstractString)
 
-Return `Wireexpr` which indicates whether a rising edge is detected
-at the same clock cycle in `uno` and `dos`.
+Return wire which shows whether wire `uno` underwent a
+falling edge.
+
+Wire `uno` must be single-bit wide or fails in width inference.
 
 ## Return Wire
-+ (1): 1 if edge detected in either of two wires
-+ (0): 1 if edge in `earlier` was earlier than `later`
++ (0): 1 if wire `uno` has never encountered a falling edge
 """
-function posedgeSync(uno::Wireexpr, dos::Wireexpr, name::AbstractString)
+nonegedge
+
+
+@vstdpatch function posedgeSync(uno::Wireexpr, dos::Wireexpr, name::AbstractString)
     answire = string("_posedgeSync_", name)
     pvg = PrivateWireNameGen(answire)
 
@@ -271,18 +259,24 @@ function posedgeSync(uno::Wireexpr, dos::Wireexpr, name::AbstractString)
 
     return Wireexpr(answire), Vpatch(als..., @decls @logic 2 $answire)
 end
-posedgeSyncCounter::Int = 0
-function posedgeSync(uno::Wireexpr, dos::Wireexpr)
-    posedgeSync(uno, dos, string(global posedgeSyncCounter+=1))
-end
+"""
+    posedgeSync(uno::Wireexpr, dos::Wireexpr, name::AbstractString)
+
+Return `Wireexpr` which indicates whether a rising edge is detected
+at the same clock cycle in `uno` and `dos`.
+
+## Return Wire
++ (1): 1 if edge detected in either of two wires
++ (0): 1 if edge in `earlier` was earlier than `later`
+"""
+posedgeSync
 
 
-function invertBitOrder(w::Wireexpr, wid::Int, name::AbstractString)
+@vstdpatch function invertBitOrder(w::Wireexpr, wid::Int, name::AbstractString)
     answire = Wireexpr(string("_invertBitOrder_", name))
     assigns = [(@alassign_comb $answire[$(i-1)] = $w[$(wid-i)]) for i in 1:wid]
     return answire, Vpatch((@decls @logic $wid $answire), @always $(assigns...))
 end
-invertBitOrderCounter::Int = 0
 """
     invertBitOrder(w::Wireexpr, wid::Int)
 
@@ -291,9 +285,7 @@ Invert bit order of wire `w`.
 ## Return Wire
 + (`wid`-1:0): Bit order of `w` is inverted.
 """
-function invertBitOrder(w::Wireexpr, wid::Int)
-    return invertBitOrder(w, wid, string(global invertBitOrderCounter+=1))
-end
+invertBitOrder
 
 @vstdpatch function isAtRisingEdge(w::Wireexpr, name::AbstractString)
     retname = string("_risingEdge_", name)
