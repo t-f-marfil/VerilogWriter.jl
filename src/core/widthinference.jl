@@ -362,7 +362,7 @@ function addDeclarationInfo!(constraint::WidthConstraint, declarations::T) where
                 vshow(item)
                 error("unknown error")
             end
-            println("[INFO] Width for $(string(item)) has already been registered, updated without conflict with value $(string(mergedWidth))")
+            # println("[INFO] Width for $(string(item)) has already been registered, updated without conflict with value $(string(mergedWidth))")
             width = mergedWidth
         end
 

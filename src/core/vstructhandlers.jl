@@ -26,6 +26,7 @@ function invport(onep::Oneport)
     # d = onep.decl
     Oneport(
         (onep.direc == pin ? pout : pin),
+        (onep.direc == pin ? logic : wire),
         onep.width,
         onep.name
     )
