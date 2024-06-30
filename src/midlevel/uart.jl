@@ -30,9 +30,14 @@ function uartRecv(baudrate, clkfreq; name="UARTRecv")
     counthalf = cyclecount == Wireexpr(cycleperhalfbit)
     countstop = cyclecount == Wireexpr(cycleperstop)
 
+
     rxfsm = @FSM recvstate sidle, sstart, sdata, sstop
+
+    noiseDetected = @wireexpr (recvstate == sstart) && (cyclecount == $cycleperhalfbit) && (rx == 1)
+
     transadd!(rxfsm, [
         ((@wireexpr rx == 0), @tstate sidle => sstart),
+        (noiseDetected, @tstate sstart => sidle),
         (countfull, @tstate sstart => sdata),
         (countfull & (bitcount == Wireexpr(3, 7)), @tstate sdata => sstop),
         (countstop & nextbyte, @tstate sstop => sstart),
@@ -43,7 +48,9 @@ function uartRecv(baudrate, clkfreq; name="UARTRecv")
         nextbyte = rx == 0
     )
     alcounters = @always (
-        if (recvstate == sstop) && (cyclecount == $cycleperstop)
+        if $noiseDetected
+            cyclecount <= 0
+        elseif (recvstate == sstop) && (cyclecount == $cycleperstop)
             cyclecount <= 0;
         elseif cyclecount == $cycleperbit
             cyclecount <= 0
