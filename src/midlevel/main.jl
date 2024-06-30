@@ -5,6 +5,8 @@ noincludehere = joinpath.(@__DIR__, [
     "midlayerstructs.jl",
 ])
 
+include(joinpath(@__DIR__, "midlayerstructs.jl"))
+
 # @show readdir(abspath(@__DIR__), join=true)
 for p in readdir(@__DIR__, join=true)
     if !(p in noincludehere)

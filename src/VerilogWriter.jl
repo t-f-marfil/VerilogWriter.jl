@@ -2,9 +2,7 @@ module VerilogWriter
 
 include("includedeps.jl")
 
-export 
-    # showfield, 
-    vshow
+export vshow
 
 export
     Oneparam, Parameters,
@@ -20,6 +18,17 @@ export
     Vmodinst, 
     Vmodule,
     Readmemh
+
+export pin, pout
+export wire, reg, logic
+export 
+    add, minus, mul, vdiv, lshift, rshift,
+    band, bor, bxor,
+    neg, uminus, redand, redor, redxor,
+    logieq, leq, lt, 
+    id, slice, literal, ipselm 
+export ff, comb, aunknown
+export posedge, negedge, unknownedge
 
 export
     oneparam, parameters, @oneparam, @parameters,
@@ -44,8 +53,7 @@ export
 
 export 
     ifadd!, addatype!,
-    invport, invports, 
-    # declmerge,
+    invport, invports,
     @sym2wire,
     alloutreg, alloutwire, alloutlogic,
     naiveinst,
@@ -89,42 +97,11 @@ export
 
 export showfield
 
-macro listtestonly(args)
-    strs = Symbol[]
-    for arg in args.args 
-        if arg isa Symbol 
-            push!(strs, arg)
-        else
-            arg.head == :macrocall || error("$(arg) is not accepted")
-            # macroname
-            push!(strs, arg.args[1])
-        end
-    end
-    :($([string(s) for s in strs]))
-end
-
-const testonlyvars = @listtestonly (
-    # showfield,
-    
-    oneblock, @oneblock, 
-    ralways
-)
+# export methods needed only for testing
+export @testonlyexport
 include("testonlyexport.jl")
 
 
-# prioritize files declaring types
-
-include("codegenfunc.jl")
-include("includestructs.jl")
-
-for myenum in [Portdirec, Wiretype, Wireop, Atype, Edge]
-    for i in instances(myenum)
-        eval(:(export $(Symbol(i))))
-    end
-end
-
-# include("includecore.jl")
-# include(joinpath(@__DIR__, "midlevel", "main.jl"))
 libs = [
     "core",
     "midlevel"
