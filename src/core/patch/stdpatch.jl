@@ -64,6 +64,18 @@ function extractFunName(expr::Expr)
     end
 end
 
+
+StdpatchCounter::Int = 0
+
+function resetStdpatchCounter()
+    global StdpatchCounter = 0
+end
+
+function incrementStdpatchCounter()
+    global StdpatchCounter += 1
+    return StdpatchCounter
+end
+
 """
     @vstdpatch(expr)
 
@@ -99,33 +111,25 @@ macro vstdpatch(expr)
         error("the last argument should be name::AbstractString, given $(args[end])")
     end
     argnames = [i for (i, j) in args]
-    countername = Symbol("StdpatchCounter")
+    # countername = Symbol("StdpatchCounter")
 
     qgenerated = nothing
     if isnothing(parametric)
         qgenerated = quote
             $expr
             function $funname($([j == :Any ? :($i) : :($i::$j) for (i, j) in args[begin:end-1]]...))
-                return $funname($(argnames[begin:end-1]...), string(global $countername += 1))
+                return $funname($(argnames[begin:end-1]...), string($(incrementStdpatchCounter)()))
             end
         end
     else
         qgenerated = quote
             $expr
             function $funname($([j == :Any ? :($i) : :($i::$j) for (i, j) in args[begin:end-1]]...)) where {$(parametric...)}
-                return $funname($(argnames[begin:end-1]...), string(global $countername += 1))
+                return $funname($(argnames[begin:end-1]...), string($(incrementStdpatchCounter)()))
             end
         end
     end
     return esc(qgenerated)
-end
-
-StdpatchCounter::Int = 0
-
-export resetStdpatchCounter
-
-function resetStdpatchCounter()
-    global StdpatchCounter = 0
 end
 
 # methods here return a tuple of wire and Vpatch

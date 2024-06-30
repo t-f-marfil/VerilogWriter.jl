@@ -1,3 +1,5 @@
+import ..Core: getname
+
 function getname(x::Midmodule)
     getname(x.vmod)
 end

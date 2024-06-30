@@ -1,5 +1,3 @@
-export readOnlyQueue, readOnlyQueueComb, fifoPatch
-
 @vstdpatch function readOnlyQueueComb(width::Int, data::V, update, restart, name::AbstractString) where {T,V<:AbstractVector{T}}
     wireId = string("_readOnlyQueueComb_", name)
     pvg = PrivateWireNameGen(wireId)

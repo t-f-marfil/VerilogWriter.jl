@@ -508,6 +508,8 @@ function connectCommonPorts_mlay!(v::Vmodule, x::Mmodgraph)
     return nothing
 end
 
+using ..Core: vinstnamemod
+
 """
     layer2vmod!(x::Mmodgraph; name = "Layers")::Vector{Vmodule}
 
@@ -548,6 +550,7 @@ function layer2vmod!(x::Mmodgraph; name = "Layers")::Vector{Vmodule}
     return [v; [lay.vmod for lay in x.layers]; hubs]
 end
 
+import ..Core: vpush!
 function vpush!(x::Midmodule, items...)
     vpush!(x.vmod, items...)
 end

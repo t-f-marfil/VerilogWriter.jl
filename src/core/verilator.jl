@@ -1,5 +1,3 @@
-export VerilatorOption, verilatorSimrun, acceptableInVerilatorTest
-
 function verilatorTestbenchGen(io::IO, tplen::Integer, cycles::Integer)
     body = """
     module testbench (

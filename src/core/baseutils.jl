@@ -100,7 +100,7 @@ end
 # end
 
 macro nonIternonBcast(arg)
-    quote
+    q = quote
         function Base.iterate(iter::$arg, ::Nothing)
             nothing
         end
@@ -111,6 +111,7 @@ macro nonIternonBcast(arg)
             Ref(b)
         end
     end
+    esc(q)
 end
 macro valIterBcast(arg)
     quote

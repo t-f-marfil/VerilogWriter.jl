@@ -37,7 +37,7 @@ function macroseparate(sv::Vector{String})
 end
 
 function vwmacrostrgen(mname)
-    s = "macro $(mname)(args...) :(VerilogWriter.@$(mname)(\$(args...))) end;"
+    s = "macro $(mname)(args...) :(VerilogWriter.Core.@$(mname)(\$(args...))) end;"
     
     return s
 end
@@ -45,7 +45,7 @@ end
 macro testonlyexport()
     nomacros, macros = macroseparate(testonlyvars)
     s = """$([
-        "const $(s) = VerilogWriter.$(s);" for s in nomacros
+        "const $(s) = VerilogWriter.Core.$(s);" for s in nomacros
         ]...) $([
             vwmacrostrgen(lstrip(s, ['@'])) for s in macros
         ]...)

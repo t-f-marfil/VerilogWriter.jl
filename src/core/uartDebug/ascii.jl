@@ -1,5 +1,9 @@
-export nibbleToHexAscii, binaryToHexAscii
-export widthToAsciiEncodedWidth
+macro exportUartDebug()
+    quote
+        export nibbleToHexAscii, binaryToHexAscii
+        export widthToAsciiEncodedWidth
+    end
+end
 
 @vstdpatch function nibbleToHexAscii(nibbleWire, name::AbstractString)
     pvg = PrivateWireNameGen(string("_nibbleToHex_", name))

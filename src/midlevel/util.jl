@@ -1,3 +1,5 @@
+import ..Core: wirenamemodgen
+
 function wirenamemodgen(lay::Midmodule)
     x -> string(x, "_", getname(lay))
 end
