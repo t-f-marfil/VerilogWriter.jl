@@ -17,7 +17,7 @@ function docgen(prettyurls)
                 "Finite State Machines" => "fsm.md", 
                 "Patch" => "patch.md",
                 "Simulation with Verilator" => "verilator.md",
-                "Mid-Level Synthesis" => "midlevel.md",
+                "Module Connection" => "midlevel.md",
                 "Reference" => "reference.md",
             ],
             "Release Note" => "release.md",

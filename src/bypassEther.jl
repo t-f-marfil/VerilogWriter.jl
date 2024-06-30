@@ -77,7 +77,7 @@ let
     )
     al = @always (
         outValid = $outvalid;
-        dout = din
+        dout = $dout
     )
     vpush!.(fifo, (p, prts, al))
     mfifo = Midmodule(fifo)

@@ -234,7 +234,7 @@ end
 
 function addPortEachLayer(x::Mmodgraph)
     addCommonPortEachLayer(x)
-    addIlPortEachLayer(x)
+    # addIlPortEachLayer(x)
 end
 
 function wireAddSuffix(wirename::String, lsuffix::Midmodule)
@@ -319,7 +319,7 @@ function layerconnInstantiate_mlay!(v::Vmodule, x::Mmodgraph)
         # what is needed below: 
         #  function: <connection_name>, <modulename> -> <wirename_in_mother_module>
         # layVisited[uno] = vmerge(conn, get(layVisited, uno, Layerconn()))
-        db = ildatabuffer(uno, conn)
+        # db = ildatabuffer(uno, conn)
 
         for (ppre, ppost) in conn.ports
             # below means
@@ -347,106 +347,106 @@ function layerconnInstantiate_mlay!(v::Vmodule, x::Mmodgraph)
     return nothing
 end
 
-"""
-    ilconndecl_mlay!(v::Vmodule, x::Mmodgraph)
+# """
+#     ilconndecl_mlay!(v::Vmodule, x::Mmodgraph)
 
-Originally, Connect valid/update wires, which are generated automatically
-when converting `Midmodule` objects into Verilog HDL, between `Midmodule` objects.
+# Originally, Connect valid/update wires, which are generated automatically
+# when converting `Midmodule` objects into Verilog HDL, between `Midmodule` objects.
 
-Now is needed only for wire declaration (wires at the top level to connect valid and update).
-"""
-function ilconndecl_mlay!(v::Vmodule, x::Mmodgraph)
-    dvec = Onedecl[]
+# Now is needed only for wire declaration (wires at the top level to connect valid and update).
+# """
+# function ilconndecl_mlay!(v::Vmodule, x::Mmodgraph)
+#     dvec = Onedecl[]
     
-    ufpregistered = Dict([lay::Midmodule => Dict{Int, Vector{Bool}}() for lay in x.layers])
-    dfpregistered = Dict([lay::Midmodule => Dict{Int, Vector{Bool}}() for lay in x.layers])
+#     ufpregistered = Dict([lay::Midmodule => Dict{Int, Vector{Bool}}() for lay in x.layers])
+#     dfpregistered = Dict([lay::Midmodule => Dict{Int, Vector{Bool}}() for lay in x.layers])
 
-    for ((dfp::Midport, ufp::Midport), _) in x.edges 
-        for ilattr in instances(IntermmodSigtype)
-            rufp = imcontrolUpstream(ilattr, ufp)
-            rdfp = imcontrolDownstream(ilattr, dfp)
+#     for ((dfp::Midport, ufp::Midport), _) in x.edges 
+#         for ilattr in instances(IntermmodSigtype)
+#             rufp = imcontrolUpstream(ilattr, ufp)
+#             rdfp = imcontrolDownstream(ilattr, dfp)
             
-            ddfp = dfpregistered[getmmod(dfp)]
-            if getpid(dfp) in keys(ddfp)
-                # port id specified
-                if !ddfp[getpid(dfp)][Int(ilattr) + 1]
-                    push!(dvec, (@decloneline (@logic $rdfp))...)
-                    ddfp[getpid(dfp)][Int(ilattr) + 1] = true
-                end
-            else
-                ddfp[getpid(dfp)] = [false, false]
-                push!(dvec, (@decloneline (@logic $rdfp))...)
-                ddfp[getpid(dfp)][Int(ilattr) + 1] = true
-            end
+#             ddfp = dfpregistered[getmmod(dfp)]
+#             if getpid(dfp) in keys(ddfp)
+#                 # port id specified
+#                 if !ddfp[getpid(dfp)][Int(ilattr) + 1]
+#                     push!(dvec, (@decloneline (@logic $rdfp))...)
+#                     ddfp[getpid(dfp)][Int(ilattr) + 1] = true
+#                 end
+#             else
+#                 ddfp[getpid(dfp)] = [false, false]
+#                 push!(dvec, (@decloneline (@logic $rdfp))...)
+#                 ddfp[getpid(dfp)][Int(ilattr) + 1] = true
+#             end
             
-            dufp = ufpregistered[getmmod(ufp)]
-            if getpid(ufp) in keys(dufp)
-                # port id specified
-                if !dufp[getpid(ufp)][Int(ilattr) + 1]
-                    push!(dvec, (@decloneline (@logic $rufp))...)
-                    dufp[getpid(ufp)][Int(ilattr) + 1] = true
-                end
-            else
-                dufp[getpid(ufp)] = [false, false]
-                push!(dvec, (@decloneline (@logic $rufp))...)
-                dufp[getpid(ufp)][Int(ilattr) + 1] = true
-            end
-        end
-    end
+#             dufp = ufpregistered[getmmod(ufp)]
+#             if getpid(ufp) in keys(dufp)
+#                 # port id specified
+#                 if !dufp[getpid(ufp)][Int(ilattr) + 1]
+#                     push!(dvec, (@decloneline (@logic $rufp))...)
+#                     dufp[getpid(ufp)][Int(ilattr) + 1] = true
+#                 end
+#             else
+#                 dufp[getpid(ufp)] = [false, false]
+#                 push!(dvec, (@decloneline (@logic $rufp))...)
+#                 dufp[getpid(ufp)][Int(ilattr) + 1] = true
+#             end
+#         end
+#     end
 
-    vpush!(v, Decls(dvec))
+#     vpush!(v, Decls(dvec))
 
-    return nothing
-end
+#     return nothing
+# end
 
-"""
-    imconnect_mlay(v::Vmodule, lay::Mmodgraph)
+# """
+#     imconnect_mlay(v::Vmodule, lay::Mmodgraph)
 
-Connect valid and update signals of `Midmodule` objects with each other.
+# Connect valid and update signals of `Midmodule` objects with each other.
 
-## Overview
-+ Upper_Layer -> imSUML -> imMUSL -> Lower_Layer
+# ## Overview
+# + Upper_Layer -> imSUML -> imMUSL -> Lower_Layer
 
-Currently all this connections are placed at the top module.
-May better create one verilog module other than top module and push these
-wires there.
-"""
-function imconnect_mlay!(v::Vmodule, lay::Mmodgraph)
-    suml, musl = graph2adlist(lay)
+# Currently all this connections are placed at the top module.
+# May better create one verilog module other than top module and push these
+# wires there.
+# """
+# function imconnect_mlay!(v::Vmodule, lay::Mmodgraph)
+#     suml, musl = graph2adlist(lay)
 
-    # hublist: list of imconnect_something Vmodules
-    # addinfolist: other additional information (e.g. Decls objects)
-    hublist1, addinfolist1 = generateSUML(suml)
-    hublist2, addinfolist2 = generateMUSL(musl)
+#     # hublist: list of imconnect_something Vmodules
+#     # addinfolist: other additional information (e.g. Decls objects)
+#     hublist1, addinfolist1 = generateSUML(suml)
+#     hublist2, addinfolist2 = generateMUSL(musl)
 
-    addsumlinfo!(v, addinfolist1)
-    addsumlinfo!(v, addinfolist2)
+#     addsumlinfo!(v, addinfolist1)
+#     addsumlinfo!(v, addinfolist2)
 
-    # Connection between upstream layer and SUML hub
-    qs = Vector{Alassign}(undef, length(suml)*2)
-    for (ind, (upper, _)) in enumerate(suml)
-        qupdate = @alassign_comb ($(imcontrolDownstream(imupdate, upper)) = $(wirenameMlayToSuml(imupdate, upper)))
-        qvalid = @alassign_comb ($(wirenameMlayToSuml(imvalid, upper)) = $(imcontrolDownstream(imvalid, upper)))
-        qs[2ind-1] = qupdate
-        qs[2ind] = qvalid
-    end
-    vpush!(v, Alwayscontent(comb, qs))
+#     # Connection between upstream layer and SUML hub
+#     qs = Vector{Alassign}(undef, length(suml)*2)
+#     for (ind, (upper, _)) in enumerate(suml)
+#         qupdate = @alassign_comb ($(imcontrolDownstream(imupdate, upper)) = $(wirenameMlayToSuml(imupdate, upper)))
+#         qvalid = @alassign_comb ($(wirenameMlayToSuml(imvalid, upper)) = $(imcontrolDownstream(imvalid, upper)))
+#         qs[2ind-1] = qupdate
+#         qs[2ind] = qvalid
+#     end
+#     vpush!(v, Alwayscontent(comb, qs))
 
-    # Connection between downstream layer and MUSL hub
-    qs = Vector{Alassign}(undef, length(musl)*2)
-    for (ind, (lower, _)) in enumerate(musl)
-        qupdate = @alassign_comb ($(wirenameMuslToMlay(imupdate, lower)) = $(imcontrolUpstream(imupdate, lower)))
-        qvalid = @alassign_comb ($(imcontrolUpstream(imvalid, lower)) = $(wirenameMuslToMlay(imvalid, lower)))
-        qs[2ind-1] = qupdate
-        qs[2ind] = qvalid
-    end
-    vpush!(v, Alwayscontent(comb, qs))
+#     # Connection between downstream layer and MUSL hub
+#     qs = Vector{Alassign}(undef, length(musl)*2)
+#     for (ind, (lower, _)) in enumerate(musl)
+#         qupdate = @alassign_comb ($(wirenameMuslToMlay(imupdate, lower)) = $(imcontrolUpstream(imupdate, lower)))
+#         qvalid = @alassign_comb ($(imcontrolUpstream(imvalid, lower)) = $(wirenameMuslToMlay(imvalid, lower)))
+#         qs[2ind-1] = qupdate
+#         qs[2ind] = qvalid
+#     end
+#     vpush!(v, Alwayscontent(comb, qs))
 
-    vpush!.(hublist1, Ref(@ports @in CLK, RST))
-    vpush!.(hublist2, Ref(@ports @in CLK, RST))
+#     vpush!.(hublist1, Ref(@ports @in CLK, RST))
+#     vpush!.(hublist2, Ref(@ports @in CLK, RST))
 
-    return [hublist1; hublist2]
-end
+#     return [hublist1; hublist2]
+# end
 
 """
     bypassUnconnected_mlay!(v::Vmodule, x::Mmodgraph)
@@ -527,9 +527,9 @@ function layer2vmod!(x::Mmodgraph; name = "Layers")::Vector{Vmodule}
     # Vmodules in each midlayer objects
     # dbufs = layerconnInstantiate_mlay!(v, x)
     layerconnInstantiate_mlay!(v, x)
-    ilconndecl_mlay!(v, x)
+    # ilconndecl_mlay!(v, x)
 
-    hubs = imconnect_mlay!(v, x)
+    # hubs = imconnect_mlay!(v, x)
     
     # connect unconnected ports to outer ports
     # currently doing this before `vfinalize`,
@@ -547,7 +547,8 @@ function layer2vmod!(x::Mmodgraph; name = "Layers")::Vector{Vmodule}
         vpush!(v, vinstnamemod(lay.vmod))
     end
 
-    return [v; [lay.vmod for lay in x.layers]; hubs]
+    # return [v; [lay.vmod for lay in x.layers]; hubs]
+    return [v; [lay.vmod for lay in x.layers]]
 end
 
 import ..Core: vpush!

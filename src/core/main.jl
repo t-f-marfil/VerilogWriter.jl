@@ -83,7 +83,7 @@ macro exportCore()
             Vmodenv, autodecl, autodeclCore, autodeclVmodlist,
             #  mergedeclenv
             WidthRemainUnresolved, WireWidthConflict, SliceOnTwoDemensionalLogic,
-            WidthInfereceStatus, widthInferenceCompleted, widthInferenceMadeProgress, throwIfInferenceIsIncomplete
+            WidthInferenceStatus, widthInferenceCompleted, widthInferenceMadeProgress, throwIfInferenceIsIncomplete
 
         export 
             FSM, @FSM, fsmconv, transadd!, @tstate, transcond

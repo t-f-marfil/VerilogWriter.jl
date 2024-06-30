@@ -47,15 +47,15 @@ Usually an Integer value which is incremented every time a method is called is p
 ## Basic Patches
 
 ```@docs
-posedgePrec
-bitbundle
-nonegedge
-posedgeSync
-invertBitOrder
-isAtRisingEdge
-interceptBuffer
-onceHigh
-zipSpike
+VerilogWriter.Core.posedgePrec
+VerilogWriter.Core.bitbundle
+VerilogWriter.Core.nonegedge
+VerilogWriter.Core.posedgeSync
+VerilogWriter.Core.invertBitOrder
+VerilogWriter.Core.isAtRisingEdge
+VerilogWriter.Core.interceptBuffer
+VerilogWriter.Core.onceHigh
+VerilogWriter.Core.zipSpike
 ```
 
 ## RAM Related Patches
