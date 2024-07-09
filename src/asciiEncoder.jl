@@ -1,7 +1,7 @@
 generateAsciiEncoder!(g, ports) = generateAsciiEncoder!(g, ports, 256, "")
 
 
-function generateAsciiEncoder!(g::Mmodgraph, prts::Ports, fifoDepth::Integer, name::AbstractString)
+function generateAsciiEncoder!(g::Vmodgraph, prts::Ports, fifoDepth::Integer, name::AbstractString)
     @assert all(p -> Int(getwidth(p)) > 0 && (getdirec(p) == pin), [p for p in prts])
 
     # concatenate input ports and push data into FIFO
@@ -130,12 +130,13 @@ function generateAsciiEncoder!(g::Mmodgraph, prts::Ports, fifoDepth::Integer, na
     )
     vpush!(vencode, toByteAl...)
 
-    msource = Midmodule(vsource)
-    mfifo = Midmodule(vfifo)
-    mencode = Midmodule(vencode)
+    # msource = Midmodule(vsource)
+    # mfifo = Midmodule(vfifo)
+    # mencode = Midmodule(vencode)
 
     g(
-        msource => mfifo, 
+        # msource => mfifo, 
+        vsource => vfifo,
         @pconnect (
             dout => din,
             outValid => inValid
@@ -143,19 +144,21 @@ function generateAsciiEncoder!(g::Mmodgraph, prts::Ports, fifoDepth::Integer, na
     )
 
     g(
-        mfifo => mencode,
+        # mfifo => mencode,
+        vfifo => vencode,
         @pconnect (
             dout => din,
             outValid => inValid
         )
     )
     g(
-        mencode => mfifo,
+        # mencode => mfifo,
+        vencode => vfifo,
         @pconnect (
             inUpdate => outUpdate
         )
     )
 
     # return layer2vmod!(g, name=name)
-    return msource, mfifo, mencode
+    return vsource, vfifo, vencode
 end

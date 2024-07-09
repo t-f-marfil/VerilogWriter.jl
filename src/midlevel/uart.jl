@@ -77,8 +77,8 @@ function uartRecv(baudrate, clkfreq; name="UARTRecv")
 
     vpush!.(m, (rxprts, rxfsm, alnextbyte, alcounters, aldout, alil))
 
-    # return m
-    return Midmodule(name, lrand, m)
+    return m
+    # return Midmodule(name, lrand, m)
 end
 
 function uartSend(baudrate, clkfreq; name="UARTSend")
@@ -150,7 +150,8 @@ function uartSend(baudrate, clkfreq; name="UARTSend")
 
     m = Vmodule(name)
     vpush!.(m, (txprts, txfsm, alcounters, alaccept, albuf, altx, alupdate))
-    send = Midmodule(name, lrand, m)
+    # send = Midmodule(name, lrand, m)
 
-    return send
+    return m
+    # return send
 end

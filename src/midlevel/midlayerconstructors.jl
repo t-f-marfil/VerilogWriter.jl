@@ -3,11 +3,11 @@ const defaultlports = [
         @in CLK, RST
     ))...
 ]
-Midmodule(t::Midmoduletype, lp::Vector{Oneport}, v::Vmodule) = Midmodule(getname(v), t, lp, v)
-Midmodule(n::String, t::Midmoduletype, v::Vmodule) = Midmodule(n, t, defaultlports, v)
-Midmodule(t::Midmoduletype, v::Vmodule) = Midmodule(t, defaultlports, v)
-Midmodule(v::Vmodule) = Midmodule(lrand, v)
-Midmodule(t::Midmoduletype, s) = Midmodule(t, Vmodule(s))
+# Midmodule(t::Midmoduletype, lp::Vector{Oneport}, v::Vmodule) = Midmodule(getname(v), t, lp, v)
+# Midmodule(n::String, t::Midmoduletype, v::Vmodule) = Midmodule(n, t, defaultlports, v)
+# Midmodule(t::Midmoduletype, v::Vmodule) = Midmodule(t, defaultlports, v)
+# Midmodule(v::Vmodule) = Midmodule(lrand, v)
+# Midmodule(t::Midmoduletype, s) = Midmodule(t, Vmodule(s))
 
 function symPairToStrPair(ast)
     ast.args[1] == :(=>) || error("$(ast.args[1]) is not acceptable in tuple expression")
@@ -30,4 +30,4 @@ Layerconn() = Layerconn(Vector{Pair{String, String}}())
 # Layerconn(x::Pair{Oneport, Oneport}) = Layerconn(OrderedSet([x]))
 # Layerconn(x::T) where {T <: AbstractArray} = Layerconn(OrderedSet(x))
 
-Mmodgraph() = Mmodgraph(OrderedDict{Pair{Midmodule, Midmodule}, Layerconn}(), Set{Midmodule}())
+# Mmodgraph() = Mmodgraph(OrderedDict{Pair{Midmodule, Midmodule}, Layerconn}(), Set{Midmodule}())

@@ -100,7 +100,7 @@ end
 
 # Additional method without `name`
 function Foo(arg1::T1, arg2::T2)
-    return Foo(arg1, arg2, string(global FooCounter += 1))
+    return Foo(arg1, arg2, string(incrementStdpatchCounter()))
 end
 ```
 """

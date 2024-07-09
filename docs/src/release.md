@@ -11,4 +11,5 @@
     + [`@nralways`](@ref) that gerates `Alwayscontent` that is not reset by `autoreset` is also available.
 + Add patch methods to easily generate wires with certain functionality.
 + Simple simulation source for Verilator is available through [`verilatorSimrun`](@ref) method.
-+ Simplified midlevel connections
++ Simplified midlevel connections, renamed to `Vmodgraph`
++ Split methods into multiple submodules
