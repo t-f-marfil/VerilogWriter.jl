@@ -80,11 +80,12 @@ let
         dout = $dout
     )
     vpush!.(fifo, (p, prts, al))
-    mfifo = Midmodule(fifo)
+    # mfifo = Midmodule(fifo).vmod
+    mfifo = fifo
     recv = uartRecv(baud, freq)
     send = uartSend(baud, freq)
 
-    g = Mmodgraph()
+    g = Vmodgraph()
 
     g(
         recv => mfifo,
@@ -94,13 +95,18 @@ let
         )
     )
     g(
-        mfifo => Midmodule(vparse),
+        # mfifo => Midmodule(vparse),
+        mfifo => vparse,
         @pconnect (
             dout => din,
             outValid => inValid
         )
     )
-    g(Midmodule(vparse) => mfifo, @pconnect inUpdate => outUpdate)
+    g(
+        # Midmodule(vparse) => mfifo,
+        vparse => mfifo,
+        @pconnect inUpdate => outUpdate
+    )
 
     include("uartMisc.jl")
     include("asciiEncoder.jl")
@@ -109,10 +115,11 @@ let
         @in $addrWidth addrData;
         @in $dataWidth dataData
     )
-    msource, mfifo, mencode = generateAsciiEncoder!(g, portsToEncode)
+    vsource, vfifo, vencode = generateAsciiEncoder!(g, portsToEncode)
 
     g(
-        Midmodule(vparse) => msource,
+        # Midmodule(vparse) => msource,
+        vparse => vsource,
         @pconnect (
             addrData => addrData,
             dataData => dataData,
@@ -120,13 +127,13 @@ let
         )
     )
     g(
-        mencode => send,
+        vencode => send,
         @pconnect (
             dout => din,
             outValid => inValid
         )
     )
-    g(send => mencode, @pconnect inUpdate => outUpdate)
+    g(send => vencode, @pconnect inUpdate => outUpdate)
 
 
 
@@ -241,7 +248,8 @@ let
         (@always addrOut = addrIn[12:0])
     ))
     g(
-        Midmodule(vparse) => Midmodule(core),
+        # Midmodule(vparse) => Midmodule(core),
+        vparse => core,
         @pconnect (
             addrValid => addrValid,
             # addrData => addrIn,
@@ -250,26 +258,38 @@ let
             dataData => dataIn
         )
     )
-    g(Midmodule(vparse) => Midmodule(vinter), @pconnect addrData => addrIn)
-    g(Midmodule(vinter) => Midmodule(core), @pconnect addrOut => addrIn)
     g(
-        Midmodule(core) => Midmodule(vparse),
+        # Midmodule(vparse) => Midmodule(vinter),
+        vparse => vinter,
+        @pconnect addrData => addrIn
+    )
+    g(
+        # Midmodule(vinter) => Midmodule(core),
+        vinter => core,
+        @pconnect addrOut => addrIn
+    )
+    g(
+        # Midmodule(core) => Midmodule(vparse),
+        core => vparse,
         @pconnect (
             addrUpdate => addrUpdate,
             dataUpdate => dataUpdate
         )
     )
     g(
-        Midmodule(strbSrc) => Midmodule(core),
+        # Midmodule(strbSrc) => Midmodule(core),
+        strbSrc => core,
         @pconnect dout => strbIn, valid => strbValid
     )
     
     g(
-        Midmodule(core) => Midmodule(vaxi),
+        # Midmodule(core) => Midmodule(vaxi),
+        core => vaxi,
         [getname(p) => string(getname(p), "_ufp") for p in generateAxiLitePort(addrWidth, dataWidth, true, "") if getdirec(p) == pout]
     )
     g(
-        Midmodule(vaxi) => Midmodule(core),
+        # Midmodule(vaxi) => Midmodule(core),
+        vaxi => core,
         [string(getname(p), "_ufp") => getname(p) for p in generateAxiLitePort(addrWidth, dataWidth, true, "") if getdirec(p) == pin]
     )
     

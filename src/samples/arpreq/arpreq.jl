@@ -65,7 +65,7 @@ let
     vpush!.(v, (opcodeAddrPatch, opcodeDataPatch))
     vpush!(v, @ports @in CLK, rstn)
 
-    addAxiLitePort!(v, addrlen, datalen)
+    addAxiLitePort!(v, addrlen, datalen, true)
     vpush!(v, @ports @in btn)
 
     controlAl = @always (
