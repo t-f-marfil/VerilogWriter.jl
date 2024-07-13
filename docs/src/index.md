@@ -139,8 +139,6 @@ git clone "https://github.com/t-f-marfil/VerilogWriter.jl"
 ```
 and try `tutorial.ipynb` in `/src`.
 
-Dockerfile to build environment with julia and this module is also available in this repository.
-
 
 ## What is Left to be Done
 
