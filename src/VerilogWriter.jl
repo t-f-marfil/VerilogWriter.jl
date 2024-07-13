@@ -1,7 +1,5 @@
 module VerilogWriter
 
-include("includedeps.jl")
-
 libs = [
     "core"
 ]
