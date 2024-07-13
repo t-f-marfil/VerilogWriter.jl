@@ -205,6 +205,44 @@ Vmodule(n::String, pas::Parameters, ps::Ports, lparams::Localparams, decls::Decl
 insts::Vector{Vmodinst}, ass::Vector{Assign}, als::Vector{Alwayscontent}
 ) = Vmodule(n, pas, ps, lparams, decls, Readmemh[], insts, ass, als)
 
+
+"""
+    eachfieldconstruct(strc)
+
+Make contructors for `struct strc`.
+
+# Example
+For 
+```
+struct S 
+a::A
+b::B
+...
+end
+```
+constructors
+```
+S(x::A) = S(x, B(),...)
+S(x::B) = S(A(), x,...)
+```
+will be generated. Note that `A(), B()` should 
+return appropriate objects.
+"""
+function eachfieldconstruct(strc)
+    purename = Symbol(
+        split(string(strc), ['.'])[end]
+    )
+    for (ind, t) in enumerate(strc.types)
+        args = Any[:($(t)()) for t in strc.types]
+        targ = :x
+        args[ind] = targ
+        q = quote 
+            $(purename)($(targ)::$(t)) = $(strc)($(args...))
+        end
+        # @show q
+        eval(q)
+    end
+end
 eachfieldconstruct(Vmodenv)
 
 """

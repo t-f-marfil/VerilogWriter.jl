@@ -1,7 +1,26 @@
 # `testonlyvars` is a list of variables/functions/macros
 #  to export only for tests
 
-export @testonlyexport
+macro listtestonly(args)
+    strs = Symbol[]
+    for arg in args.args 
+        if arg isa Symbol 
+            push!(strs, arg)
+        else
+            arg.head == :macrocall || error("$(arg) is not accepted")
+            # macroname
+            push!(strs, arg.args[1])
+        end
+    end
+    :($([string(s) for s in strs]))
+end
+
+const testonlyvars = @listtestonly (
+    # showfield,
+    
+    oneblock, @oneblock, 
+    ralways
+)
 
 function macroseparate(sv::Vector{String})
     nomacros = String[]
@@ -18,7 +37,7 @@ function macroseparate(sv::Vector{String})
 end
 
 function vwmacrostrgen(mname)
-    s = "macro $(mname)(args...) :(VerilogWriter.@$(mname)(\$(args...))) end;"
+    s = "macro $(mname)(args...) :(VerilogWriter.Core.@$(mname)(\$(args...))) end;"
     
     return s
 end
@@ -26,7 +45,7 @@ end
 macro testonlyexport()
     nomacros, macros = macroseparate(testonlyvars)
     s = """$([
-        "const $(s) = VerilogWriter.$(s);" for s in nomacros
+        "const $(s) = VerilogWriter.Core.$(s);" for s in nomacros
         ]...) $([
             vwmacrostrgen(lstrip(s, ['@'])) for s in macros
         ]...)

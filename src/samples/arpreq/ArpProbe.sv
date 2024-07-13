@@ -24,9 +24,8 @@ module ArpProbe (
     reg [31:0] _reg_readonlyqueue_2 [12:0];
     reg [0:0] _reg_readonlyqueue_3 [12:0];
     reg [0:0] _reg_readonlyqueue_4 [12:0];
-    logic [2:0] _bitbundle_1;
+    logic [2:0] _bitbundle_9;
     logic addrIsRead;
-    logic _ans_onceAtRisingEdge_3;
     logic [3:0] _preindex_readonlyqueue_1;
     logic [3:0] _preindex_readonlyqueue_4;
     logic [3:0] _index_readonlyqueue_3;
@@ -36,38 +35,39 @@ module ArpProbe (
     logic _valid_readonlyqueue_4;
     logic _initWait_readonlyqueue_2;
     logic [12:0] _outdata_readonlyqueue_1;
-    logic _ans_onceAtRisingEdge_1;
-    logic _zipped_zippedSpike_1;
     logic updateReqAddrWrite;
     logic [3:0] _index_readonlyqueue_1;
     logic _outdata_readonlyqueue_4;
-    logic _prevzipped_zippedSpike_1;
+    logic _ans_onceHigh_8;
     logic [3:0] _index_readonlyqueue_4;
     logic updateReqRead;
     logic _initWait_readonlyqueue_1;
-    logic _ans_onceAtRisingEdge_2;
     logic waccepted;
     logic [3:0] _index_readonlyqueue_2;
-    logic _buf_onceAtRisingEdge_2;
+    logic _prevzipped_zippedSpike_5;
     logic rstCleared;
     logic [3:0] _preindex_readonlyqueue_3;
     logic _valid_readonlyqueue_3;
     logic dataIsRead;
+    logic _buf_onceHigh_6;
     logic _valid_readonlyqueue_2;
     logic addrIsWrite;
     logic _initWait_readonlyqueue_4;
     logic [31:0] spikeCount;
+    logic _ans_onceHigh_6;
     logic startCount;
     logic _initWait_readonlyqueue_3;
+    logic _zipped_zippedSpike_5;
+    logic _buf_onceHigh_8;
     logic [3:0] _preindex_readonlyqueue_2;
+    logic _buf_onceHigh_7;
+    logic _ans_onceHigh_7;
     logic awaccepted;
     logic spike;
     logic _iterdone_readonlyqueue_4;
     logic updateReqDataWrite;
     logic updateReqAddr;
-    logic _buf_onceAtRisingEdge_3;
     logic restart;
-    logic _buf_onceAtRisingEdge_1;
     logic updateReqData;
     logic dataIsWrite;
     logic _outdata_readonlyqueue_3;
@@ -342,8 +342,8 @@ module ArpProbe (
         _outdata_readonlyqueue_4 <= _reg_readonlyqueue_4[_index_readonlyqueue_4];
     end
     always_comb begin
-        _ans_onceAtRisingEdge_1 = (_buf_onceAtRisingEdge_1 | (wvalid & wready));
-        if (_zipped_zippedSpike_1) begin
+        _ans_onceHigh_6 = (_buf_onceHigh_6 | (wvalid & wready));
+        if (_zipped_zippedSpike_5) begin
             
         end else begin
             
@@ -351,18 +351,18 @@ module ArpProbe (
     end
     always_ff @( posedge CLK ) begin
         if ((~rstn)) begin
-            _buf_onceAtRisingEdge_1 <= 0;
+            _buf_onceHigh_6 <= 0;
         end else begin
-            if (_zipped_zippedSpike_1) begin
-                _buf_onceAtRisingEdge_1 <= 0;
+            if (_zipped_zippedSpike_5) begin
+                _buf_onceHigh_6 <= 1'd0;
             end else begin
-                _buf_onceAtRisingEdge_1 <= (_buf_onceAtRisingEdge_1 | (wvalid & wready));
+                _buf_onceHigh_6 <= (_buf_onceHigh_6 | (wvalid & wready));
             end
         end
     end
     always_comb begin
-        _ans_onceAtRisingEdge_2 = (_buf_onceAtRisingEdge_2 | (awvalid & awready));
-        if (_zipped_zippedSpike_1) begin
+        _ans_onceHigh_7 = (_buf_onceHigh_7 | (awvalid & awready));
+        if (_zipped_zippedSpike_5) begin
             
         end else begin
             
@@ -370,18 +370,18 @@ module ArpProbe (
     end
     always_ff @( posedge CLK ) begin
         if ((~rstn)) begin
-            _buf_onceAtRisingEdge_2 <= 0;
+            _buf_onceHigh_7 <= 0;
         end else begin
-            if (_zipped_zippedSpike_1) begin
-                _buf_onceAtRisingEdge_2 <= 0;
+            if (_zipped_zippedSpike_5) begin
+                _buf_onceHigh_7 <= 1'd0;
             end else begin
-                _buf_onceAtRisingEdge_2 <= (_buf_onceAtRisingEdge_2 | (awvalid & awready));
+                _buf_onceHigh_7 <= (_buf_onceHigh_7 | (awvalid & awready));
             end
         end
     end
     always_comb begin
-        _ans_onceAtRisingEdge_3 = (_buf_onceAtRisingEdge_3 | (bready & bvalid));
-        if (_zipped_zippedSpike_1) begin
+        _ans_onceHigh_8 = (_buf_onceHigh_8 | (bready & bvalid));
+        if (_zipped_zippedSpike_5) begin
             
         end else begin
             
@@ -389,33 +389,33 @@ module ArpProbe (
     end
     always_ff @( posedge CLK ) begin
         if ((~rstn)) begin
-            _buf_onceAtRisingEdge_3 <= 0;
+            _buf_onceHigh_8 <= 0;
         end else begin
-            if (_zipped_zippedSpike_1) begin
-                _buf_onceAtRisingEdge_3 <= 0;
+            if (_zipped_zippedSpike_5) begin
+                _buf_onceHigh_8 <= 1'd0;
             end else begin
-                _buf_onceAtRisingEdge_3 <= (_buf_onceAtRisingEdge_3 | (bready & bvalid));
+                _buf_onceHigh_8 <= (_buf_onceHigh_8 | (bready & bvalid));
             end
         end
     end
     always_comb begin
-        _bitbundle_1[0] = _ans_onceAtRisingEdge_1;
-        _bitbundle_1[1] = _ans_onceAtRisingEdge_2;
-        _bitbundle_1[2] = _ans_onceAtRisingEdge_3;
+        _bitbundle_9[0] = _ans_onceHigh_6;
+        _bitbundle_9[1] = _ans_onceHigh_7;
+        _bitbundle_9[2] = _ans_onceHigh_8;
     end
     always_comb begin
-        _zipped_zippedSpike_1 = (&(_bitbundle_1));
+        _zipped_zippedSpike_5 = (&(_bitbundle_9));
     end
     always_ff @( posedge CLK ) begin
         if ((~rstn)) begin
-            _prevzipped_zippedSpike_1 <= 0;
+            _prevzipped_zippedSpike_5 <= 0;
         end else begin
-            _prevzipped_zippedSpike_1 <= _zipped_zippedSpike_1;
+            _prevzipped_zippedSpike_5 <= _zipped_zippedSpike_5;
         end
     end
     always_comb begin
         spike = 0;
-        if (_zipped_zippedSpike_1) begin
+        if (_zipped_zippedSpike_5) begin
             
         end else if ((spikeCount == 50)) begin
             spike = 1;
@@ -431,7 +431,7 @@ module ArpProbe (
             spikeCount <= 0;
             startCount <= 0;
         end else begin
-            if (_zipped_zippedSpike_1) begin
+            if (_zipped_zippedSpike_5) begin
                 startCount <= 1'd1;
             end else if ((spikeCount == 50)) begin
                 startCount <= 0;

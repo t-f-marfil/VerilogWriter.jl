@@ -1,5 +1,3 @@
-const STOPBIT_MARGIN = 0.9
-
 """
     uartRecv(baudrate, clkfreq; name="UARTRecv")
 
@@ -16,14 +14,15 @@ function uartRecv(baudrate, clkfreq; name="UARTRecv")
     cycleperbitRaw = clkfreq / baudrate
     cycleperbit = Int(round(cycleperbitRaw)) - 1
     cycleperhalfbit = Int(round(cycleperbitRaw / 2)) - 1
-    cycleperbit > 0 && cycleperhalfbit > 0 || error("cycleper(|half)bit should be positive")
+    cycleperbit > 0 && cycleperhalfbit > 0 || error("cycleper(|half)bit should be positive, perbit: $cycleperbit, perhalf: $cycleperhalfbit, where baud = $baudrate, freq = $clkfreq")
     cycleperbit != cycleperhalfbit || error("cycles for a bit and half a bit is the same, increase cycles per bit.")
     
-    cycleperstop = Int(round(cycleperbitRaw*STOPBIT_MARGIN)) - 1
+    cycleperstop = Int(round(cycleperbitRaw / 2)) - 1
 
     rxprts = @ports (
         @in rx;
-        @out @reg 8 dout
+        @out @reg 8 dout;
+        @out @logic outValid
     )
 
     @sym2wire cyclecount, bitcount, nextbyte
@@ -31,9 +30,14 @@ function uartRecv(baudrate, clkfreq; name="UARTRecv")
     counthalf = cyclecount == Wireexpr(cycleperhalfbit)
     countstop = cyclecount == Wireexpr(cycleperstop)
 
+
     rxfsm = @FSM recvstate sidle, sstart, sdata, sstop
+
+    noiseDetected = @wireexpr (recvstate == sstart) && (cyclecount == $cycleperhalfbit) && (rx == 1)
+
     transadd!(rxfsm, [
         ((@wireexpr rx == 0), @tstate sidle => sstart),
+        (noiseDetected, @tstate sstart => sidle),
         (countfull, @tstate sstart => sdata),
         (countfull & (bitcount == Wireexpr(3, 7)), @tstate sdata => sstop),
         (countstop & nextbyte, @tstate sstop => sstart),
@@ -44,7 +48,9 @@ function uartRecv(baudrate, clkfreq; name="UARTRecv")
         nextbyte = rx == 0
     )
     alcounters = @always (
-        if (recvstate == sstop) && (cyclecount == $cycleperstop)
+        if $noiseDetected
+            cyclecount <= 0
+        elseif (recvstate == sstop) && (cyclecount == $cycleperstop)
             cyclecount <= 0;
         elseif cyclecount == $cycleperbit
             cyclecount <= 0
@@ -66,13 +72,13 @@ function uartRecv(baudrate, clkfreq; name="UARTRecv")
         end
     )
     alil = @always (
-        $(nametolower(imvalid)) = (recvstate == sstop) & $counthalf
+        outValid = (recvstate == sstop) & $counthalf
     )
 
     vpush!.(m, (rxprts, rxfsm, alnextbyte, alcounters, aldout, alil))
 
-    # return m
-    return Midmodule(name, lrand, m)
+    return m
+    # return Midmodule(name, lrand, m)
 end
 
 function uartSend(baudrate, clkfreq; name="UARTSend")
@@ -82,7 +88,9 @@ function uartSend(baudrate, clkfreq; name="UARTSend")
 
     txprts = @ports (
         @in 8 din;
-        @out @logic tx
+        @out @logic tx;
+        @in inValid;
+        @out @logic inUpdate
     )
 
     @sym2wire acceptNext, bitcount, cyclecount
@@ -90,7 +98,7 @@ function uartSend(baudrate, clkfreq; name="UARTSend")
 
     txfsm = @FSM sendstate sidle, sstart, sdata, sstop
     transadd!(txfsm, [
-        (Wireexpr(nametoupper(imvalid)), @tstate sidle => sstart),
+        (@wireexpr(inValid), @tstate sidle => sstart),
         (countfull, @tstate sstart => sdata),
         (countfull & (bitcount == Wireexpr(3, 7)), @tstate sdata => sstop),
         (countfull & acceptNext, @tstate sstop => sstart),
@@ -112,7 +120,7 @@ function uartSend(baudrate, clkfreq; name="UARTSend")
     )
     alaccept = @always (
         acceptNext = 0;
-        if $(nametoupper(imvalid))
+        if inValid
             if sendstate == sidle
                 acceptNext = 1
             elseif (sendstate == sstop) && (cyclecount == $cycleperbit)
@@ -134,7 +142,7 @@ function uartSend(baudrate, clkfreq; name="UARTSend")
         end
     )
     alupdate = @always (
-        $(nametoupper(imupdate)) = (
+        inUpdate = (
             ((sendstate == sstop) && (cyclecount == $cycleperbit))
             || sendstate == sidle
         )
@@ -142,7 +150,8 @@ function uartSend(baudrate, clkfreq; name="UARTSend")
 
     m = Vmodule(name)
     vpush!.(m, (txprts, txfsm, alcounters, alaccept, albuf, altx, alupdate))
-    send = Midmodule(name, lrand, m)
+    # send = Midmodule(name, lrand, m)
 
-    return send
+    return m
+    # return send
 end

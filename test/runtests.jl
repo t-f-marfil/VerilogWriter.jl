@@ -4,8 +4,12 @@ include("testutils.jl")
 
 @testonlyexport()
 
-tpaths = readdir(joinpath(@__DIR__, "core"), join=true)
-tpaths = [tpaths; readdir(joinpath(@__DIR__, "midlevel"), join=true)]
+tpaths = [
+    readdir(joinpath(@__DIR__, "core"), join=true);
+    readdir(joinpath(@__DIR__, "core/patch"), join=true);
+    readdir(joinpath(@__DIR__, "core/uartDebug"), join=true);
+]
+tpaths = filter(isfile, tpaths)
 
 macro testconduct(tpath)
     quote
@@ -17,6 +21,10 @@ macro testconduct(tpath)
     end
 end
 
+for tpath in tpaths
+    @testconduct tpath
+end
+
 DocMeta.setdocmeta!(
     VerilogWriter, 
     :DocTestSetup, 
@@ -25,15 +33,4 @@ DocMeta.setdocmeta!(
 )
 
 
-# @testset "VerilogWriter.jl" begin
-# for tpair in tpairs 
-for tpath in tpaths
-    @testconduct tpath
-end
-
 doctest(VerilogWriter)
-
-# println("start doctest.")
-# doctest(VerilogWriter)
-# println("doctest done.")
-# # end

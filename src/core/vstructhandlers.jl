@@ -26,6 +26,7 @@ function invport(onep::Oneport)
     # d = onep.decl
     Oneport(
         (onep.direc == pin ? pout : pin),
+        (onep.direc == pin ? logic : wire),
         onep.width,
         onep.name
     )
@@ -54,8 +55,8 @@ julia> vshow(pts); vshow(ipts);
 );
 type: Ports
 (
-    output [7:0] bus1,
-    output [7:0] bus2,
+    output logic [7:0] bus1,
+    output logic [7:0] bus2,
     input bus3
 );
 type: Ports
