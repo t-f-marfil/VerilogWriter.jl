@@ -1,3 +1,39 @@
+"struct to contain connection info."
+struct Layerconn
+    ports::Vector{Pair{String, String}}
+end
+
+"struct to store and connect Layerconn objects."
+struct Vmodgraph
+    edges::Dict{Pair{Vmodule, Vmodule}, Layerconn}
+    vmods::Set{Vmodule}
+end
+
+Vmodgraph() = Vmodgraph(Dict{Pair{Vmodule, Vmodule}, Layerconn}(), Set{Vmodule}())
+
+const defaultlports = [
+    (@ports (
+        @in CLK, RST
+    ))...
+]
+
+function symPairToStrPair(ast)
+    ast.args[1] == :(=>) || error("$(ast.args[1]) is not acceptable in tuple expression")
+    return :($(string(ast.args[2])) => $(string(ast.args[3])))
+end
+macro pconnect(arg)
+    if arg.head == :call
+        return :([$(symPairToStrPair(arg))])
+    else
+        arg.head == :tuple || error("arg.head should be tuple, but actually $(arg.head)")
+        return :([$([symPairToStrPair(e) for e in arg.args]...)])
+    end
+end
+
+Layerconn(x::Layerconn) = x
+Layerconn() = Layerconn(Vector{Pair{String, String}}())
+
+
 function (cls::Vmodgraph)(p::Pair{Vmodule, Vmodule}, args...)
     dfp, ufp = p
     isnothing(get(cls.edges, (dfp => ufp), nothing)) || error("pair dfp => ufp is already registered")
@@ -73,7 +109,7 @@ function wireAddSuffix(wirename::String, vsuffix::Vmodule)
     Wireexpr(string(wirename, "_", getname(vsuffix)))
 end
 
-using ..Core: wirenamemodgen
+# using ..Core: wirenamemodgen
 
 """
     outerportnamegen(portname::String, mlay::Midmodule)
@@ -224,7 +260,7 @@ function connectCommonPorts_mlay!(v::Vmodule, x::Vmodgraph)
     return nothing
 end
 
-using ..Core: vinstnamemod
+# using ..Core: vinstnamemod
 
 """
     layer2vmod!(x::Mmodgraph; name = "Layers")::Vector{Vmodule}

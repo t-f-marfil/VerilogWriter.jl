@@ -65,6 +65,15 @@ macro exportCore()
         export 
             vpush!
 
+        export
+            dumpMemfile
+
+        # Vmodgraph
+        export
+            Vmodgraph, Layerconn, @pconnect, dotgen, layer2vmod!
+
+        export
+            uartRecv, uartSend
 
         # vpatch
         export 
@@ -128,6 +137,10 @@ const pathbasic = [
     "vpush.jl", 
     "accessor.jl",
     "verilator.jl",
+
+    "vmodgraph.jl",
+
+    "uart.jl",
 
     "axi.jl",
     "memfile.jl",
