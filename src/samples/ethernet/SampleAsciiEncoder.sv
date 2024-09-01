@@ -1,11 +1,12 @@
 module SampleAsciiEncoder (
-    input rx_UARTRecv,
-    input rvalid_dfp_AxiControl,
+    input rx_UartRecv_etherBypass,
+    output strbUpdate_CoreWrite,
+    output tx_UartSend_etherBypass,
     output rready_dfp_AxiControl,
     output bready_dfp_AxiControl,
     output arvalid_dfp_AxiControl,
-    input arready_dfp_AxiControl,
     output [12:0] araddr_dfp_AxiControl,
+    input arready_dfp_AxiControl,
     output [3:0] wstrb_dfp_AxiControl,
     output [12:0] awaddr_dfp_AxiControl,
     input wready_dfp_AxiControl,
@@ -17,99 +18,109 @@ module SampleAsciiEncoder (
     input [31:0] rdata_dfp_AxiControl,
     input bvalid_dfp_AxiControl,
     output wvalid_dfp_AxiControl,
-    output tx_UARTSend,
-    output strbUpdate_CoreWrite,
+    input rvalid_dfp_AxiControl,
     input CLK,
     input RST
 );
-    logic bothAccepted_InputParser;
+    logic inUpdate_UartSend_etherBypass;
+    logic [31:0] wDataIn_CoreWrite;
     logic CLK_InputParser;
     logic awvalid_CoreWrite;
+    logic rDataValid_InputParser;
     logic [12:0] araddr_ufp_AxiControl;
     logic inValid_fifoForUart;
-    logic RST_UARTRecv;
-    logic outValid_fifoForUart;
     logic CLK_AsciiEncoder_source;
-    logic CLK_UARTRecv;
+    logic outValid_fifoForUart;
+    logic wDataValid_InputParser;
     logic [15:0] addrData_AsciiEncoder_source;
     logic outUpdate_fifoForUart;
+    logic wAddrUpdate_InputParser;
     logic RST_InputParser;
     logic inValid_AsciiEncoder_encodeToByteStream;
+    logic RST_UartSend_etherBypass;
     logic [3:0] strbIn_CoreWrite;
+    logic CLK_UartSend_etherBypass;
     logic bvalid_ufp_AxiControl;
     logic wready_ufp_AxiControl;
-    logic [111:0] din_AsciiEncoder_encodeToByteStream;
+    logic rAddrValid_CoreWrite;
+    logic [119:0] din_AsciiEncoder_encodeToByteStream;
     logic [7:0] din_fifoForUart;
     logic rready_ufp_AxiControl;
-    logic [31:0] dataData_AsciiEncoder_source;
-    logic dataValid_CoreWrite;
-    logic inValid_UARTSend;
+    logic [7:0] opcode_AsciiEncoder_source;
+    logic wAddrValid_CoreWrite;
+    logic rAddrValid_InputParser;
     logic CLK_StrbSrc;
     logic arvalid_CoreWrite;
     logic [12:0] awaddr_CoreWrite;
+    logic [31:0] rData_InputParser;
     logic arready_ufp_AxiControl;
-    logic inValid_AsciiEncoder_source;
     logic [1:0] rresp_ufp_AxiControl;
+    logic inValid_AsciiEncoder_source;
+    logic wAddrUpdate_CoreWrite;
     logic [7:0] din_InputParser;
-    logic dataUpdate_InputParser;
     logic CLK_AsciiEncoder_encodeToByteStream;
+    logic RST_UartRecv_etherBypass;
     logic [3:0] wstrb_CoreWrite;
     logic [7:0] dout_fifoForUart;
-    logic [111:0] dout_AsciiEncoder_fifo;
     logic wready_CoreWrite;
+    logic [119:0] dout_AsciiEncoder_fifo;
     logic [3:0] wstrb_ufp_AxiControl;
+    logic inValid_UartSend_etherBypass;
     logic [7:0] dout_AsciiEncoder_encodeToByteStream;
-    logic addrUpdate_InputParser;
     logic arready_CoreWrite;
-    logic [12:0] addrIn_CoreWrite;
     logic RST_StrbSrc;
     logic RST_AsciiEncoder_source;
     logic outValid_AsciiEncoder_source;
-    logic dataValid_InputParser;
+    logic outValid_UartRecv_etherBypass;
     logic RST_CoreWrite;
-    logic [111:0] dout_AsciiEncoder_source;
+    logic [119:0] dout_AsciiEncoder_source;
+    logic [12:0] wAddrIn_CoreWrite;
+    logic rDataValid_CoreWrite;
     logic RST_fifoForUart;
-    logic [31:0] dataIn_CoreWrite;
-    logic CLK_AsciiEncoder_fifo;
     logic [3:0] dout_StrbSrc;
-    logic inUpdate_UARTSend;
+    logic CLK_AsciiEncoder_fifo;
     logic rvalid_CoreWrite;
     logic [31:0] rdata_CoreWrite;
-    logic [31:0] dataData_InputParser;
-    logic outValid_UARTRecv;
     logic [15:0] addrIn_WidthIntermediate;
+    logic [31:0] wData_InputParser;
+    logic [7:0] opcode_InputParser;
     logic outUpdate_AsciiEncoder_encodeToByteStream;
     logic bready_CoreWrite;
-    logic outUpdate_AsciiEncoder_fifo;
-    logic dataUpdate_CoreWrite;
     logic [31:0] rdata_ufp_AxiControl;
-    logic [111:0] din_AsciiEncoder_fifo;
-    logic addrValid_InputParser;
-    logic CLK_UARTSend;
+    logic outUpdate_AsciiEncoder_fifo;
+    logic [7:0] dout_UartRecv_etherBypass;
+    logic CLK_UartRecv_etherBypass;
+    logic [119:0] din_AsciiEncoder_fifo;
     logic wvalid_ufp_AxiControl;
     logic [1:0] bresp_CoreWrite;
+    logic [31:0] rDataOut_CoreWrite;
     logic [31:0] wdata_CoreWrite;
+    logic rDataUpdate_CoreWrite;
     logic [12:0] awaddr_ufp_AxiControl;
     logic inUpdate_AsciiEncoder_encodeToByteStream;
+    logic rAddrUpdate_CoreWrite;
     logic RST_AsciiEncoder_fifo;
+    logic [31:0] data_AsciiEncoder_source;
     logic [12:0] araddr_CoreWrite;
-    logic [7:0] din_UARTSend;
     logic outValid_AsciiEncoder_fifo;
+    logic transEnd_InputParser;
     logic CLK_AxiControl;
-    logic outValid_AsciiEncoder_encodeToByteStream;
     logic awready_ufp_AxiControl;
+    logic outValid_AsciiEncoder_encodeToByteStream;
     logic [31:0] wdata_ufp_AxiControl;
     logic inValid_InputParser;
-    logic RST_UARTSend;
     logic CLK_fifoForUart;
     logic arvalid_ufp_AxiControl;
+    logic rAddrUpdate_InputParser;
     logic CLK_WidthIntermediate;
-    logic [7:0] dout_UARTRecv;
-    logic addrUpdate_CoreWrite;
+    logic [12:0] rAddrIn_CoreWrite;
+    logic wDataUpdate_InputParser;
+    logic rvalid_ufp_AxiControl;
     logic wvalid_CoreWrite;
     logic inValid_AsciiEncoder_fifo;
     logic valid_StrbSrc;
-    logic rvalid_ufp_AxiControl;
+    logic rDataUpdate_InputParser;
+    logic [7:0] din_UartSend_etherBypass;
     logic rready_CoreWrite;
     logic bvalid_CoreWrite;
     logic RST_WidthIntermediate;
@@ -118,15 +129,78 @@ module SampleAsciiEncoder (
     logic awvalid_ufp_AxiControl;
     logic [1:0] rresp_CoreWrite;
     logic CLK_CoreWrite;
-    logic addrValid_CoreWrite;
     logic awready_CoreWrite;
     logic [12:0] addrOut_WidthIntermediate;
+    logic wDataUpdate_CoreWrite;
+    logic wDataValid_CoreWrite;
     logic RST_AsciiEncoder_encodeToByteStream;
+    logic [31:0] transData_InputParser;
+    logic wAddrValid_InputParser;
     logic [15:0] addrData_InputParser;
     logic bready_ufp_AxiControl;
     logic inUpdate_InputParser;
     logic RST_AxiControl;
 
+    UartRecv_etherBypass UartRecv_etherBypass_inst (
+        .rx(rx_UartRecv_etherBypass),
+        .dout(dout_UartRecv_etherBypass),
+        .outValid(outValid_UartRecv_etherBypass),
+        .CLK(CLK_UartRecv_etherBypass),
+        .RST(RST_UartRecv_etherBypass)
+    );
+    CoreWrite CoreWrite_inst (
+        .wAddrValid(wAddrValid_CoreWrite),
+        .wAddrUpdate(wAddrUpdate_CoreWrite),
+        .wAddrIn(wAddrIn_CoreWrite),
+        .rAddrValid(rAddrValid_CoreWrite),
+        .rAddrUpdate(rAddrUpdate_CoreWrite),
+        .rAddrIn(rAddrIn_CoreWrite),
+        .wDataValid(wDataValid_CoreWrite),
+        .wDataUpdate(wDataUpdate_CoreWrite),
+        .wDataIn(wDataIn_CoreWrite),
+        .rDataOut(rDataOut_CoreWrite),
+        .rDataValid(rDataValid_CoreWrite),
+        .rDataUpdate(rDataUpdate_CoreWrite),
+        .strbValid(strbValid_CoreWrite),
+        .strbUpdate(strbUpdate_CoreWrite),
+        .strbIn(strbIn_CoreWrite),
+        .araddr(araddr_CoreWrite),
+        .arready(arready_CoreWrite),
+        .arvalid(arvalid_CoreWrite),
+        .awaddr(awaddr_CoreWrite),
+        .awready(awready_CoreWrite),
+        .awvalid(awvalid_CoreWrite),
+        .bready(bready_CoreWrite),
+        .bresp(bresp_CoreWrite),
+        .bvalid(bvalid_CoreWrite),
+        .wdata(wdata_CoreWrite),
+        .wstrb(wstrb_CoreWrite),
+        .wvalid(wvalid_CoreWrite),
+        .wready(wready_CoreWrite),
+        .rready(rready_CoreWrite),
+        .rvalid(rvalid_CoreWrite),
+        .rdata(rdata_CoreWrite),
+        .rresp(rresp_CoreWrite),
+        .CLK(CLK_CoreWrite),
+        .RST(RST_CoreWrite)
+    );
+    UartSend_etherBypass UartSend_etherBypass_inst (
+        .din(din_UartSend_etherBypass),
+        .tx(tx_UartSend_etherBypass),
+        .inValid(inValid_UartSend_etherBypass),
+        .inUpdate(inUpdate_UartSend_etherBypass),
+        .CLK(CLK_UartSend_etherBypass),
+        .RST(RST_UartSend_etherBypass)
+    );
+    fifoForUart fifoForUart_inst (
+        .inValid(inValid_fifoForUart),
+        .outUpdate(outUpdate_fifoForUart),
+        .din(din_fifoForUart),
+        .dout(dout_fifoForUart),
+        .outValid(outValid_fifoForUart),
+        .CLK(CLK_fifoForUart),
+        .RST(RST_fifoForUart)
+    );
     AsciiEncoder_fifo AsciiEncoder_fifo_inst (
         .din(din_AsciiEncoder_fifo),
         .inValid(inValid_AsciiEncoder_fifo),
@@ -136,21 +210,27 @@ module SampleAsciiEncoder (
         .CLK(CLK_AsciiEncoder_fifo),
         .RST(RST_AsciiEncoder_fifo)
     );
+    AsciiEncoder_source AsciiEncoder_source_inst (
+        .opcode(opcode_AsciiEncoder_source),
+        .addrData(addrData_AsciiEncoder_source),
+        .data(data_AsciiEncoder_source),
+        .inValid(inValid_AsciiEncoder_source),
+        .outValid(outValid_AsciiEncoder_source),
+        .dout(dout_AsciiEncoder_source),
+        .CLK(CLK_AsciiEncoder_source),
+        .RST(RST_AsciiEncoder_source)
+    );
     WidthIntermediate WidthIntermediate_inst (
         .addrIn(addrIn_WidthIntermediate),
         .addrOut(addrOut_WidthIntermediate),
         .CLK(CLK_WidthIntermediate),
         .RST(RST_WidthIntermediate)
     );
-    AsciiEncoder_encodeToByteStream AsciiEncoder_encodeToByteStream_inst (
-        .din(din_AsciiEncoder_encodeToByteStream),
-        .dout(dout_AsciiEncoder_encodeToByteStream),
-        .inUpdate(inUpdate_AsciiEncoder_encodeToByteStream),
-        .inValid(inValid_AsciiEncoder_encodeToByteStream),
-        .outValid(outValid_AsciiEncoder_encodeToByteStream),
-        .outUpdate(outUpdate_AsciiEncoder_encodeToByteStream),
-        .CLK(CLK_AsciiEncoder_encodeToByteStream),
-        .RST(RST_AsciiEncoder_encodeToByteStream)
+    StrbSrc StrbSrc_inst (
+        .valid(valid_StrbSrc),
+        .dout(dout_StrbSrc),
+        .CLK(CLK_StrbSrc),
+        .RST(RST_StrbSrc)
     );
     AxiControl AxiControl_inst (
         .araddr_ufp(araddr_ufp_AxiControl),
@@ -190,98 +270,46 @@ module SampleAsciiEncoder (
         .CLK(CLK_AxiControl),
         .RST(RST_AxiControl)
     );
-    StrbSrc StrbSrc_inst (
-        .valid(valid_StrbSrc),
-        .dout(dout_StrbSrc),
-        .CLK(CLK_StrbSrc),
-        .RST(RST_StrbSrc)
-    );
-    UARTSend UARTSend_inst (
-        .din(din_UARTSend),
-        .tx(tx_UARTSend),
-        .inValid(inValid_UARTSend),
-        .inUpdate(inUpdate_UARTSend),
-        .CLK(CLK_UARTSend),
-        .RST(RST_UARTSend)
-    );
-    CoreWrite CoreWrite_inst (
-        .addrValid(addrValid_CoreWrite),
-        .addrUpdate(addrUpdate_CoreWrite),
-        .addrIn(addrIn_CoreWrite),
-        .dataValid(dataValid_CoreWrite),
-        .dataUpdate(dataUpdate_CoreWrite),
-        .dataIn(dataIn_CoreWrite),
-        .strbValid(strbValid_CoreWrite),
-        .strbUpdate(strbUpdate_CoreWrite),
-        .strbIn(strbIn_CoreWrite),
-        .araddr(araddr_CoreWrite),
-        .arready(arready_CoreWrite),
-        .arvalid(arvalid_CoreWrite),
-        .awaddr(awaddr_CoreWrite),
-        .awready(awready_CoreWrite),
-        .awvalid(awvalid_CoreWrite),
-        .bready(bready_CoreWrite),
-        .bresp(bresp_CoreWrite),
-        .bvalid(bvalid_CoreWrite),
-        .wdata(wdata_CoreWrite),
-        .wstrb(wstrb_CoreWrite),
-        .wvalid(wvalid_CoreWrite),
-        .wready(wready_CoreWrite),
-        .rready(rready_CoreWrite),
-        .rvalid(rvalid_CoreWrite),
-        .rdata(rdata_CoreWrite),
-        .rresp(rresp_CoreWrite),
-        .CLK(CLK_CoreWrite),
-        .RST(RST_CoreWrite)
-    );
-    UARTRecv UARTRecv_inst (
-        .rx(rx_UARTRecv),
-        .dout(dout_UARTRecv),
-        .outValid(outValid_UARTRecv),
-        .CLK(CLK_UARTRecv),
-        .RST(RST_UARTRecv)
-    );
-    AsciiEncoder_source AsciiEncoder_source_inst (
-        .addrData(addrData_AsciiEncoder_source),
-        .dataData(dataData_AsciiEncoder_source),
-        .inValid(inValid_AsciiEncoder_source),
-        .outValid(outValid_AsciiEncoder_source),
-        .dout(dout_AsciiEncoder_source),
-        .CLK(CLK_AsciiEncoder_source),
-        .RST(RST_AsciiEncoder_source)
-    );
     InputParser InputParser_inst (
         .din(din_InputParser),
         .inValid(inValid_InputParser),
         .inUpdate(inUpdate_InputParser),
-        .addrValid(addrValid_InputParser),
-        .addrUpdate(addrUpdate_InputParser),
+        .wAddrValid(wAddrValid_InputParser),
+        .rAddrValid(rAddrValid_InputParser),
+        .wAddrUpdate(wAddrUpdate_InputParser),
+        .rAddrUpdate(rAddrUpdate_InputParser),
         .addrData(addrData_InputParser),
-        .dataValid(dataValid_InputParser),
-        .dataUpdate(dataUpdate_InputParser),
-        .dataData(dataData_InputParser),
-        .bothAccepted(bothAccepted_InputParser),
+        .wDataValid(wDataValid_InputParser),
+        .wDataUpdate(wDataUpdate_InputParser),
+        .wData(wData_InputParser),
+        .rData(rData_InputParser),
+        .rDataUpdate(rDataUpdate_InputParser),
+        .rDataValid(rDataValid_InputParser),
+        .transEnd(transEnd_InputParser),
+        .transData(transData_InputParser),
+        .opcode(opcode_InputParser),
         .CLK(CLK_InputParser),
         .RST(RST_InputParser)
     );
-    fifoForUart fifoForUart_inst (
-        .inValid(inValid_fifoForUart),
-        .outUpdate(outUpdate_fifoForUart),
-        .din(din_fifoForUart),
-        .dout(dout_fifoForUart),
-        .outValid(outValid_fifoForUart),
-        .CLK(CLK_fifoForUart),
-        .RST(RST_fifoForUart)
+    AsciiEncoder_encodeToByteStream AsciiEncoder_encodeToByteStream_inst (
+        .din(din_AsciiEncoder_encodeToByteStream),
+        .dout(dout_AsciiEncoder_encodeToByteStream),
+        .inUpdate(inUpdate_AsciiEncoder_encodeToByteStream),
+        .inValid(inValid_AsciiEncoder_encodeToByteStream),
+        .outValid(outValid_AsciiEncoder_encodeToByteStream),
+        .outUpdate(outUpdate_AsciiEncoder_encodeToByteStream),
+        .CLK(CLK_AsciiEncoder_encodeToByteStream),
+        .RST(RST_AsciiEncoder_encodeToByteStream)
     );
     always_comb begin
-        inValid_fifoForUart = outValid_UARTRecv;
-        din_fifoForUart = dout_UARTRecv;
+        wAddrValid_CoreWrite = wAddrValid_InputParser;
+        rAddrValid_CoreWrite = rAddrValid_InputParser;
+        wDataValid_CoreWrite = wDataValid_InputParser;
+        wDataIn_CoreWrite = wData_InputParser;
+        rDataUpdate_CoreWrite = rDataUpdate_InputParser;
         addrIn_WidthIntermediate = addrData_InputParser;
-        strbIn_CoreWrite = dout_StrbSrc;
-        strbValid_CoreWrite = valid_StrbSrc;
-        din_InputParser = dout_fifoForUart;
-        inValid_InputParser = outValid_fifoForUart;
-        outUpdate_fifoForUart = inUpdate_InputParser;
+        wAddrIn_CoreWrite = addrOut_WidthIntermediate;
+        rAddrIn_CoreWrite = addrOut_WidthIntermediate;
         araddr_ufp_AxiControl = araddr_CoreWrite;
         arvalid_ufp_AxiControl = arvalid_CoreWrite;
         awaddr_ufp_AxiControl = awaddr_CoreWrite;
@@ -291,22 +319,11 @@ module SampleAsciiEncoder (
         wstrb_ufp_AxiControl = wstrb_CoreWrite;
         wvalid_ufp_AxiControl = wvalid_CoreWrite;
         rready_ufp_AxiControl = rready_CoreWrite;
-        outUpdate_AsciiEncoder_encodeToByteStream = inUpdate_UARTSend;
-        din_UARTSend = dout_AsciiEncoder_encodeToByteStream;
-        inValid_UARTSend = outValid_AsciiEncoder_encodeToByteStream;
-        addrUpdate_InputParser = addrUpdate_CoreWrite;
-        dataUpdate_InputParser = dataUpdate_CoreWrite;
-        din_AsciiEncoder_encodeToByteStream = dout_AsciiEncoder_fifo;
-        inValid_AsciiEncoder_encodeToByteStream = outValid_AsciiEncoder_fifo;
-        outUpdate_AsciiEncoder_fifo = inUpdate_AsciiEncoder_encodeToByteStream;
-        din_AsciiEncoder_fifo = dout_AsciiEncoder_source;
-        inValid_AsciiEncoder_fifo = outValid_AsciiEncoder_source;
-        addrValid_CoreWrite = addrValid_InputParser;
-        dataValid_CoreWrite = dataValid_InputParser;
-        dataIn_CoreWrite = dataData_InputParser;
-        addrData_AsciiEncoder_source = addrData_InputParser;
-        dataData_AsciiEncoder_source = dataData_InputParser;
-        inValid_AsciiEncoder_source = bothAccepted_InputParser;
+        wAddrUpdate_InputParser = wAddrUpdate_CoreWrite;
+        rAddrUpdate_InputParser = rAddrUpdate_CoreWrite;
+        wDataUpdate_InputParser = wDataUpdate_CoreWrite;
+        rData_InputParser = rDataOut_CoreWrite;
+        rDataValid_InputParser = rDataValid_CoreWrite;
         arready_CoreWrite = arready_ufp_AxiControl;
         awready_CoreWrite = awready_ufp_AxiControl;
         bresp_CoreWrite = bresp_ufp_AxiControl;
@@ -315,125 +332,382 @@ module SampleAsciiEncoder (
         rvalid_CoreWrite = rvalid_ufp_AxiControl;
         rdata_CoreWrite = rdata_ufp_AxiControl;
         rresp_CoreWrite = rresp_ufp_AxiControl;
-        addrIn_CoreWrite = addrOut_WidthIntermediate;
+        outUpdate_fifoForUart = inUpdate_InputParser;
+        strbIn_CoreWrite = dout_StrbSrc;
+        strbValid_CoreWrite = valid_StrbSrc;
+        din_AsciiEncoder_encodeToByteStream = dout_AsciiEncoder_fifo;
+        inValid_AsciiEncoder_encodeToByteStream = outValid_AsciiEncoder_fifo;
+        din_UartSend_etherBypass = dout_AsciiEncoder_encodeToByteStream;
+        inValid_UartSend_etherBypass = outValid_AsciiEncoder_encodeToByteStream;
+        outUpdate_AsciiEncoder_fifo = inUpdate_AsciiEncoder_encodeToByteStream;
+        outUpdate_AsciiEncoder_encodeToByteStream = inUpdate_UartSend_etherBypass;
+        din_AsciiEncoder_fifo = dout_AsciiEncoder_source;
+        inValid_AsciiEncoder_fifo = outValid_AsciiEncoder_source;
+        opcode_AsciiEncoder_source = opcode_InputParser;
+        addrData_AsciiEncoder_source = addrData_InputParser;
+        data_AsciiEncoder_source = transData_InputParser;
+        inValid_AsciiEncoder_source = transEnd_InputParser;
+        inValid_fifoForUart = outValid_UartRecv_etherBypass;
+        din_fifoForUart = dout_UartRecv_etherBypass;
+        din_InputParser = dout_fifoForUart;
+        inValid_InputParser = outValid_fifoForUart;
     end
     always_comb begin
-        CLK_AsciiEncoder_fifo = CLK;
-        RST_AsciiEncoder_fifo = RST;
-    end
-    always_comb begin
-        CLK_WidthIntermediate = CLK;
-        RST_WidthIntermediate = RST;
-    end
-    always_comb begin
-        CLK_AsciiEncoder_encodeToByteStream = CLK;
-        RST_AsciiEncoder_encodeToByteStream = RST;
-    end
-    always_comb begin
-        CLK_AxiControl = CLK;
-        RST_AxiControl = RST;
-    end
-    always_comb begin
-        CLK_StrbSrc = CLK;
-        RST_StrbSrc = RST;
-    end
-    always_comb begin
-        CLK_UARTSend = CLK;
-        RST_UARTSend = RST;
+        CLK_UartRecv_etherBypass = CLK;
+        RST_UartRecv_etherBypass = RST;
     end
     always_comb begin
         CLK_CoreWrite = CLK;
         RST_CoreWrite = RST;
     end
     always_comb begin
-        CLK_UARTRecv = CLK;
-        RST_UARTRecv = RST;
+        CLK_UartSend_etherBypass = CLK;
+        RST_UartSend_etherBypass = RST;
+    end
+    always_comb begin
+        CLK_fifoForUart = CLK;
+        RST_fifoForUart = RST;
+    end
+    always_comb begin
+        CLK_AsciiEncoder_fifo = CLK;
+        RST_AsciiEncoder_fifo = RST;
     end
     always_comb begin
         CLK_AsciiEncoder_source = CLK;
         RST_AsciiEncoder_source = RST;
     end
     always_comb begin
+        CLK_WidthIntermediate = CLK;
+        RST_WidthIntermediate = RST;
+    end
+    always_comb begin
+        CLK_StrbSrc = CLK;
+        RST_StrbSrc = RST;
+    end
+    always_comb begin
+        CLK_AxiControl = CLK;
+        RST_AxiControl = RST;
+    end
+    always_comb begin
         CLK_InputParser = CLK;
         RST_InputParser = RST;
     end
     always_comb begin
-        CLK_fifoForUart = CLK;
-        RST_fifoForUart = RST;
+        CLK_AsciiEncoder_encodeToByteStream = CLK;
+        RST_AsciiEncoder_encodeToByteStream = RST;
     end
 endmodule
-module AsciiEncoder_fifo (
-    input [111:0] din,
-    input inValid,
+module UartRecv_etherBypass (
+    input rx,
+    output reg [7:0] dout,
     output logic outValid,
-    input outUpdate,
-    output logic [111:0] dout,
     input CLK,
     input RST
 );
-    reg [111:0] _ram_fifoPatch_4 [255:0];
-    logic [7:0] _rptr_fifoPatch_4;
-    logic [7:0] _prevwptr_fifoPatch_4;
-    logic _full_fifoPatch_4;
-    logic [111:0] _doutBypassed_fifoPatch_4;
-    logic _outvalid_fifoPatch_4;
-    logic [111:0] _doutRam_fifoPatch_4;
-    logic _rincr_fifoPatch_4;
-    logic [7:0] _rptrComb_fifoPatch_4;
-    logic _wincr_fifoPatch_4;
-    logic _empty_fifoPatch_4;
-    logic [111:0] _dout_fifoPatch_4;
-    logic [7:0] _wptr_fifoPatch_4;
-    logic _inready_fifoPatch_4;
+    localparam sidle = 0;
+    localparam sstart = 1;
+    localparam sdata = 2;
+    localparam sstop = 3;
+
+    reg [1:0] recvstate;
+    logic nextbyte;
+    logic [2:0] bitcount;
+    logic [31:0] cyclecount;
+
+    always_ff @( posedge CLK ) begin
+        if (RST) begin
+            recvstate <= 0;
+        end else begin
+            case (recvstate)
+                sidle: begin
+                    if ((rx == 0)) begin
+                        recvstate <= sstart;
+                    end
+                end
+                sstart: begin
+                    if (((recvstate == sstart) && ((cyclecount == 433) && (rx == 1)))) begin
+                        recvstate <= sidle;
+                    end else if ((cyclecount == 32'd867)) begin
+                        recvstate <= sdata;
+                    end
+                end
+                sdata: begin
+                    if (((cyclecount == 32'd867) & (bitcount == 3'd7))) begin
+                        recvstate <= sstop;
+                    end
+                end
+                sstop: begin
+                    if (((cyclecount == 433) & (~nextbyte))) begin
+                        recvstate <= sidle;
+                    end else if (((cyclecount == 433) & nextbyte)) begin
+                        recvstate <= sstart;
+                    end
+                end
+            endcase
+        end
+    end
+    always_comb begin
+        nextbyte = (rx == 0);
+    end
+    always_ff @( posedge CLK ) begin
+        if (RST) begin
+            bitcount <= 0;
+            cyclecount <= 0;
+        end else begin
+            if (((recvstate == sstart) && ((cyclecount == 433) && (rx == 1)))) begin
+                cyclecount <= 0;
+            end else if (((recvstate == sstop) && (cyclecount == 433))) begin
+                cyclecount <= 0;
+            end else if ((cyclecount == 867)) begin
+                cyclecount <= 0;
+            end else begin
+                if ((~(recvstate == sidle))) begin
+                    cyclecount <= (cyclecount + 1);
+                end
+            end
+            if (((cyclecount == 32'd867) & (recvstate == sdata))) begin
+                bitcount <= (bitcount + 1);
+            end
+        end
+    end
+    always_ff @( posedge CLK ) begin
+        if (RST) begin
+            dout <= 0;
+        end else begin
+            if (((cyclecount == 433) & (recvstate == sdata))) begin
+                dout[bitcount] <= rx;
+            end else if (((cyclecount == 433) & (recvstate == sstart))) begin
+                dout <= 0;
+            end
+        end
+    end
+    always_comb begin
+        outValid = ((recvstate == sstop) & (cyclecount == 433));
+    end
+endmodule
+module CoreWrite (
+    input wAddrValid,
+    output logic wAddrUpdate,
+    input [12:0] wAddrIn,
+    input rAddrValid,
+    output logic rAddrUpdate,
+    input [12:0] rAddrIn,
+    input wDataValid,
+    output logic wDataUpdate,
+    input [31:0] wDataIn,
+    output logic [31:0] rDataOut,
+    output logic rDataValid,
+    input rDataUpdate,
+    input strbValid,
+    output logic strbUpdate,
+    input [3:0] strbIn,
+    output logic [12:0] araddr,
+    input arready,
+    output logic arvalid,
+    output logic [12:0] awaddr,
+    input awready,
+    output logic awvalid,
+    output logic bready,
+    input [1:0] bresp,
+    input bvalid,
+    output logic [31:0] wdata,
+    output logic [3:0] wstrb,
+    output logic wvalid,
+    input wready,
+    output logic rready,
+    input rvalid,
+    input [31:0] rdata,
+    input [1:0] rresp,
+    input CLK,
+    input RST
+);
+    always_comb begin
+        awaddr = wAddrIn;
+        wdata = wDataIn;
+        wstrb = strbIn;
+        wvalid = (strbValid & wDataValid);
+        wDataUpdate = (wready & strbValid);
+        strbUpdate = (wready & wDataValid);
+        awvalid = wAddrValid;
+        wAddrUpdate = awready;
+        bready = 1;
+        araddr = rAddrIn;
+        arvalid = rAddrValid;
+        rAddrUpdate = arready;
+        rready = rDataUpdate;
+        rDataValid = rvalid;
+        rDataOut = rdata;
+    end
+endmodule
+module UartSend_etherBypass (
+    input [7:0] din,
+    output logic tx,
+    input inValid,
+    output logic inUpdate,
+    input CLK,
+    input RST
+);
+    localparam sidle = 0;
+    localparam sstart = 1;
+    localparam sdata = 2;
+    localparam sstop = 3;
+
+    reg [1:0] sendstate;
+    logic [7:0] dbuf;
+    logic acceptNext;
+    logic [2:0] bitcount;
+    logic [31:0] cyclecount;
+
+    always_ff @( posedge CLK ) begin
+        if (RST) begin
+            sendstate <= 0;
+        end else begin
+            case (sendstate)
+                sidle: begin
+                    if (inValid) begin
+                        sendstate <= sstart;
+                    end
+                end
+                sstart: begin
+                    if ((cyclecount == 32'd867)) begin
+                        sendstate <= sdata;
+                    end
+                end
+                sdata: begin
+                    if (((cyclecount == 32'd867) & (bitcount == 3'd7))) begin
+                        sendstate <= sstop;
+                    end
+                end
+                sstop: begin
+                    if (((cyclecount == 32'd867) & (~acceptNext))) begin
+                        sendstate <= sidle;
+                    end else if (((cyclecount == 32'd867) & acceptNext)) begin
+                        sendstate <= sstart;
+                    end
+                end
+            endcase
+        end
+    end
+    always_ff @( posedge CLK ) begin
+        if (RST) begin
+            bitcount <= 0;
+            cyclecount <= 0;
+        end else begin
+            if ((cyclecount == 867)) begin
+                cyclecount <= 0;
+            end else begin
+                if ((~(sendstate == sidle))) begin
+                    cyclecount <= (cyclecount + 1);
+                end
+            end
+            if (((cyclecount == 32'd867) & (sendstate == sdata))) begin
+                bitcount <= (bitcount + 1);
+            end
+        end
+    end
+    always_comb begin
+        acceptNext = 0;
+        if (inValid) begin
+            if ((sendstate == sidle)) begin
+                acceptNext = 1;
+            end else if (((sendstate == sstop) && (cyclecount == 867))) begin
+                acceptNext = 1;
+            end
+        end
+    end
+    always_ff @( posedge CLK ) begin
+        if (RST) begin
+            dbuf <= 0;
+        end else begin
+            if (acceptNext) begin
+                dbuf <= din;
+            end
+        end
+    end
+    always_comb begin
+        tx = 1;
+        if ((sendstate == sstart)) begin
+            tx = 0;
+        end else if ((sendstate == sdata)) begin
+            tx = dbuf[bitcount];
+        end
+    end
+    always_comb begin
+        inUpdate = (((sendstate == sstop) && (cyclecount == 867)) || (sendstate == sidle));
+    end
+endmodule
+module fifoForUart (
+    input inValid,
+    input outUpdate,
+    input [7:0] din,
+    output logic [7:0] dout,
+    output logic outValid,
+    input CLK,
+    input RST
+);
+    reg [7:0] _ram_fifoPatch_361 [511:0];
+    logic [8:0] _wptr_fifoPatch_361;
+    logic [7:0] _dout_fifoPatch_361;
+    logic [8:0] _rptr_fifoPatch_361;
+    logic _empty_fifoPatch_361;
+    logic _full_fifoPatch_361;
+    logic [7:0] _doutRam_fifoPatch_361;
+    logic [8:0] _prevwptr_fifoPatch_361;
+    logic _wincr_fifoPatch_361;
+    logic _outvalid_fifoPatch_361;
+    logic _rincr_fifoPatch_361;
+    logic [8:0] _rptrComb_fifoPatch_361;
+    logic [7:0] _doutBypassed_fifoPatch_361;
+    logic _inready_fifoPatch_361;
 
     always_comb begin
-        _empty_fifoPatch_4 = (_wptr_fifoPatch_4 == _rptr_fifoPatch_4);
-        _full_fifoPatch_4 = ((_wptr_fifoPatch_4 + 8'd1) == _rptr_fifoPatch_4);
+        _empty_fifoPatch_361 = (_wptr_fifoPatch_361 == _rptr_fifoPatch_361);
+        _full_fifoPatch_361 = ((_wptr_fifoPatch_361 + 9'd1) == _rptr_fifoPatch_361);
     end
     always_comb begin
-        _rptrComb_fifoPatch_4 = _rptr_fifoPatch_4;
-        if ((_wincr_fifoPatch_4 && (~_full_fifoPatch_4))) begin
+        _rptrComb_fifoPatch_361 = _rptr_fifoPatch_361;
+        if ((_wincr_fifoPatch_361 && (~_full_fifoPatch_361))) begin
             
         end
-        if ((_rincr_fifoPatch_4 && (~_empty_fifoPatch_4))) begin
-            _rptrComb_fifoPatch_4 = (_rptr_fifoPatch_4 + 8'd1);
+        if ((_rincr_fifoPatch_361 && (~_empty_fifoPatch_361))) begin
+            _rptrComb_fifoPatch_361 = (_rptr_fifoPatch_361 + 9'd1);
         end
     end
     always_ff @( posedge CLK ) begin
         if (RST) begin
-            _prevwptr_fifoPatch_4 <= 0;
-            _rptr_fifoPatch_4 <= 0;
-            _wptr_fifoPatch_4 <= 0;
+            _prevwptr_fifoPatch_361 <= 0;
+            _rptr_fifoPatch_361 <= 0;
+            _wptr_fifoPatch_361 <= 0;
         end else begin
-            _prevwptr_fifoPatch_4 <= _wptr_fifoPatch_4;
-            if ((_wincr_fifoPatch_4 && (~_full_fifoPatch_4))) begin
-                _wptr_fifoPatch_4 <= (_wptr_fifoPatch_4 + 8'd1);
+            _prevwptr_fifoPatch_361 <= _wptr_fifoPatch_361;
+            if ((_wincr_fifoPatch_361 && (~_full_fifoPatch_361))) begin
+                _wptr_fifoPatch_361 <= (_wptr_fifoPatch_361 + 9'd1);
             end
-            if ((_rincr_fifoPatch_4 && (~_empty_fifoPatch_4))) begin
-                _rptr_fifoPatch_4 <= (_rptr_fifoPatch_4 + 8'd1);
+            if ((_rincr_fifoPatch_361 && (~_empty_fifoPatch_361))) begin
+                _rptr_fifoPatch_361 <= (_rptr_fifoPatch_361 + 9'd1);
             end
         end
     end
     always_ff @( posedge CLK ) begin
         if (RST) begin
-            _doutRam_fifoPatch_4 <= 0;
+            _doutRam_fifoPatch_361 <= 0;
         end else begin
-            _doutRam_fifoPatch_4 <= _ram_fifoPatch_4[_rptrComb_fifoPatch_4];
+            _doutRam_fifoPatch_361 <= _ram_fifoPatch_361[_rptrComb_fifoPatch_361];
         end
     end
     always_comb begin
-        if ((_prevwptr_fifoPatch_4 == _rptr_fifoPatch_4)) begin
-            _dout_fifoPatch_4 = _doutBypassed_fifoPatch_4;
+        if ((_prevwptr_fifoPatch_361 == _rptr_fifoPatch_361)) begin
+            _dout_fifoPatch_361 = _doutBypassed_fifoPatch_361;
         end else begin
-            _dout_fifoPatch_4 = _doutRam_fifoPatch_4;
+            _dout_fifoPatch_361 = _doutRam_fifoPatch_361;
         end
     end
     always_ff @( posedge CLK ) begin
         if (RST) begin
-            _doutBypassed_fifoPatch_4 <= 0;
+            _doutBypassed_fifoPatch_361 <= 0;
         end else begin
-            _doutBypassed_fifoPatch_4 <= din;
-            if ((_prevwptr_fifoPatch_4 == _rptr_fifoPatch_4)) begin
+            _doutBypassed_fifoPatch_361 <= din;
+            if ((_prevwptr_fifoPatch_361 == _rptr_fifoPatch_361)) begin
                 
             end else begin
                 
@@ -441,21 +715,154 @@ module AsciiEncoder_fifo (
         end
     end
     always_ff @( posedge CLK ) begin
-        if ((_wincr_fifoPatch_4 && (~_full_fifoPatch_4))) begin
-            _ram_fifoPatch_4[_wptr_fifoPatch_4] <= din;
+        if ((_wincr_fifoPatch_361 && (~_full_fifoPatch_361))) begin
+            _ram_fifoPatch_361[_wptr_fifoPatch_361] <= din;
         end
     end
     always_comb begin
-        _outvalid_fifoPatch_4 = (~_empty_fifoPatch_4);
-        _rincr_fifoPatch_4 = outUpdate;
-        _inready_fifoPatch_4 = (~_full_fifoPatch_4);
-        _wincr_fifoPatch_4 = inValid;
+        _outvalid_fifoPatch_361 = (~_empty_fifoPatch_361);
+        _rincr_fifoPatch_361 = outUpdate;
+        _inready_fifoPatch_361 = (~_full_fifoPatch_361);
+        _wincr_fifoPatch_361 = inValid;
     end
     always_comb begin
-        outValid = _outvalid_fifoPatch_4;
+        outValid = _outvalid_fifoPatch_361;
+        dout = _dout_fifoPatch_361;
+    end
+endmodule
+module AsciiEncoder_fifo (
+    input [119:0] din,
+    input inValid,
+    output logic outValid,
+    input outUpdate,
+    output logic [119:0] dout,
+    input CLK,
+    input RST
+);
+    reg [119:0] _ram_fifoPatch_363 [255:0];
+    logic [119:0] _doutRam_fifoPatch_363;
+    logic [7:0] _prevwptr_fifoPatch_363;
+    logic [7:0] _wptr_fifoPatch_363;
+    logic _rincr_fifoPatch_363;
+    logic [119:0] _dout_fifoPatch_363;
+    logic _outvalid_fifoPatch_363;
+    logic _wincr_fifoPatch_363;
+    logic [7:0] _rptr_fifoPatch_363;
+    logic _full_fifoPatch_363;
+    logic _empty_fifoPatch_363;
+    logic [119:0] _doutBypassed_fifoPatch_363;
+    logic [7:0] _rptrComb_fifoPatch_363;
+    logic _inready_fifoPatch_363;
+
+    always_comb begin
+        _empty_fifoPatch_363 = (_wptr_fifoPatch_363 == _rptr_fifoPatch_363);
+        _full_fifoPatch_363 = ((_wptr_fifoPatch_363 + 8'd1) == _rptr_fifoPatch_363);
     end
     always_comb begin
-        dout = _dout_fifoPatch_4;
+        _rptrComb_fifoPatch_363 = _rptr_fifoPatch_363;
+        if ((_wincr_fifoPatch_363 && (~_full_fifoPatch_363))) begin
+            
+        end
+        if ((_rincr_fifoPatch_363 && (~_empty_fifoPatch_363))) begin
+            _rptrComb_fifoPatch_363 = (_rptr_fifoPatch_363 + 8'd1);
+        end
+    end
+    always_ff @( posedge CLK ) begin
+        if (RST) begin
+            _prevwptr_fifoPatch_363 <= 0;
+            _rptr_fifoPatch_363 <= 0;
+            _wptr_fifoPatch_363 <= 0;
+        end else begin
+            _prevwptr_fifoPatch_363 <= _wptr_fifoPatch_363;
+            if ((_wincr_fifoPatch_363 && (~_full_fifoPatch_363))) begin
+                _wptr_fifoPatch_363 <= (_wptr_fifoPatch_363 + 8'd1);
+            end
+            if ((_rincr_fifoPatch_363 && (~_empty_fifoPatch_363))) begin
+                _rptr_fifoPatch_363 <= (_rptr_fifoPatch_363 + 8'd1);
+            end
+        end
+    end
+    always_ff @( posedge CLK ) begin
+        if (RST) begin
+            _doutRam_fifoPatch_363 <= 0;
+        end else begin
+            _doutRam_fifoPatch_363 <= _ram_fifoPatch_363[_rptrComb_fifoPatch_363];
+        end
+    end
+    always_comb begin
+        if ((_prevwptr_fifoPatch_363 == _rptr_fifoPatch_363)) begin
+            _dout_fifoPatch_363 = _doutBypassed_fifoPatch_363;
+        end else begin
+            _dout_fifoPatch_363 = _doutRam_fifoPatch_363;
+        end
+    end
+    always_ff @( posedge CLK ) begin
+        if (RST) begin
+            _doutBypassed_fifoPatch_363 <= 0;
+        end else begin
+            _doutBypassed_fifoPatch_363 <= din;
+            if ((_prevwptr_fifoPatch_363 == _rptr_fifoPatch_363)) begin
+                
+            end else begin
+                
+            end
+        end
+    end
+    always_ff @( posedge CLK ) begin
+        if ((_wincr_fifoPatch_363 && (~_full_fifoPatch_363))) begin
+            _ram_fifoPatch_363[_wptr_fifoPatch_363] <= din;
+        end
+    end
+    always_comb begin
+        _outvalid_fifoPatch_363 = (~_empty_fifoPatch_363);
+        _rincr_fifoPatch_363 = outUpdate;
+        _inready_fifoPatch_363 = (~_full_fifoPatch_363);
+        _wincr_fifoPatch_363 = inValid;
+    end
+    always_comb begin
+        outValid = _outvalid_fifoPatch_363;
+    end
+    always_comb begin
+        dout = _dout_fifoPatch_363;
+    end
+endmodule
+module AsciiEncoder_source (
+    input [7:0] opcode,
+    input [15:0] addrData,
+    input [31:0] data,
+    input inValid,
+    output logic outValid,
+    output logic [119:0] dout,
+    input CLK,
+    input RST
+);
+    logic [119:0] _result_wireConcat_362;
+    logic resetCount;
+    logic [63:0] counter;
+
+    always_ff @( posedge CLK ) begin
+        if (RST) begin
+            counter <= 0;
+        end else begin
+            if (resetCount) begin
+                counter <= 0;
+            end else if (inValid) begin
+                counter <= (counter + 64'd1);
+            end
+        end
+    end
+    always_comb begin
+        resetCount = 1'd0;
+        outValid = inValid;
+    end
+    always_comb begin
+        _result_wireConcat_362[63:0] = counter;
+        _result_wireConcat_362[71:64] = opcode;
+        _result_wireConcat_362[87:72] = addrData;
+        _result_wireConcat_362[119:88] = data;
+    end
+    always_comb begin
+        dout = _result_wireConcat_362;
     end
 endmodule
 module WidthIntermediate (
@@ -468,486 +875,15 @@ module WidthIntermediate (
         addrOut = addrIn[12:0];
     end
 endmodule
-module AsciiEncoder_encodeToByteStream (
-    input [111:0] din,
-    output logic [7:0] dout,
-    output logic inUpdate,
-    input inValid,
-    output logic outValid,
-    input outUpdate,
+module StrbSrc (
+    output logic valid,
+    output logic [3:0] dout,
     input CLK,
     input RST
 );
-    logic [127:0] _result_binaryToHex_8;
-    logic [31:0] _result_binaryToHex_25;
-    logic [63:0] _result_binaryToHex_30;
-    logic [239:0] _joinwith_asciiSpace_7;
-    logic [255:0] totalWord;
-    logic [31:0] _wire3_wireUnpack_6;
-    logic [7:0] _extended_nibbleToHex_24;
-    logic [7:0] _extended_nibbleToHex_12;
-    logic [31:0] _extended_binaryToHex_30;
-    logic [7:0] _ans_nibbleToHex_27;
-    logic [7:0] _extended_nibbleToHex_38;
-    logic [7:0] _ans_nibbleToHex_26;
-    logic [7:0] _extended_nibbleToHex_10;
-    logic [7:0] _extended_nibbleToHex_32;
-    logic [7:0] _ans_nibbleToHex_23;
-    logic [7:0] _extended_nibbleToHex_36;
-    logic requestToUpperContinue;
-    logic [7:0] _extended_nibbleToHex_14;
-    logic [7:0] _extended_nibbleToHex_35;
-    logic [111:0] _buffer_interceptBuffer_5;
-    logic [7:0] _extended_nibbleToHex_9;
-    logic [7:0] _extended_nibbleToHex_27;
-    logic [7:0] _ans_nibbleToHex_36;
-    logic initProcess;
-    logic lastByte;
-    logic [7:0] _ans_nibbleToHex_15;
-    logic [7:0] _ans_nibbleToHex_21;
-    logic [7:0] _extended_nibbleToHex_34;
-    logic [31:0] byteCounter;
-    logic [7:0] _extended_nibbleToHex_15;
-    logic [7:0] _ans_nibbleToHex_33;
-    logic [7:0] _ans_nibbleToHex_37;
-    logic [7:0] _ans_nibbleToHex_14;
-    logic [7:0] _ans_nibbleToHex_16;
-    logic [7:0] _extended_nibbleToHex_28;
-    logic [7:0] _extended_nibbleToHex_20;
-    logic [15:0] _extended_binaryToHex_25;
-    logic [7:0] _extended_nibbleToHex_26;
-    logic [7:0] _extended_nibbleToHex_22;
-    logic [7:0] _extended_nibbleToHex_23;
-    logic working;
-    logic [7:0] _ans_nibbleToHex_34;
-    logic [7:0] _ans_nibbleToHex_12;
-    logic [7:0] _extended_nibbleToHex_11;
-    logic [7:0] _extended_nibbleToHex_19;
-    logic [7:0] _ans_nibbleToHex_9;
-    logic [7:0] _extended_nibbleToHex_31;
-    logic [7:0] _ans_nibbleToHex_17;
-    logic [7:0] _extended_nibbleToHex_33;
-    logic [7:0] _ans_nibbleToHex_28;
-    logic [7:0] _extended_nibbleToHex_13;
-    logic [7:0] _ans_nibbleToHex_24;
-    logic [7:0] _ans_nibbleToHex_35;
-    logic [7:0] _ans_nibbleToHex_18;
-    logic [7:0] _extended_nibbleToHex_16;
-    logic [111:0] _interceptBuffer_5;
-    logic [7:0] _extended_nibbleToHex_29;
-    logic [7:0] _ans_nibbleToHex_38;
-    logic [7:0] _ans_nibbleToHex_10;
-    logic [7:0] _ans_nibbleToHex_29;
-    logic [7:0] _ans_nibbleToHex_31;
-    logic [7:0] _ans_nibbleToHex_19;
-    logic [63:0] _extended_binaryToHex_8;
-    logic [7:0] _ans_nibbleToHex_20;
-    logic [7:0] _ans_nibbleToHex_22;
-    logic [7:0] _ans_nibbleToHex_13;
-    logic [7:0] _ans_nibbleToHex_32;
-    logic [63:0] _wire1_wireUnpack_6;
-    logic [7:0] _extended_nibbleToHex_37;
-    logic [7:0] _ans_nibbleToHex_11;
-    logic [7:0] _extended_nibbleToHex_17;
-    logic [7:0] _extended_nibbleToHex_18;
-    logic [7:0] _extended_nibbleToHex_21;
-    logic [15:0] _wire2_wireUnpack_6;
-
     always_comb begin
-        if ((inUpdate & inValid)) begin
-            _interceptBuffer_5 = din;
-        end else begin
-            _interceptBuffer_5 = _buffer_interceptBuffer_5;
-        end
-    end
-    always_ff @( posedge CLK ) begin
-        if (RST) begin
-            _buffer_interceptBuffer_5 <= 0;
-        end else begin
-            if ((inUpdate & inValid)) begin
-                _buffer_interceptBuffer_5 <= din;
-            end else begin
-                
-            end
-        end
-    end
-    always_comb begin
-        _wire1_wireUnpack_6 = _interceptBuffer_5[63:0];
-        _wire2_wireUnpack_6 = _interceptBuffer_5[79:64];
-        _wire3_wireUnpack_6 = _interceptBuffer_5[111:80];
-    end
-    always_comb begin
-        _extended_binaryToHex_8 = 64'd0;
-        _extended_binaryToHex_8[63:0] = _wire1_wireUnpack_6;
-    end
-    always_comb begin
-        _extended_nibbleToHex_9 = 8'd0;
-        _extended_nibbleToHex_9[3:0] = _extended_binaryToHex_8[3:0];
-        if ((_extended_binaryToHex_8[3:0] < 10)) begin
-            _ans_nibbleToHex_9 = (_extended_nibbleToHex_9 + 48);
-        end else begin
-            _ans_nibbleToHex_9 = (_extended_nibbleToHex_9 + 55);
-        end
-    end
-    always_comb begin
-        _extended_nibbleToHex_10 = 8'd0;
-        _extended_nibbleToHex_10[3:0] = _extended_binaryToHex_8[7:4];
-        if ((_extended_binaryToHex_8[7:4] < 10)) begin
-            _ans_nibbleToHex_10 = (_extended_nibbleToHex_10 + 48);
-        end else begin
-            _ans_nibbleToHex_10 = (_extended_nibbleToHex_10 + 55);
-        end
-    end
-    always_comb begin
-        _extended_nibbleToHex_11 = 8'd0;
-        _extended_nibbleToHex_11[3:0] = _extended_binaryToHex_8[11:8];
-        if ((_extended_binaryToHex_8[11:8] < 10)) begin
-            _ans_nibbleToHex_11 = (_extended_nibbleToHex_11 + 48);
-        end else begin
-            _ans_nibbleToHex_11 = (_extended_nibbleToHex_11 + 55);
-        end
-    end
-    always_comb begin
-        _extended_nibbleToHex_12 = 8'd0;
-        _extended_nibbleToHex_12[3:0] = _extended_binaryToHex_8[15:12];
-        if ((_extended_binaryToHex_8[15:12] < 10)) begin
-            _ans_nibbleToHex_12 = (_extended_nibbleToHex_12 + 48);
-        end else begin
-            _ans_nibbleToHex_12 = (_extended_nibbleToHex_12 + 55);
-        end
-    end
-    always_comb begin
-        _extended_nibbleToHex_13 = 8'd0;
-        _extended_nibbleToHex_13[3:0] = _extended_binaryToHex_8[19:16];
-        if ((_extended_binaryToHex_8[19:16] < 10)) begin
-            _ans_nibbleToHex_13 = (_extended_nibbleToHex_13 + 48);
-        end else begin
-            _ans_nibbleToHex_13 = (_extended_nibbleToHex_13 + 55);
-        end
-    end
-    always_comb begin
-        _extended_nibbleToHex_14 = 8'd0;
-        _extended_nibbleToHex_14[3:0] = _extended_binaryToHex_8[23:20];
-        if ((_extended_binaryToHex_8[23:20] < 10)) begin
-            _ans_nibbleToHex_14 = (_extended_nibbleToHex_14 + 48);
-        end else begin
-            _ans_nibbleToHex_14 = (_extended_nibbleToHex_14 + 55);
-        end
-    end
-    always_comb begin
-        _extended_nibbleToHex_15 = 8'd0;
-        _extended_nibbleToHex_15[3:0] = _extended_binaryToHex_8[27:24];
-        if ((_extended_binaryToHex_8[27:24] < 10)) begin
-            _ans_nibbleToHex_15 = (_extended_nibbleToHex_15 + 48);
-        end else begin
-            _ans_nibbleToHex_15 = (_extended_nibbleToHex_15 + 55);
-        end
-    end
-    always_comb begin
-        _extended_nibbleToHex_16 = 8'd0;
-        _extended_nibbleToHex_16[3:0] = _extended_binaryToHex_8[31:28];
-        if ((_extended_binaryToHex_8[31:28] < 10)) begin
-            _ans_nibbleToHex_16 = (_extended_nibbleToHex_16 + 48);
-        end else begin
-            _ans_nibbleToHex_16 = (_extended_nibbleToHex_16 + 55);
-        end
-    end
-    always_comb begin
-        _extended_nibbleToHex_17 = 8'd0;
-        _extended_nibbleToHex_17[3:0] = _extended_binaryToHex_8[35:32];
-        if ((_extended_binaryToHex_8[35:32] < 10)) begin
-            _ans_nibbleToHex_17 = (_extended_nibbleToHex_17 + 48);
-        end else begin
-            _ans_nibbleToHex_17 = (_extended_nibbleToHex_17 + 55);
-        end
-    end
-    always_comb begin
-        _extended_nibbleToHex_18 = 8'd0;
-        _extended_nibbleToHex_18[3:0] = _extended_binaryToHex_8[39:36];
-        if ((_extended_binaryToHex_8[39:36] < 10)) begin
-            _ans_nibbleToHex_18 = (_extended_nibbleToHex_18 + 48);
-        end else begin
-            _ans_nibbleToHex_18 = (_extended_nibbleToHex_18 + 55);
-        end
-    end
-    always_comb begin
-        _extended_nibbleToHex_19 = 8'd0;
-        _extended_nibbleToHex_19[3:0] = _extended_binaryToHex_8[43:40];
-        if ((_extended_binaryToHex_8[43:40] < 10)) begin
-            _ans_nibbleToHex_19 = (_extended_nibbleToHex_19 + 48);
-        end else begin
-            _ans_nibbleToHex_19 = (_extended_nibbleToHex_19 + 55);
-        end
-    end
-    always_comb begin
-        _extended_nibbleToHex_20 = 8'd0;
-        _extended_nibbleToHex_20[3:0] = _extended_binaryToHex_8[47:44];
-        if ((_extended_binaryToHex_8[47:44] < 10)) begin
-            _ans_nibbleToHex_20 = (_extended_nibbleToHex_20 + 48);
-        end else begin
-            _ans_nibbleToHex_20 = (_extended_nibbleToHex_20 + 55);
-        end
-    end
-    always_comb begin
-        _extended_nibbleToHex_21 = 8'd0;
-        _extended_nibbleToHex_21[3:0] = _extended_binaryToHex_8[51:48];
-        if ((_extended_binaryToHex_8[51:48] < 10)) begin
-            _ans_nibbleToHex_21 = (_extended_nibbleToHex_21 + 48);
-        end else begin
-            _ans_nibbleToHex_21 = (_extended_nibbleToHex_21 + 55);
-        end
-    end
-    always_comb begin
-        _extended_nibbleToHex_22 = 8'd0;
-        _extended_nibbleToHex_22[3:0] = _extended_binaryToHex_8[55:52];
-        if ((_extended_binaryToHex_8[55:52] < 10)) begin
-            _ans_nibbleToHex_22 = (_extended_nibbleToHex_22 + 48);
-        end else begin
-            _ans_nibbleToHex_22 = (_extended_nibbleToHex_22 + 55);
-        end
-    end
-    always_comb begin
-        _extended_nibbleToHex_23 = 8'd0;
-        _extended_nibbleToHex_23[3:0] = _extended_binaryToHex_8[59:56];
-        if ((_extended_binaryToHex_8[59:56] < 10)) begin
-            _ans_nibbleToHex_23 = (_extended_nibbleToHex_23 + 48);
-        end else begin
-            _ans_nibbleToHex_23 = (_extended_nibbleToHex_23 + 55);
-        end
-    end
-    always_comb begin
-        _extended_nibbleToHex_24 = 8'd0;
-        _extended_nibbleToHex_24[3:0] = _extended_binaryToHex_8[63:60];
-        if ((_extended_binaryToHex_8[63:60] < 10)) begin
-            _ans_nibbleToHex_24 = (_extended_nibbleToHex_24 + 48);
-        end else begin
-            _ans_nibbleToHex_24 = (_extended_nibbleToHex_24 + 55);
-        end
-    end
-    always_comb begin
-        _result_binaryToHex_8[127:120] = _ans_nibbleToHex_9;
-        _result_binaryToHex_8[119:112] = _ans_nibbleToHex_10;
-        _result_binaryToHex_8[111:104] = _ans_nibbleToHex_11;
-        _result_binaryToHex_8[103:96] = _ans_nibbleToHex_12;
-        _result_binaryToHex_8[95:88] = _ans_nibbleToHex_13;
-        _result_binaryToHex_8[87:80] = _ans_nibbleToHex_14;
-        _result_binaryToHex_8[79:72] = _ans_nibbleToHex_15;
-        _result_binaryToHex_8[71:64] = _ans_nibbleToHex_16;
-        _result_binaryToHex_8[63:56] = _ans_nibbleToHex_17;
-        _result_binaryToHex_8[55:48] = _ans_nibbleToHex_18;
-        _result_binaryToHex_8[47:40] = _ans_nibbleToHex_19;
-        _result_binaryToHex_8[39:32] = _ans_nibbleToHex_20;
-        _result_binaryToHex_8[31:24] = _ans_nibbleToHex_21;
-        _result_binaryToHex_8[23:16] = _ans_nibbleToHex_22;
-        _result_binaryToHex_8[15:8] = _ans_nibbleToHex_23;
-        _result_binaryToHex_8[7:0] = _ans_nibbleToHex_24;
-    end
-    always_comb begin
-        _extended_binaryToHex_25 = 16'd0;
-        _extended_binaryToHex_25[15:0] = _wire2_wireUnpack_6;
-    end
-    always_comb begin
-        _extended_nibbleToHex_26 = 8'd0;
-        _extended_nibbleToHex_26[3:0] = _extended_binaryToHex_25[3:0];
-        if ((_extended_binaryToHex_25[3:0] < 10)) begin
-            _ans_nibbleToHex_26 = (_extended_nibbleToHex_26 + 48);
-        end else begin
-            _ans_nibbleToHex_26 = (_extended_nibbleToHex_26 + 55);
-        end
-    end
-    always_comb begin
-        _extended_nibbleToHex_27 = 8'd0;
-        _extended_nibbleToHex_27[3:0] = _extended_binaryToHex_25[7:4];
-        if ((_extended_binaryToHex_25[7:4] < 10)) begin
-            _ans_nibbleToHex_27 = (_extended_nibbleToHex_27 + 48);
-        end else begin
-            _ans_nibbleToHex_27 = (_extended_nibbleToHex_27 + 55);
-        end
-    end
-    always_comb begin
-        _extended_nibbleToHex_28 = 8'd0;
-        _extended_nibbleToHex_28[3:0] = _extended_binaryToHex_25[11:8];
-        if ((_extended_binaryToHex_25[11:8] < 10)) begin
-            _ans_nibbleToHex_28 = (_extended_nibbleToHex_28 + 48);
-        end else begin
-            _ans_nibbleToHex_28 = (_extended_nibbleToHex_28 + 55);
-        end
-    end
-    always_comb begin
-        _extended_nibbleToHex_29 = 8'd0;
-        _extended_nibbleToHex_29[3:0] = _extended_binaryToHex_25[15:12];
-        if ((_extended_binaryToHex_25[15:12] < 10)) begin
-            _ans_nibbleToHex_29 = (_extended_nibbleToHex_29 + 48);
-        end else begin
-            _ans_nibbleToHex_29 = (_extended_nibbleToHex_29 + 55);
-        end
-    end
-    always_comb begin
-        _result_binaryToHex_25[31:24] = _ans_nibbleToHex_26;
-        _result_binaryToHex_25[23:16] = _ans_nibbleToHex_27;
-        _result_binaryToHex_25[15:8] = _ans_nibbleToHex_28;
-        _result_binaryToHex_25[7:0] = _ans_nibbleToHex_29;
-    end
-    always_comb begin
-        _extended_binaryToHex_30 = 32'd0;
-        _extended_binaryToHex_30[31:0] = _wire3_wireUnpack_6;
-    end
-    always_comb begin
-        _extended_nibbleToHex_31 = 8'd0;
-        _extended_nibbleToHex_31[3:0] = _extended_binaryToHex_30[3:0];
-        if ((_extended_binaryToHex_30[3:0] < 10)) begin
-            _ans_nibbleToHex_31 = (_extended_nibbleToHex_31 + 48);
-        end else begin
-            _ans_nibbleToHex_31 = (_extended_nibbleToHex_31 + 55);
-        end
-    end
-    always_comb begin
-        _extended_nibbleToHex_32 = 8'd0;
-        _extended_nibbleToHex_32[3:0] = _extended_binaryToHex_30[7:4];
-        if ((_extended_binaryToHex_30[7:4] < 10)) begin
-            _ans_nibbleToHex_32 = (_extended_nibbleToHex_32 + 48);
-        end else begin
-            _ans_nibbleToHex_32 = (_extended_nibbleToHex_32 + 55);
-        end
-    end
-    always_comb begin
-        _extended_nibbleToHex_33 = 8'd0;
-        _extended_nibbleToHex_33[3:0] = _extended_binaryToHex_30[11:8];
-        if ((_extended_binaryToHex_30[11:8] < 10)) begin
-            _ans_nibbleToHex_33 = (_extended_nibbleToHex_33 + 48);
-        end else begin
-            _ans_nibbleToHex_33 = (_extended_nibbleToHex_33 + 55);
-        end
-    end
-    always_comb begin
-        _extended_nibbleToHex_34 = 8'd0;
-        _extended_nibbleToHex_34[3:0] = _extended_binaryToHex_30[15:12];
-        if ((_extended_binaryToHex_30[15:12] < 10)) begin
-            _ans_nibbleToHex_34 = (_extended_nibbleToHex_34 + 48);
-        end else begin
-            _ans_nibbleToHex_34 = (_extended_nibbleToHex_34 + 55);
-        end
-    end
-    always_comb begin
-        _extended_nibbleToHex_35 = 8'd0;
-        _extended_nibbleToHex_35[3:0] = _extended_binaryToHex_30[19:16];
-        if ((_extended_binaryToHex_30[19:16] < 10)) begin
-            _ans_nibbleToHex_35 = (_extended_nibbleToHex_35 + 48);
-        end else begin
-            _ans_nibbleToHex_35 = (_extended_nibbleToHex_35 + 55);
-        end
-    end
-    always_comb begin
-        _extended_nibbleToHex_36 = 8'd0;
-        _extended_nibbleToHex_36[3:0] = _extended_binaryToHex_30[23:20];
-        if ((_extended_binaryToHex_30[23:20] < 10)) begin
-            _ans_nibbleToHex_36 = (_extended_nibbleToHex_36 + 48);
-        end else begin
-            _ans_nibbleToHex_36 = (_extended_nibbleToHex_36 + 55);
-        end
-    end
-    always_comb begin
-        _extended_nibbleToHex_37 = 8'd0;
-        _extended_nibbleToHex_37[3:0] = _extended_binaryToHex_30[27:24];
-        if ((_extended_binaryToHex_30[27:24] < 10)) begin
-            _ans_nibbleToHex_37 = (_extended_nibbleToHex_37 + 48);
-        end else begin
-            _ans_nibbleToHex_37 = (_extended_nibbleToHex_37 + 55);
-        end
-    end
-    always_comb begin
-        _extended_nibbleToHex_38 = 8'd0;
-        _extended_nibbleToHex_38[3:0] = _extended_binaryToHex_30[31:28];
-        if ((_extended_binaryToHex_30[31:28] < 10)) begin
-            _ans_nibbleToHex_38 = (_extended_nibbleToHex_38 + 48);
-        end else begin
-            _ans_nibbleToHex_38 = (_extended_nibbleToHex_38 + 55);
-        end
-    end
-    always_comb begin
-        _result_binaryToHex_30[63:56] = _ans_nibbleToHex_31;
-        _result_binaryToHex_30[55:48] = _ans_nibbleToHex_32;
-        _result_binaryToHex_30[47:40] = _ans_nibbleToHex_33;
-        _result_binaryToHex_30[39:32] = _ans_nibbleToHex_34;
-        _result_binaryToHex_30[31:24] = _ans_nibbleToHex_35;
-        _result_binaryToHex_30[23:16] = _ans_nibbleToHex_36;
-        _result_binaryToHex_30[15:8] = _ans_nibbleToHex_37;
-        _result_binaryToHex_30[7:0] = _ans_nibbleToHex_38;
-    end
-    always_comb begin
-        _joinwith_asciiSpace_7[127:0] = _result_binaryToHex_8;
-        _joinwith_asciiSpace_7[167:136] = _result_binaryToHex_25;
-        _joinwith_asciiSpace_7[239:176] = _result_binaryToHex_30;
-        _joinwith_asciiSpace_7[135:128] = 32;
-        _joinwith_asciiSpace_7[175:168] = 32;
-    end
-    always_comb begin
-        lastByte = (byteCounter == 31);
-        totalWord[239:0] = _joinwith_asciiSpace_7;
-        totalWord[247:240] = 13;
-        totalWord[255:248] = 10;
-        dout = totalWord[((byteCounter << 3) + 7) -: 8];
-        outValid = working;
-        inUpdate = 0;
-        if ((outValid & outUpdate)) begin
-            if (lastByte) begin
-                
-            end else begin
-                
-            end
-        end
-        if ((inValid & inUpdate)) begin
-            
-        end else if ((lastByte && (outValid & outUpdate))) begin
-            
-        end
-        if ((inUpdate & inValid)) begin
-            
-        end
-        if ((lastByte && (outValid & outUpdate))) begin
-            inUpdate = 1;
-            if ((~inValid)) begin
-                
-            end
-        end else if ((requestToUpperContinue || (~initProcess))) begin
-            inUpdate = 1;
-            if (inValid) begin
-                
-            end
-        end
-    end
-    always_ff @( posedge CLK ) begin
-        if (RST) begin
-            byteCounter <= 0;
-            initProcess <= 0;
-            requestToUpperContinue <= 0;
-            working <= 0;
-        end else begin
-            if ((outValid & outUpdate)) begin
-                if (lastByte) begin
-                    byteCounter <= 32'd0;
-                end else begin
-                    byteCounter <= (byteCounter + 1);
-                end
-            end
-            if ((inValid & inUpdate)) begin
-                working <= 1'd1;
-            end else if ((lastByte && (outValid & outUpdate))) begin
-                working <= 0;
-            end
-            if ((inUpdate & inValid)) begin
-                initProcess <= 1'd1;
-            end
-            if ((lastByte && (outValid & outUpdate))) begin
-                if ((~inValid)) begin
-                    requestToUpperContinue <= 1'd1;
-                end
-            end else if ((requestToUpperContinue || (~initProcess))) begin
-                if (inValid) begin
-                    requestToUpperContinue <= 0;
-                end
-            end
-        end
+        valid = 1;
+        dout = (~0);
     end
 endmodule
 module AxiControl (
@@ -1048,337 +984,93 @@ module AxiControl (
         end
     end
 endmodule
-module StrbSrc (
-    output logic valid,
-    output logic [3:0] dout,
-    input CLK,
-    input RST
-);
-    always_comb begin
-        valid = 1;
-        dout = (~0);
-    end
-endmodule
-module UARTSend (
-    input [7:0] din,
-    output logic tx,
-    input inValid,
-    output logic inUpdate,
-    input CLK,
-    input RST
-);
-    localparam sidle = 0;
-    localparam sstart = 1;
-    localparam sdata = 2;
-    localparam sstop = 3;
-
-    reg [1:0] sendstate;
-    logic [7:0] dbuf;
-    logic acceptNext;
-    logic [2:0] bitcount;
-    logic [31:0] cyclecount;
-
-    always_ff @( posedge CLK ) begin
-        if (RST) begin
-            sendstate <= 0;
-        end else begin
-            case (sendstate)
-                sidle: begin
-                    if (inValid) begin
-                        sendstate <= sstart;
-                    end
-                end
-                sstart: begin
-                    if ((cyclecount == 32'd867)) begin
-                        sendstate <= sdata;
-                    end
-                end
-                sdata: begin
-                    if (((cyclecount == 32'd867) & (bitcount == 3'd7))) begin
-                        sendstate <= sstop;
-                    end
-                end
-                sstop: begin
-                    if (((cyclecount == 32'd867) & (~acceptNext))) begin
-                        sendstate <= sidle;
-                    end else if (((cyclecount == 32'd867) & acceptNext)) begin
-                        sendstate <= sstart;
-                    end
-                end
-            endcase
-        end
-    end
-    always_ff @( posedge CLK ) begin
-        if (RST) begin
-            bitcount <= 0;
-            cyclecount <= 0;
-        end else begin
-            if ((cyclecount == 867)) begin
-                cyclecount <= 0;
-            end else begin
-                if ((~(sendstate == sidle))) begin
-                    cyclecount <= (cyclecount + 1);
-                end
-            end
-            if (((cyclecount == 32'd867) & (sendstate == sdata))) begin
-                bitcount <= (bitcount + 1);
-            end
-        end
-    end
-    always_comb begin
-        acceptNext = 0;
-        if (inValid) begin
-            if ((sendstate == sidle)) begin
-                acceptNext = 1;
-            end else if (((sendstate == sstop) && (cyclecount == 867))) begin
-                acceptNext = 1;
-            end
-        end
-    end
-    always_ff @( posedge CLK ) begin
-        if (RST) begin
-            dbuf <= 0;
-        end else begin
-            if (acceptNext) begin
-                dbuf <= din;
-            end
-        end
-    end
-    always_comb begin
-        tx = 1;
-        if ((sendstate == sstart)) begin
-            tx = 0;
-        end else if ((sendstate == sdata)) begin
-            tx = dbuf[bitcount];
-        end
-    end
-    always_comb begin
-        inUpdate = (((sendstate == sstop) && (cyclecount == 867)) || (sendstate == sidle));
-    end
-endmodule
-module CoreWrite (
-    input addrValid,
-    output logic addrUpdate,
-    input [12:0] addrIn,
-    input dataValid,
-    output logic dataUpdate,
-    input [31:0] dataIn,
-    input strbValid,
-    output logic strbUpdate,
-    input [3:0] strbIn,
-    output logic [12:0] araddr,
-    input arready,
-    output logic arvalid,
-    output logic [12:0] awaddr,
-    input awready,
-    output logic awvalid,
-    output logic bready,
-    input [1:0] bresp,
-    input bvalid,
-    output logic [31:0] wdata,
-    output logic [3:0] wstrb,
-    output logic wvalid,
-    input wready,
-    output logic rready,
-    input rvalid,
-    input [31:0] rdata,
-    input [1:0] rresp,
-    input CLK,
-    input RST
-);
-    always_comb begin
-        awaddr = addrIn;
-        wdata = dataIn;
-        wstrb = strbIn;
-        wvalid = (strbValid & dataValid);
-        dataUpdate = (wready & strbValid);
-        strbUpdate = (wready & dataValid);
-        awvalid = addrValid;
-        addrUpdate = awready;
-        bready = 1;
-        araddr = 0;
-        arvalid = 0;
-        rready = 0;
-    end
-endmodule
-module UARTRecv (
-    input rx,
-    output reg [7:0] dout,
-    output logic outValid,
-    input CLK,
-    input RST
-);
-    localparam sidle = 0;
-    localparam sstart = 1;
-    localparam sdata = 2;
-    localparam sstop = 3;
-
-    reg [1:0] recvstate;
-    logic nextbyte;
-    logic [2:0] bitcount;
-    logic [31:0] cyclecount;
-
-    always_ff @( posedge CLK ) begin
-        if (RST) begin
-            recvstate <= 0;
-        end else begin
-            case (recvstate)
-                sidle: begin
-                    if ((rx == 0)) begin
-                        recvstate <= sstart;
-                    end
-                end
-                sstart: begin
-                    if (((recvstate == sstart) && ((cyclecount == 433) && (rx == 1)))) begin
-                        recvstate <= sidle;
-                    end else if ((cyclecount == 32'd867)) begin
-                        recvstate <= sdata;
-                    end
-                end
-                sdata: begin
-                    if (((cyclecount == 32'd867) & (bitcount == 3'd7))) begin
-                        recvstate <= sstop;
-                    end
-                end
-                sstop: begin
-                    if (((cyclecount == 433) & (~nextbyte))) begin
-                        recvstate <= sidle;
-                    end else if (((cyclecount == 433) & nextbyte)) begin
-                        recvstate <= sstart;
-                    end
-                end
-            endcase
-        end
-    end
-    always_comb begin
-        nextbyte = (rx == 0);
-    end
-    always_ff @( posedge CLK ) begin
-        if (RST) begin
-            bitcount <= 0;
-            cyclecount <= 0;
-        end else begin
-            if (((recvstate == sstart) && ((cyclecount == 433) && (rx == 1)))) begin
-                cyclecount <= 0;
-            end else if (((recvstate == sstop) && (cyclecount == 433))) begin
-                cyclecount <= 0;
-            end else if ((cyclecount == 867)) begin
-                cyclecount <= 0;
-            end else begin
-                if ((~(recvstate == sidle))) begin
-                    cyclecount <= (cyclecount + 1);
-                end
-            end
-            if (((cyclecount == 32'd867) & (recvstate == sdata))) begin
-                bitcount <= (bitcount + 1);
-            end
-        end
-    end
-    always_ff @( posedge CLK ) begin
-        if (RST) begin
-            dout <= 0;
-        end else begin
-            if (((cyclecount == 433) & (recvstate == sdata))) begin
-                dout[bitcount] <= rx;
-            end else if (((cyclecount == 433) & (recvstate == sstart))) begin
-                dout <= 0;
-            end
-        end
-    end
-    always_comb begin
-        outValid = ((recvstate == sstop) & (cyclecount == 433));
-    end
-endmodule
-module AsciiEncoder_source (
-    input [15:0] addrData,
-    input [31:0] dataData,
-    input inValid,
-    output logic outValid,
-    output logic [111:0] dout,
-    input CLK,
-    input RST
-);
-    logic [111:0] _result_wireConcat_3;
-    logic resetCount;
-    logic [63:0] counter;
-
-    always_ff @( posedge CLK ) begin
-        if (RST) begin
-            counter <= 0;
-        end else begin
-            if (resetCount) begin
-                counter <= 0;
-            end else if (inValid) begin
-                counter <= (counter + 64'd1);
-            end
-        end
-    end
-    always_comb begin
-        resetCount = 1'd0;
-        outValid = inValid;
-    end
-    always_comb begin
-        _result_wireConcat_3[63:0] = counter;
-        _result_wireConcat_3[79:64] = addrData;
-        _result_wireConcat_3[111:80] = dataData;
-    end
-    always_comb begin
-        dout = _result_wireConcat_3;
-    end
-endmodule
 module InputParser (
     input [7:0] din,
     input inValid,
     output logic inUpdate,
-    output logic addrValid,
-    input addrUpdate,
+    output logic wAddrValid,
+    output logic rAddrValid,
+    input wAddrUpdate,
+    input rAddrUpdate,
     output logic [15:0] addrData,
-    output logic dataValid,
-    input dataUpdate,
-    output logic [31:0] dataData,
-    output logic bothAccepted,
+    output logic wDataValid,
+    input wDataUpdate,
+    output logic [31:0] wData,
+    input [31:0] rData,
+    output logic rDataUpdate,
+    input rDataValid,
+    output logic transEnd,
+    output logic [31:0] transData,
+    output logic [7:0] opcode,
     input CLK,
     input RST
 );
-    logic [47:0] buffer;
+    logic [55:0] buffer;
+    logic addrAccepted;
     logic dataAccepted;
     logic [31:0] bufferIndexHead;
-    logic addrAccepted;
-    logic [31:0] minusOne32;
+    logic [31:0] rDataBuffer;
     logic [31:0] zero32;
+    logic bothAccepted;
+    logic [31:0] minusOne32;
     logic [31:0] counter;
 
     always_comb begin
         bothAccepted = (addrAccepted & dataAccepted);
-        inUpdate = (counter < 6);
-        addrValid = 0;
-        dataValid = 0;
+        transEnd = bothAccepted;
+        inUpdate = (counter < 7);
+        wAddrValid = 0;
+        wDataValid = 0;
+        rAddrValid = 0;
+        rDataUpdate = 0;
         zero32 = 32'd0;
         minusOne32 = (~zero32);
         bufferIndexHead = (((counter + 1) << 3) + minusOne32);
-        addrData = buffer[15:0];
-        dataData = buffer[47:16];
+        opcode = buffer[7:0];
+        addrData = buffer[23:8];
+        wData = buffer[55:24];
+        transData = 0;
         if ((inUpdate & inValid)) begin
             
-        end else if (bothAccepted) begin
+        end else if (transEnd) begin
             
         end
-        if ((counter == 6)) begin
-            addrValid = (~addrAccepted);
-            dataValid = (~dataAccepted);
-            if (bothAccepted) begin
-                
-            end else begin
-                if (addrUpdate) begin
+        if ((counter == 7)) begin
+            if ((opcode == 1)) begin
+                wAddrValid = (~addrAccepted);
+                wDataValid = (~dataAccepted);
+                if (bothAccepted) begin
                     
+                end else begin
+                    if (wAddrUpdate) begin
+                        
+                    end
+                    if (wDataUpdate) begin
+                        
+                    end
                 end
-                if (dataUpdate) begin
+            end else if ((opcode == 2)) begin
+                rAddrValid = (~addrAccepted);
+                rDataUpdate = (~dataAccepted);
+                if (bothAccepted) begin
                     
+                end else begin
+                    if (rAddrUpdate) begin
+                        
+                    end
+                    if (rDataValid) begin
+                        
+                    end
                 end
             end
         end
         if ((inUpdate & inValid)) begin
             
+        end
+        if ((opcode == 1)) begin
+            transData = wData;
+        end else if ((opcode == 2)) begin
+            transData = rDataBuffer;
         end
     end
     always_ff @( posedge CLK ) begin
@@ -1387,122 +1079,567 @@ module InputParser (
             buffer <= 0;
             counter <= 0;
             dataAccepted <= 0;
+            rDataBuffer <= 0;
         end else begin
             if ((inUpdate & inValid)) begin
                 counter <= (counter + 32'd1);
-            end else if (bothAccepted) begin
+            end else if (transEnd) begin
                 counter <= 0;
             end
-            if ((counter == 6)) begin
-                if (bothAccepted) begin
-                    addrAccepted <= 0;
-                    dataAccepted <= 0;
-                end else begin
-                    if (addrUpdate) begin
-                        addrAccepted <= 1'd1;
+            if ((counter == 7)) begin
+                if ((opcode == 1)) begin
+                    if (bothAccepted) begin
+                        addrAccepted <= 0;
+                        dataAccepted <= 0;
+                    end else begin
+                        if (wAddrUpdate) begin
+                            addrAccepted <= 1'd1;
+                        end
+                        if (wDataUpdate) begin
+                            dataAccepted <= 1'd1;
+                        end
                     end
-                    if (dataUpdate) begin
-                        dataAccepted <= 1'd1;
+                end else if ((opcode == 2)) begin
+                    if (bothAccepted) begin
+                        addrAccepted <= 0;
+                        dataAccepted <= 0;
+                    end else begin
+                        if (rAddrUpdate) begin
+                            addrAccepted <= 1;
+                        end
+                        if (rDataValid) begin
+                            dataAccepted <= 1;
+                            rDataBuffer <= rData;
+                        end
                     end
                 end
             end
             if ((inUpdate & inValid)) begin
                 buffer[bufferIndexHead -: 8] <= din;
             end
+            if ((opcode == 1)) begin
+                
+            end else if ((opcode == 2)) begin
+                
+            end
         end
     end
 endmodule
-module fifoForUart (
-    input inValid,
-    input outUpdate,
-    input [7:0] din,
+module AsciiEncoder_encodeToByteStream (
+    input [119:0] din,
     output logic [7:0] dout,
+    output logic inUpdate,
+    input inValid,
     output logic outValid,
+    input outUpdate,
     input CLK,
     input RST
 );
-    reg [7:0] _ram_fifoPatch_2 [511:0];
-    logic _inready_fifoPatch_2;
-    logic [7:0] _doutBypassed_fifoPatch_2;
-    logic _outvalid_fifoPatch_2;
-    logic [7:0] _doutRam_fifoPatch_2;
-    logic [8:0] _rptrComb_fifoPatch_2;
-    logic [8:0] _wptr_fifoPatch_2;
-    logic _wincr_fifoPatch_2;
-    logic _rincr_fifoPatch_2;
-    logic [8:0] _rptr_fifoPatch_2;
-    logic [8:0] _prevwptr_fifoPatch_2;
-    logic _full_fifoPatch_2;
-    logic _empty_fifoPatch_2;
-    logic [7:0] _dout_fifoPatch_2;
+    logic [127:0] _result_binaryToHex_367;
+    logic [15:0] _result_binaryToHex_384;
+    logic [31:0] _result_binaryToHex_387;
+    logic [63:0] _result_binaryToHex_392;
+    logic [263:0] _joinwith_asciiSpace_366;
+    logic [279:0] totalWord;
+    logic [7:0] _ans_nibbleToHex_379;
+    logic [7:0] _extended_nibbleToHex_390;
+    logic [7:0] _extended_nibbleToHex_395;
+    logic [7:0] _ans_nibbleToHex_381;
+    logic [7:0] _extended_nibbleToHex_398;
+    logic [7:0] _ans_nibbleToHex_378;
+    logic [7:0] _extended_binaryToHex_384;
+    logic [7:0] _ans_nibbleToHex_374;
+    logic [7:0] _ans_nibbleToHex_380;
+    logic [7:0] _ans_nibbleToHex_376;
+    logic [7:0] _ans_nibbleToHex_375;
+    logic [7:0] _extended_nibbleToHex_391;
+    logic [7:0] _ans_nibbleToHex_398;
+    logic [7:0] _extended_nibbleToHex_370;
+    logic [7:0] _ans_nibbleToHex_377;
+    logic [7:0] _ans_nibbleToHex_399;
+    logic [7:0] _extended_nibbleToHex_368;
+    logic requestToUpperContinue;
+    logic [7:0] _ans_nibbleToHex_368;
+    logic [7:0] _extended_nibbleToHex_378;
+    logic initProcess;
+    logic [63:0] _extended_binaryToHex_367;
+    logic [7:0] _extended_nibbleToHex_380;
+    logic [7:0] _ans_nibbleToHex_369;
+    logic lastByte;
+    logic [7:0] _ans_nibbleToHex_394;
+    logic [7:0] _extended_nibbleToHex_374;
+    logic [31:0] _wire4_wireUnpack_365;
+    logic [7:0] _extended_nibbleToHex_382;
+    logic [7:0] _ans_nibbleToHex_391;
+    logic [31:0] _extended_binaryToHex_392;
+    logic [31:0] byteCounter;
+    logic [7:0] _extended_nibbleToHex_376;
+    logic [119:0] _buffer_interceptBuffer_364;
+    logic [7:0] _extended_nibbleToHex_381;
+    logic [7:0] _extended_nibbleToHex_371;
+    logic [7:0] _ans_nibbleToHex_397;
+    logic [7:0] _extended_nibbleToHex_394;
+    logic [7:0] _ans_nibbleToHex_386;
+    logic [7:0] _extended_nibbleToHex_369;
+    logic [15:0] _extended_binaryToHex_387;
+    logic [7:0] _wire2_wireUnpack_365;
+    logic [7:0] _extended_nibbleToHex_372;
+    logic [7:0] _extended_nibbleToHex_388;
+    logic [7:0] _extended_nibbleToHex_396;
+    logic [7:0] _extended_nibbleToHex_383;
+    logic [63:0] _wire1_wireUnpack_365;
+    logic working;
+    logic [7:0] _extended_nibbleToHex_393;
+    logic [7:0] _extended_nibbleToHex_397;
+    logic [7:0] _ans_nibbleToHex_395;
+    logic [7:0] _ans_nibbleToHex_370;
+    logic [7:0] _ans_nibbleToHex_383;
+    logic [7:0] _ans_nibbleToHex_400;
+    logic [7:0] _ans_nibbleToHex_389;
+    logic [15:0] _wire3_wireUnpack_365;
+    logic [119:0] _interceptBuffer_364;
+    logic [7:0] _extended_nibbleToHex_373;
+    logic [7:0] _extended_nibbleToHex_389;
+    logic [7:0] _ans_nibbleToHex_373;
+    logic [7:0] _extended_nibbleToHex_386;
+    logic [7:0] _ans_nibbleToHex_393;
+    logic [7:0] _extended_nibbleToHex_400;
+    logic [7:0] _ans_nibbleToHex_396;
+    logic [7:0] _extended_nibbleToHex_399;
+    logic [7:0] _ans_nibbleToHex_390;
+    logic [7:0] _extended_nibbleToHex_377;
+    logic [7:0] _extended_nibbleToHex_375;
+    logic [7:0] _extended_nibbleToHex_379;
+    logic [7:0] _ans_nibbleToHex_388;
+    logic [7:0] _ans_nibbleToHex_372;
+    logic [7:0] _ans_nibbleToHex_382;
+    logic [7:0] _extended_nibbleToHex_385;
+    logic [7:0] _ans_nibbleToHex_385;
+    logic [7:0] _ans_nibbleToHex_371;
 
     always_comb begin
-        _empty_fifoPatch_2 = (_wptr_fifoPatch_2 == _rptr_fifoPatch_2);
-        _full_fifoPatch_2 = ((_wptr_fifoPatch_2 + 9'd1) == _rptr_fifoPatch_2);
-    end
-    always_comb begin
-        _rptrComb_fifoPatch_2 = _rptr_fifoPatch_2;
-        if ((_wincr_fifoPatch_2 && (~_full_fifoPatch_2))) begin
-            
-        end
-        if ((_rincr_fifoPatch_2 && (~_empty_fifoPatch_2))) begin
-            _rptrComb_fifoPatch_2 = (_rptr_fifoPatch_2 + 9'd1);
+        if ((inUpdate & inValid)) begin
+            _interceptBuffer_364 = din;
+        end else begin
+            _interceptBuffer_364 = _buffer_interceptBuffer_364;
         end
     end
     always_ff @( posedge CLK ) begin
         if (RST) begin
-            _prevwptr_fifoPatch_2 <= 0;
-            _rptr_fifoPatch_2 <= 0;
-            _wptr_fifoPatch_2 <= 0;
+            _buffer_interceptBuffer_364 <= 0;
         end else begin
-            _prevwptr_fifoPatch_2 <= _wptr_fifoPatch_2;
-            if ((_wincr_fifoPatch_2 && (~_full_fifoPatch_2))) begin
-                _wptr_fifoPatch_2 <= (_wptr_fifoPatch_2 + 9'd1);
-            end
-            if ((_rincr_fifoPatch_2 && (~_empty_fifoPatch_2))) begin
-                _rptr_fifoPatch_2 <= (_rptr_fifoPatch_2 + 9'd1);
-            end
-        end
-    end
-    always_ff @( posedge CLK ) begin
-        if (RST) begin
-            _doutRam_fifoPatch_2 <= 0;
-        end else begin
-            _doutRam_fifoPatch_2 <= _ram_fifoPatch_2[_rptrComb_fifoPatch_2];
-        end
-    end
-    always_comb begin
-        if ((_prevwptr_fifoPatch_2 == _rptr_fifoPatch_2)) begin
-            _dout_fifoPatch_2 = _doutBypassed_fifoPatch_2;
-        end else begin
-            _dout_fifoPatch_2 = _doutRam_fifoPatch_2;
-        end
-    end
-    always_ff @( posedge CLK ) begin
-        if (RST) begin
-            _doutBypassed_fifoPatch_2 <= 0;
-        end else begin
-            _doutBypassed_fifoPatch_2 <= din;
-            if ((_prevwptr_fifoPatch_2 == _rptr_fifoPatch_2)) begin
-                
+            if ((inUpdate & inValid)) begin
+                _buffer_interceptBuffer_364 <= din;
             end else begin
                 
             end
         end
     end
-    always_ff @( posedge CLK ) begin
-        if ((_wincr_fifoPatch_2 && (~_full_fifoPatch_2))) begin
-            _ram_fifoPatch_2[_wptr_fifoPatch_2] <= din;
+    always_comb begin
+        _wire1_wireUnpack_365 = _interceptBuffer_364[63:0];
+        _wire2_wireUnpack_365 = _interceptBuffer_364[71:64];
+        _wire3_wireUnpack_365 = _interceptBuffer_364[87:72];
+        _wire4_wireUnpack_365 = _interceptBuffer_364[119:88];
+    end
+    always_comb begin
+        _extended_binaryToHex_367 = 64'd0;
+        _extended_binaryToHex_367[63:0] = _wire1_wireUnpack_365;
+    end
+    always_comb begin
+        _extended_nibbleToHex_368 = 8'd0;
+        _extended_nibbleToHex_368[3:0] = _extended_binaryToHex_367[3:0];
+        if ((_extended_binaryToHex_367[3:0] < 10)) begin
+            _ans_nibbleToHex_368 = (_extended_nibbleToHex_368 + 48);
+        end else begin
+            _ans_nibbleToHex_368 = (_extended_nibbleToHex_368 + 55);
         end
     end
     always_comb begin
-        _outvalid_fifoPatch_2 = (~_empty_fifoPatch_2);
-        _rincr_fifoPatch_2 = outUpdate;
-        _inready_fifoPatch_2 = (~_full_fifoPatch_2);
-        _wincr_fifoPatch_2 = inValid;
+        _extended_nibbleToHex_369 = 8'd0;
+        _extended_nibbleToHex_369[3:0] = _extended_binaryToHex_367[7:4];
+        if ((_extended_binaryToHex_367[7:4] < 10)) begin
+            _ans_nibbleToHex_369 = (_extended_nibbleToHex_369 + 48);
+        end else begin
+            _ans_nibbleToHex_369 = (_extended_nibbleToHex_369 + 55);
+        end
     end
     always_comb begin
-        outValid = _outvalid_fifoPatch_2;
-        dout = _dout_fifoPatch_2;
+        _extended_nibbleToHex_370 = 8'd0;
+        _extended_nibbleToHex_370[3:0] = _extended_binaryToHex_367[11:8];
+        if ((_extended_binaryToHex_367[11:8] < 10)) begin
+            _ans_nibbleToHex_370 = (_extended_nibbleToHex_370 + 48);
+        end else begin
+            _ans_nibbleToHex_370 = (_extended_nibbleToHex_370 + 55);
+        end
+    end
+    always_comb begin
+        _extended_nibbleToHex_371 = 8'd0;
+        _extended_nibbleToHex_371[3:0] = _extended_binaryToHex_367[15:12];
+        if ((_extended_binaryToHex_367[15:12] < 10)) begin
+            _ans_nibbleToHex_371 = (_extended_nibbleToHex_371 + 48);
+        end else begin
+            _ans_nibbleToHex_371 = (_extended_nibbleToHex_371 + 55);
+        end
+    end
+    always_comb begin
+        _extended_nibbleToHex_372 = 8'd0;
+        _extended_nibbleToHex_372[3:0] = _extended_binaryToHex_367[19:16];
+        if ((_extended_binaryToHex_367[19:16] < 10)) begin
+            _ans_nibbleToHex_372 = (_extended_nibbleToHex_372 + 48);
+        end else begin
+            _ans_nibbleToHex_372 = (_extended_nibbleToHex_372 + 55);
+        end
+    end
+    always_comb begin
+        _extended_nibbleToHex_373 = 8'd0;
+        _extended_nibbleToHex_373[3:0] = _extended_binaryToHex_367[23:20];
+        if ((_extended_binaryToHex_367[23:20] < 10)) begin
+            _ans_nibbleToHex_373 = (_extended_nibbleToHex_373 + 48);
+        end else begin
+            _ans_nibbleToHex_373 = (_extended_nibbleToHex_373 + 55);
+        end
+    end
+    always_comb begin
+        _extended_nibbleToHex_374 = 8'd0;
+        _extended_nibbleToHex_374[3:0] = _extended_binaryToHex_367[27:24];
+        if ((_extended_binaryToHex_367[27:24] < 10)) begin
+            _ans_nibbleToHex_374 = (_extended_nibbleToHex_374 + 48);
+        end else begin
+            _ans_nibbleToHex_374 = (_extended_nibbleToHex_374 + 55);
+        end
+    end
+    always_comb begin
+        _extended_nibbleToHex_375 = 8'd0;
+        _extended_nibbleToHex_375[3:0] = _extended_binaryToHex_367[31:28];
+        if ((_extended_binaryToHex_367[31:28] < 10)) begin
+            _ans_nibbleToHex_375 = (_extended_nibbleToHex_375 + 48);
+        end else begin
+            _ans_nibbleToHex_375 = (_extended_nibbleToHex_375 + 55);
+        end
+    end
+    always_comb begin
+        _extended_nibbleToHex_376 = 8'd0;
+        _extended_nibbleToHex_376[3:0] = _extended_binaryToHex_367[35:32];
+        if ((_extended_binaryToHex_367[35:32] < 10)) begin
+            _ans_nibbleToHex_376 = (_extended_nibbleToHex_376 + 48);
+        end else begin
+            _ans_nibbleToHex_376 = (_extended_nibbleToHex_376 + 55);
+        end
+    end
+    always_comb begin
+        _extended_nibbleToHex_377 = 8'd0;
+        _extended_nibbleToHex_377[3:0] = _extended_binaryToHex_367[39:36];
+        if ((_extended_binaryToHex_367[39:36] < 10)) begin
+            _ans_nibbleToHex_377 = (_extended_nibbleToHex_377 + 48);
+        end else begin
+            _ans_nibbleToHex_377 = (_extended_nibbleToHex_377 + 55);
+        end
+    end
+    always_comb begin
+        _extended_nibbleToHex_378 = 8'd0;
+        _extended_nibbleToHex_378[3:0] = _extended_binaryToHex_367[43:40];
+        if ((_extended_binaryToHex_367[43:40] < 10)) begin
+            _ans_nibbleToHex_378 = (_extended_nibbleToHex_378 + 48);
+        end else begin
+            _ans_nibbleToHex_378 = (_extended_nibbleToHex_378 + 55);
+        end
+    end
+    always_comb begin
+        _extended_nibbleToHex_379 = 8'd0;
+        _extended_nibbleToHex_379[3:0] = _extended_binaryToHex_367[47:44];
+        if ((_extended_binaryToHex_367[47:44] < 10)) begin
+            _ans_nibbleToHex_379 = (_extended_nibbleToHex_379 + 48);
+        end else begin
+            _ans_nibbleToHex_379 = (_extended_nibbleToHex_379 + 55);
+        end
+    end
+    always_comb begin
+        _extended_nibbleToHex_380 = 8'd0;
+        _extended_nibbleToHex_380[3:0] = _extended_binaryToHex_367[51:48];
+        if ((_extended_binaryToHex_367[51:48] < 10)) begin
+            _ans_nibbleToHex_380 = (_extended_nibbleToHex_380 + 48);
+        end else begin
+            _ans_nibbleToHex_380 = (_extended_nibbleToHex_380 + 55);
+        end
+    end
+    always_comb begin
+        _extended_nibbleToHex_381 = 8'd0;
+        _extended_nibbleToHex_381[3:0] = _extended_binaryToHex_367[55:52];
+        if ((_extended_binaryToHex_367[55:52] < 10)) begin
+            _ans_nibbleToHex_381 = (_extended_nibbleToHex_381 + 48);
+        end else begin
+            _ans_nibbleToHex_381 = (_extended_nibbleToHex_381 + 55);
+        end
+    end
+    always_comb begin
+        _extended_nibbleToHex_382 = 8'd0;
+        _extended_nibbleToHex_382[3:0] = _extended_binaryToHex_367[59:56];
+        if ((_extended_binaryToHex_367[59:56] < 10)) begin
+            _ans_nibbleToHex_382 = (_extended_nibbleToHex_382 + 48);
+        end else begin
+            _ans_nibbleToHex_382 = (_extended_nibbleToHex_382 + 55);
+        end
+    end
+    always_comb begin
+        _extended_nibbleToHex_383 = 8'd0;
+        _extended_nibbleToHex_383[3:0] = _extended_binaryToHex_367[63:60];
+        if ((_extended_binaryToHex_367[63:60] < 10)) begin
+            _ans_nibbleToHex_383 = (_extended_nibbleToHex_383 + 48);
+        end else begin
+            _ans_nibbleToHex_383 = (_extended_nibbleToHex_383 + 55);
+        end
+    end
+    always_comb begin
+        _result_binaryToHex_367[127:120] = _ans_nibbleToHex_368;
+        _result_binaryToHex_367[119:112] = _ans_nibbleToHex_369;
+        _result_binaryToHex_367[111:104] = _ans_nibbleToHex_370;
+        _result_binaryToHex_367[103:96] = _ans_nibbleToHex_371;
+        _result_binaryToHex_367[95:88] = _ans_nibbleToHex_372;
+        _result_binaryToHex_367[87:80] = _ans_nibbleToHex_373;
+        _result_binaryToHex_367[79:72] = _ans_nibbleToHex_374;
+        _result_binaryToHex_367[71:64] = _ans_nibbleToHex_375;
+        _result_binaryToHex_367[63:56] = _ans_nibbleToHex_376;
+        _result_binaryToHex_367[55:48] = _ans_nibbleToHex_377;
+        _result_binaryToHex_367[47:40] = _ans_nibbleToHex_378;
+        _result_binaryToHex_367[39:32] = _ans_nibbleToHex_379;
+        _result_binaryToHex_367[31:24] = _ans_nibbleToHex_380;
+        _result_binaryToHex_367[23:16] = _ans_nibbleToHex_381;
+        _result_binaryToHex_367[15:8] = _ans_nibbleToHex_382;
+        _result_binaryToHex_367[7:0] = _ans_nibbleToHex_383;
+    end
+    always_comb begin
+        _extended_binaryToHex_384 = 8'd0;
+        _extended_binaryToHex_384[7:0] = _wire2_wireUnpack_365;
+    end
+    always_comb begin
+        _extended_nibbleToHex_385 = 8'd0;
+        _extended_nibbleToHex_385[3:0] = _extended_binaryToHex_384[3:0];
+        if ((_extended_binaryToHex_384[3:0] < 10)) begin
+            _ans_nibbleToHex_385 = (_extended_nibbleToHex_385 + 48);
+        end else begin
+            _ans_nibbleToHex_385 = (_extended_nibbleToHex_385 + 55);
+        end
+    end
+    always_comb begin
+        _extended_nibbleToHex_386 = 8'd0;
+        _extended_nibbleToHex_386[3:0] = _extended_binaryToHex_384[7:4];
+        if ((_extended_binaryToHex_384[7:4] < 10)) begin
+            _ans_nibbleToHex_386 = (_extended_nibbleToHex_386 + 48);
+        end else begin
+            _ans_nibbleToHex_386 = (_extended_nibbleToHex_386 + 55);
+        end
+    end
+    always_comb begin
+        _result_binaryToHex_384[15:8] = _ans_nibbleToHex_385;
+        _result_binaryToHex_384[7:0] = _ans_nibbleToHex_386;
+    end
+    always_comb begin
+        _extended_binaryToHex_387 = 16'd0;
+        _extended_binaryToHex_387[15:0] = _wire3_wireUnpack_365;
+    end
+    always_comb begin
+        _extended_nibbleToHex_388 = 8'd0;
+        _extended_nibbleToHex_388[3:0] = _extended_binaryToHex_387[3:0];
+        if ((_extended_binaryToHex_387[3:0] < 10)) begin
+            _ans_nibbleToHex_388 = (_extended_nibbleToHex_388 + 48);
+        end else begin
+            _ans_nibbleToHex_388 = (_extended_nibbleToHex_388 + 55);
+        end
+    end
+    always_comb begin
+        _extended_nibbleToHex_389 = 8'd0;
+        _extended_nibbleToHex_389[3:0] = _extended_binaryToHex_387[7:4];
+        if ((_extended_binaryToHex_387[7:4] < 10)) begin
+            _ans_nibbleToHex_389 = (_extended_nibbleToHex_389 + 48);
+        end else begin
+            _ans_nibbleToHex_389 = (_extended_nibbleToHex_389 + 55);
+        end
+    end
+    always_comb begin
+        _extended_nibbleToHex_390 = 8'd0;
+        _extended_nibbleToHex_390[3:0] = _extended_binaryToHex_387[11:8];
+        if ((_extended_binaryToHex_387[11:8] < 10)) begin
+            _ans_nibbleToHex_390 = (_extended_nibbleToHex_390 + 48);
+        end else begin
+            _ans_nibbleToHex_390 = (_extended_nibbleToHex_390 + 55);
+        end
+    end
+    always_comb begin
+        _extended_nibbleToHex_391 = 8'd0;
+        _extended_nibbleToHex_391[3:0] = _extended_binaryToHex_387[15:12];
+        if ((_extended_binaryToHex_387[15:12] < 10)) begin
+            _ans_nibbleToHex_391 = (_extended_nibbleToHex_391 + 48);
+        end else begin
+            _ans_nibbleToHex_391 = (_extended_nibbleToHex_391 + 55);
+        end
+    end
+    always_comb begin
+        _result_binaryToHex_387[31:24] = _ans_nibbleToHex_388;
+        _result_binaryToHex_387[23:16] = _ans_nibbleToHex_389;
+        _result_binaryToHex_387[15:8] = _ans_nibbleToHex_390;
+        _result_binaryToHex_387[7:0] = _ans_nibbleToHex_391;
+    end
+    always_comb begin
+        _extended_binaryToHex_392 = 32'd0;
+        _extended_binaryToHex_392[31:0] = _wire4_wireUnpack_365;
+    end
+    always_comb begin
+        _extended_nibbleToHex_393 = 8'd0;
+        _extended_nibbleToHex_393[3:0] = _extended_binaryToHex_392[3:0];
+        if ((_extended_binaryToHex_392[3:0] < 10)) begin
+            _ans_nibbleToHex_393 = (_extended_nibbleToHex_393 + 48);
+        end else begin
+            _ans_nibbleToHex_393 = (_extended_nibbleToHex_393 + 55);
+        end
+    end
+    always_comb begin
+        _extended_nibbleToHex_394 = 8'd0;
+        _extended_nibbleToHex_394[3:0] = _extended_binaryToHex_392[7:4];
+        if ((_extended_binaryToHex_392[7:4] < 10)) begin
+            _ans_nibbleToHex_394 = (_extended_nibbleToHex_394 + 48);
+        end else begin
+            _ans_nibbleToHex_394 = (_extended_nibbleToHex_394 + 55);
+        end
+    end
+    always_comb begin
+        _extended_nibbleToHex_395 = 8'd0;
+        _extended_nibbleToHex_395[3:0] = _extended_binaryToHex_392[11:8];
+        if ((_extended_binaryToHex_392[11:8] < 10)) begin
+            _ans_nibbleToHex_395 = (_extended_nibbleToHex_395 + 48);
+        end else begin
+            _ans_nibbleToHex_395 = (_extended_nibbleToHex_395 + 55);
+        end
+    end
+    always_comb begin
+        _extended_nibbleToHex_396 = 8'd0;
+        _extended_nibbleToHex_396[3:0] = _extended_binaryToHex_392[15:12];
+        if ((_extended_binaryToHex_392[15:12] < 10)) begin
+            _ans_nibbleToHex_396 = (_extended_nibbleToHex_396 + 48);
+        end else begin
+            _ans_nibbleToHex_396 = (_extended_nibbleToHex_396 + 55);
+        end
+    end
+    always_comb begin
+        _extended_nibbleToHex_397 = 8'd0;
+        _extended_nibbleToHex_397[3:0] = _extended_binaryToHex_392[19:16];
+        if ((_extended_binaryToHex_392[19:16] < 10)) begin
+            _ans_nibbleToHex_397 = (_extended_nibbleToHex_397 + 48);
+        end else begin
+            _ans_nibbleToHex_397 = (_extended_nibbleToHex_397 + 55);
+        end
+    end
+    always_comb begin
+        _extended_nibbleToHex_398 = 8'd0;
+        _extended_nibbleToHex_398[3:0] = _extended_binaryToHex_392[23:20];
+        if ((_extended_binaryToHex_392[23:20] < 10)) begin
+            _ans_nibbleToHex_398 = (_extended_nibbleToHex_398 + 48);
+        end else begin
+            _ans_nibbleToHex_398 = (_extended_nibbleToHex_398 + 55);
+        end
+    end
+    always_comb begin
+        _extended_nibbleToHex_399 = 8'd0;
+        _extended_nibbleToHex_399[3:0] = _extended_binaryToHex_392[27:24];
+        if ((_extended_binaryToHex_392[27:24] < 10)) begin
+            _ans_nibbleToHex_399 = (_extended_nibbleToHex_399 + 48);
+        end else begin
+            _ans_nibbleToHex_399 = (_extended_nibbleToHex_399 + 55);
+        end
+    end
+    always_comb begin
+        _extended_nibbleToHex_400 = 8'd0;
+        _extended_nibbleToHex_400[3:0] = _extended_binaryToHex_392[31:28];
+        if ((_extended_binaryToHex_392[31:28] < 10)) begin
+            _ans_nibbleToHex_400 = (_extended_nibbleToHex_400 + 48);
+        end else begin
+            _ans_nibbleToHex_400 = (_extended_nibbleToHex_400 + 55);
+        end
+    end
+    always_comb begin
+        _result_binaryToHex_392[63:56] = _ans_nibbleToHex_393;
+        _result_binaryToHex_392[55:48] = _ans_nibbleToHex_394;
+        _result_binaryToHex_392[47:40] = _ans_nibbleToHex_395;
+        _result_binaryToHex_392[39:32] = _ans_nibbleToHex_396;
+        _result_binaryToHex_392[31:24] = _ans_nibbleToHex_397;
+        _result_binaryToHex_392[23:16] = _ans_nibbleToHex_398;
+        _result_binaryToHex_392[15:8] = _ans_nibbleToHex_399;
+        _result_binaryToHex_392[7:0] = _ans_nibbleToHex_400;
+    end
+    always_comb begin
+        _joinwith_asciiSpace_366[127:0] = _result_binaryToHex_367;
+        _joinwith_asciiSpace_366[151:136] = _result_binaryToHex_384;
+        _joinwith_asciiSpace_366[191:160] = _result_binaryToHex_387;
+        _joinwith_asciiSpace_366[263:200] = _result_binaryToHex_392;
+        _joinwith_asciiSpace_366[135:128] = 32;
+        _joinwith_asciiSpace_366[159:152] = 32;
+        _joinwith_asciiSpace_366[199:192] = 32;
+    end
+    always_comb begin
+        lastByte = (byteCounter == 34);
+        totalWord[263:0] = _joinwith_asciiSpace_366;
+        totalWord[271:264] = 13;
+        totalWord[279:272] = 10;
+        dout = totalWord[((byteCounter << 3) + 7) -: 8];
+        outValid = working;
+        inUpdate = 0;
+        if ((outValid & outUpdate)) begin
+            if (lastByte) begin
+                
+            end else begin
+                
+            end
+        end
+        if ((inValid & inUpdate)) begin
+            
+        end else if ((lastByte && (outValid & outUpdate))) begin
+            
+        end
+        if ((inUpdate & inValid)) begin
+            
+        end
+        if ((lastByte && (outValid & outUpdate))) begin
+            inUpdate = 1;
+            if ((~inValid)) begin
+                
+            end
+        end else if ((requestToUpperContinue || (~initProcess))) begin
+            inUpdate = 1;
+            if (inValid) begin
+                
+            end
+        end
+    end
+    always_ff @( posedge CLK ) begin
+        if (RST) begin
+            byteCounter <= 0;
+            initProcess <= 0;
+            requestToUpperContinue <= 0;
+            working <= 0;
+        end else begin
+            if ((outValid & outUpdate)) begin
+                if (lastByte) begin
+                    byteCounter <= 32'd0;
+                end else begin
+                    byteCounter <= (byteCounter + 1);
+                end
+            end
+            if ((inValid & inUpdate)) begin
+                working <= 1'd1;
+            end else if ((lastByte && (outValid & outUpdate))) begin
+                working <= 0;
+            end
+            if ((inUpdate & inValid)) begin
+                initProcess <= 1'd1;
+            end
+            if ((lastByte && (outValid & outUpdate))) begin
+                if ((~inValid)) begin
+                    requestToUpperContinue <= 1'd1;
+                end
+            end else if ((requestToUpperContinue || (~initProcess))) begin
+                if (inValid) begin
+                    requestToUpperContinue <= 0;
+                end
+            end
+        end
     end
 endmodule
