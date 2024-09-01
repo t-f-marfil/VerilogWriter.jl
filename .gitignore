@@ -24,3 +24,4 @@ test.ipynb
 
 *.mem
 Dockerfile
+__pycache__
