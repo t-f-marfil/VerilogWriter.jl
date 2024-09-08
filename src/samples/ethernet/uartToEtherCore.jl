@@ -1,4 +1,6 @@
 let
+    resetStdpatchCounter()
+    
     # 2 byte address + 4 byte data
     vparse = Vmodule("InputParser")
 
@@ -110,7 +112,7 @@ let
     # freq = 4baud
     
     fifo = Vmodule("fifoForUart")
-    depth = 512
+    depth = 1024
     width = 8
     (inready, outvalid, dout), p = fifoPatch(depth, width, @wireexpr(din), @wireexpr(inValid), @wireexpr(outUpdate))
     prts = @ports (
@@ -351,16 +353,16 @@ let
         @pconnect dout => strbIn, valid => strbValid
     )
     
-    g(
-        # Midmodule(core) => Midmodule(vaxi),
-        core => vaxi,
-        [getname(p) => string(getname(p), "_ufp") for p in generateAxiLitePort(addrWidth, dataWidth, true, "") if getdirec(p) == pout]
-    )
-    g(
-        # Midmodule(vaxi) => Midmodule(core),
-        vaxi => core,
-        [string(getname(p), "_ufp") => getname(p) for p in generateAxiLitePort(addrWidth, dataWidth, true, "") if getdirec(p) == pin]
-    )
+    # g(
+    #     # Midmodule(core) => Midmodule(vaxi),
+    #     core => vaxi,
+    #     [getname(p) => string(getname(p), "_ufp") for p in generateAxiLitePort(addrWidth, dataWidth, true, "") if getdirec(p) == pout]
+    # )
+    # g(
+    #     # Midmodule(vaxi) => Midmodule(core),
+    #     vaxi => core,
+    #     [string(getname(p), "_ufp") => getname(p) for p in generateAxiLitePort(addrWidth, dataWidth, true, "") if getdirec(p) == pin]
+    # )
     
     encoders = vfinalize(layer2vmod!(g, name="SampleAsciiEncoder"))
     wrapper = wrappergen(encoders[begin])
@@ -377,7 +379,7 @@ let
         txt = read(io, String)
     end
 
-    txt = replace(txt, r"_dfp_AxiControl([\),])" => s"\1")
+    txt = replace(txt, r"_CoreWrite([\),])" => s"\1")
     open(wrappername, "w") do io
         write(io, txt)
     end
