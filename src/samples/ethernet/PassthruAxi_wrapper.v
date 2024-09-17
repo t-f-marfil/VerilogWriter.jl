@@ -1,4 +1,10 @@
-module SampleAsciiEncoder_wrapper (
+module PassthruAxi_wrapper (
+    output bready,
+    output [12:0] awaddr,
+    output arvalid,
+    output [12:0] araddr,
+    output [3:0] wstrb,
+    output strbUpdate,
     input [1:0] bresp,
     input [31:0] rdata,
     output awvalid,
@@ -11,18 +17,18 @@ module SampleAsciiEncoder_wrapper (
     input arready,
     input wready,
     output wvalid,
-    output bready,
-    output [12:0] awaddr,
-    output arvalid,
-    output [12:0] araddr,
-    output [3:0] wstrb,
-    output strbUpdate,
-    output tx_UartSend_etherBypass,
-    input rx_UartRecv_etherBypass,
+    input rx_UartRecv_etherPassthru,
+    output tx_UartSend_etherPassthru,
     input CLK,
     input RST
 );
-    SampleAsciiEncoder uSampleAsciiEncoder (
+    PassthruAxi uPassthruAxi (
+        .bready_CoreWrite(bready),
+        .awaddr_CoreWrite(awaddr),
+        .arvalid_CoreWrite(arvalid),
+        .araddr_CoreWrite(araddr),
+        .wstrb_CoreWrite(wstrb),
+        .strbUpdate_CoreWrite(strbUpdate),
         .bresp_CoreWrite(bresp),
         .rdata_CoreWrite(rdata),
         .awvalid_CoreWrite(awvalid),
@@ -35,14 +41,8 @@ module SampleAsciiEncoder_wrapper (
         .arready_CoreWrite(arready),
         .wready_CoreWrite(wready),
         .wvalid_CoreWrite(wvalid),
-        .bready_CoreWrite(bready),
-        .awaddr_CoreWrite(awaddr),
-        .arvalid_CoreWrite(arvalid),
-        .araddr_CoreWrite(araddr),
-        .wstrb_CoreWrite(wstrb),
-        .strbUpdate_CoreWrite(strbUpdate),
-        .tx_UartSend_etherBypass(tx_UartSend_etherBypass),
-        .rx_UartRecv_etherBypass(rx_UartRecv_etherBypass),
+        .rx_UartRecv_etherPassthru(rx_UartRecv_etherPassthru),
+        .tx_UartSend_etherPassthru(tx_UartSend_etherPassthru),
         .CLK(CLK),
         .RST(RST)
     );

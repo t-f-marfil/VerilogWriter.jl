@@ -128,8 +128,8 @@ let
     vpush!.(fifo, (p, prts, al))
     # mfifo = Midmodule(fifo).vmod
     mfifo = fifo
-    recv = uartRecv(baud, freq, name="UartRecv_etherBypass")
-    send = uartSend(baud, freq, name="UartSend_etherBypass")
+    recv = uartRecv(baud, freq, name="UartRecv_etherPassthru")
+    send = uartSend(baud, freq, name="UartSend_etherPassthru")
 
     g = Vmodgraph()
 
@@ -364,11 +364,11 @@ let
     #     [string(getname(p), "_ufp") => getname(p) for p in generateAxiLitePort(addrWidth, dataWidth, true, "") if getdirec(p) == pin]
     # )
     
-    encoders = vfinalize(layer2vmod!(g, name="SampleAsciiEncoder"))
+    encoders = vfinalize(layer2vmod!(g, name="PassthruAxi"))
     wrapper = wrappergen(encoders[begin])
 
     txt = dotgen(g, dpi=196)
-    cmd = `dot -Tpng -oSampleAsciiEncoder.png`
+    cmd = `dot -Tpng -oPassthruAxi.png`
     run(pipeline(cmd, stdin=IOBuffer(txt)))
 
     wrappername = "$(getname(wrapper)).v"
