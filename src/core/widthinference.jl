@@ -738,9 +738,9 @@ julia> c = @ifcontent (
        end
        ); 
 
-julia> status, venv = autodecl(c, env); vshow(venv);
-input [15:0] din
+julia> status, venv = autodecl(c, env); vshow(venv, true);
 input b1
+input [15:0] din
 
 logic [3:0] reg1;
 logic [15:0] reg2;
@@ -778,18 +778,18 @@ julia> env = Vmodenv(Parameters(), ps, Localparams(), ds);
 
 julia> status, nenv = autodecl(ab.content, env);
 
-julia> vshow(nenv);
+julia> vshow(nenv, true);
 input [1:0] x
 input [B-1:0] y
 output reg [A-1:0] z
 
-wire [B-1:0] w1;
-wire [B-1:0] w2;
 logic [A-1:0] r1;
 logic [A-1:0] r2;
-logic [B-1:0] r5;
 logic [A-1:0] r3;
 logic [B-1:0] r4;
+logic [B-1:0] r5;
+wire [B-1:0] w1;
+wire [B-1:0] w2;
 type: Vmodenv
 
 julia> widthInferenceCompleted(status)
