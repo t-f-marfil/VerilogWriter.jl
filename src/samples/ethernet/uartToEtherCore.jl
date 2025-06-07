@@ -1,9 +1,17 @@
 let
+    resetStdpatchCounter()
+    
     # 2 byte address + 4 byte data
     vparse = Vmodule("InputParser")
 
+    opcodeBytes = 1
+    opWrite = 1
+    opRead = 2
+    
     addrBytes, dataBytes = 2, 4
-    totalBytes = addrBytes + dataBytes
+    totalBytes = opcodeBytes + addrBytes + dataBytes
+    
+    opcodeWidth = 8opcodeBytes
     addrWidth = 8addrBytes
     dataWidth = 8dataBytes
     prts = @ports (
@@ -11,41 +19,68 @@ let
         @in inValid;
         @out @logic inUpdate;
 
-        @out @logic addrValid;
-        @in addrUpdate;
+        @out @logic wAddrValid, rAddrValid;
+        @in wAddrUpdate, rAddrUpdate;
         @out @logic $addrWidth addrData;
 
-        @out @logic dataValid;
-        @in dataUpdate;
-        @out @logic $dataWidth dataData;
+        @out @logic wDataValid;
+        @in wDataUpdate;
+        @out @logic $dataWidth wData;
 
-        @out @logic bothAccepted
+        @in $dataWidth rData;
+        @out @logic rDataUpdate;
+        @in rDataValid;
+
+        @out @logic transEnd;
+        @out @logic $dataWidth transData;
+        @out @logic $opcodeWidth opcode;
     )
     alParse = @cpalways (
         bothAccepted = addrAccepted & dataAccepted;
+        transEnd = bothAccepted;
         inUpdate = counter < $totalBytes;
 
         if inUpdate & inValid
             counter <= counter + $(Wireexpr(32, 1))
-        elseif bothAccepted
+        elseif transEnd
             counter <= 0
         end;
 
-        addrValid = 0;
-        dataValid = 0;
+        wAddrValid = 0;
+        wDataValid = 0;
+        rAddrValid = 0;
+        rDataUpdate = 0;
         if counter == $totalBytes
-            addrValid = ~addrAccepted
-            dataValid = ~dataAccepted
+            if opcode == $opWrite
+                wAddrValid = ~addrAccepted
+                wDataValid = ~dataAccepted
 
-            if bothAccepted
-                addrAccepted <= 0
-                dataAccepted <= 0
-            else
-                if addrUpdate
-                    addrAccepted <= $(Wireexpr(1, 1))
+                if bothAccepted
+                    addrAccepted <= 0
+                    dataAccepted <= 0
+                else
+                    if wAddrUpdate
+                        addrAccepted <= $(Wireexpr(1, 1))
+                    end
+                    if wDataUpdate
+                        dataAccepted <= $(Wireexpr(1, 1))
+                    end
                 end
-                if dataUpdate
-                    dataAccepted <= $(Wireexpr(1, 1))
+            elseif opcode == $opRead
+                rAddrValid = ~addrAccepted
+                rDataUpdate = ~dataAccepted
+
+                if bothAccepted
+                    addrAccepted <= 0
+                    dataAccepted <= 0
+                else
+                    if rAddrUpdate
+                        addrAccepted <= 1
+                    end
+                    if rDataValid
+                        dataAccepted <= 1
+                        rDataBuffer <= rData
+                    end
                 end
             end
         end;
@@ -57,16 +92,27 @@ let
         if inUpdate & inValid
             buffer[bufferIndexHead-:8] <= din
         end;
-        addrData = buffer[$(addrWidth - 1):0];
-        dataData = buffer[$(addrWidth + dataWidth - 1):$(addrWidth)]
+
+        opcode = buffer[$(opcodeWidth - 1):0];
+        addrData = buffer[$(addrWidth + opcodeWidth - 1):$opcodeWidth];
+        wData = buffer[$(addrWidth + dataWidth + opcodeWidth - 1):$(addrWidth + opcodeWidth)];
+
+        transData = 0;
+        if opcode == $opWrite
+            transData = wData
+        elseif opcode == $opRead
+            transData = rDataBuffer
+        end
     )
     vpush!.(vparse, (prts, alParse..., @decls @logic $(8totalBytes) buffer))
     
     baud = 115200
     freq = 100 * 10^6
+    # baud = 9600
+    # freq = 4baud
     
     fifo = Vmodule("fifoForUart")
-    depth = 512
+    depth = 1024
     width = 8
     (inready, outvalid, dout), p = fifoPatch(depth, width, @wireexpr(din), @wireexpr(inValid), @wireexpr(outUpdate))
     prts = @ports (
@@ -82,8 +128,8 @@ let
     vpush!.(fifo, (p, prts, al))
     # mfifo = Midmodule(fifo).vmod
     mfifo = fifo
-    recv = uartRecv(baud, freq)
-    send = uartSend(baud, freq)
+    recv = uartRecv(baud, freq, name="UartRecv_etherPassthru")
+    send = uartSend(baud, freq, name="UartSend_etherPassthru")
 
     g = Vmodgraph()
 
@@ -108,12 +154,13 @@ let
         @pconnect inUpdate => outUpdate
     )
 
-    include("uartMisc.jl")
-    include("asciiEncoder.jl")
+    include("samples/ethernet/uartMisc.jl")
+    include("samples/ethernet/asciiEncoder.jl")
 
     portsToEncode = @ports (
+        @in $opcodeWidth opcode;
         @in $addrWidth addrData;
-        @in $dataWidth dataData
+        @in $dataWidth data
     )
     vsource, vfifo, vencode = generateAsciiEncoder!(g, portsToEncode)
 
@@ -121,9 +168,10 @@ let
         # Midmodule(vparse) => msource,
         vparse => vsource,
         @pconnect (
+            opcode => opcode,
             addrData => addrData,
-            dataData => dataData,
-            bothAccepted => inValid
+            transData => data,
+            transEnd => inValid
         )
     )
     g(
@@ -144,14 +192,22 @@ let
     dataWidth = 32
 
     addrPorts = @ports (
-        @in addrValid;
-        @out @logic addrUpdate;
-        @in $addrWidth addrIn
+        @in wAddrValid;
+        @out @logic wAddrUpdate;
+        @in $addrWidth wAddrIn;
+
+        @in rAddrValid;
+        @out @logic rAddrUpdate;
+        @in $addrWidth rAddrIn;
     )
     dataPorts = @ports (
-        @in dataValid;
-        @out @logic dataUpdate;
-        @in $dataWidth dataIn
+        @in wDataValid;
+        @out @logic wDataUpdate;
+        @in $dataWidth wDataIn;
+
+        @out @logic $dataWidth rDataOut;
+        @out @logic rDataValid;
+        @in rDataUpdate;
     )
     strbPorts = @ports (
         @in strbValid;
@@ -163,24 +219,29 @@ let
     addAxiLitePort!(core, addrWidth, dataWidth, true)
 
     alBypass = @always (
-        awaddr = addrIn;
-        wdata = dataIn;
+        awaddr = wAddrIn;
+        wdata = wDataIn;
         wstrb = strbIn;
 
-        wvalid = strbValid & dataValid;
-        dataUpdate = wready & strbValid;
-        strbUpdate = wready & dataValid;
+        wvalid = strbValid & wDataValid;
+        wDataUpdate = wready & strbValid;
+        strbUpdate = wready & wDataValid;
 
-        awvalid = addrValid;
-        addrUpdate = awready;
+        awvalid = wAddrValid;
+        wAddrUpdate = awready;
 
         # TODO: handle bresp
         bready = 1;
 
-        # ignore read ports
-        araddr = 0;
-        arvalid = 0;
-        rready = 0;
+        
+        araddr = rAddrIn;
+        arvalid = rAddrValid;
+        rAddrUpdate = arready;
+
+        rready = rDataUpdate;
+        rDataValid = rvalid;
+        rDataOut = rdata
+        # TODO: handle rresp
     )
 
     vpush!(core, alBypass)
@@ -251,11 +312,14 @@ let
         # Midmodule(vparse) => Midmodule(core),
         vparse => core,
         @pconnect (
-            addrValid => addrValid,
+            wAddrValid => wAddrValid,
+            rAddrValid => rAddrValid,
             # addrData => addrIn,
 
-            dataValid => dataValid,
-            dataData => dataIn
+            wDataValid => wDataValid,
+            wData => wDataIn,
+
+            rDataUpdate => rDataUpdate,
         )
     )
     g(
@@ -266,14 +330,21 @@ let
     g(
         # Midmodule(vinter) => Midmodule(core),
         vinter => core,
-        @pconnect addrOut => addrIn
+        @pconnect (
+            addrOut => wAddrIn,
+            addrOut => rAddrIn,
+        )
     )
     g(
         # Midmodule(core) => Midmodule(vparse),
         core => vparse,
         @pconnect (
-            addrUpdate => addrUpdate,
-            dataUpdate => dataUpdate
+            wAddrUpdate => wAddrUpdate,
+            rAddrUpdate => rAddrUpdate,
+            wDataUpdate => wDataUpdate,
+
+            rDataOut => rData,
+            rDataValid => rDataValid,
         )
     )
     g(
@@ -282,23 +353,36 @@ let
         @pconnect dout => strbIn, valid => strbValid
     )
     
-    g(
-        # Midmodule(core) => Midmodule(vaxi),
-        core => vaxi,
-        [getname(p) => string(getname(p), "_ufp") for p in generateAxiLitePort(addrWidth, dataWidth, true, "") if getdirec(p) == pout]
-    )
-    g(
-        # Midmodule(vaxi) => Midmodule(core),
-        vaxi => core,
-        [string(getname(p), "_ufp") => getname(p) for p in generateAxiLitePort(addrWidth, dataWidth, true, "") if getdirec(p) == pin]
-    )
+    # g(
+    #     # Midmodule(core) => Midmodule(vaxi),
+    #     core => vaxi,
+    #     [getname(p) => string(getname(p), "_ufp") for p in generateAxiLitePort(addrWidth, dataWidth, true, "") if getdirec(p) == pout]
+    # )
+    # g(
+    #     # Midmodule(vaxi) => Midmodule(core),
+    #     vaxi => core,
+    #     [string(getname(p), "_ufp") => getname(p) for p in generateAxiLitePort(addrWidth, dataWidth, true, "") if getdirec(p) == pin]
+    # )
     
-    encoders = vfinalize(layer2vmod!(g, name="SampleAsciiEncoder"))
+    encoders = vfinalize(layer2vmod!(g, name="PassthruAxi"))
     wrapper = wrappergen(encoders[begin])
 
     txt = dotgen(g, dpi=196)
-    cmd = `dot -Tpng -oSampleAsciiEncoder.png`
+    cmd = `dot -Tpng -oPassthruAxi.png`
     run(pipeline(cmd, stdin=IOBuffer(txt)))
 
-    vexport(encoders), vexport("$(getname(wrapper)).v", wrapper)
+    wrappername = "$(getname(wrapper)).v"
+    vexport(encoders), vexport(wrappername, wrapper)
+    
+    txt = nothing
+    open(wrappername) do io
+        txt = read(io, String)
+    end
+
+    txt = replace(txt, r"_CoreWrite([\),])" => s"\1")
+    open(wrappername, "w") do io
+        write(io, txt)
+    end
+
+
 end

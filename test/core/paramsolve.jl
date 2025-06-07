@@ -32,5 +32,5 @@ lp = @localparams (
 )
 
 @test (@strerror paramsolve(p, lp)) == """
-Looking at 'b',
+Looking at 'a',
 Mutual recursion detected in solving parameters."""

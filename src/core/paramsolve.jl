@@ -126,7 +126,7 @@ function paramsolve(prm::Parameters, lprm::Localparams)
 
     ans = Dict([i => punsolved for i in keys(alldict)])
     
-    for n in keys(alldict)
+    for n in sort(collect(keys(alldict)))
         if ans[n] == punsolved
             paramsolvecore!(n, ans, alldict)
         end

@@ -45,6 +45,12 @@ function vshow(x...; systemverilog=true)
     end
 end
 
+# for doctest, sort items if explicilty specified
+function vshow(x::Vmodenv, ordered::Bool)
+    println(string(x, ordered))
+    println(string("type: ", typeof(x)))
+end
+
 function vshow(x::Vector{T}; systemverilog=true) where {T}
     vshow.(x, systemverilog=systemverilog)
 end

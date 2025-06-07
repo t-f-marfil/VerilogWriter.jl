@@ -378,14 +378,16 @@ macro streachline_blocksplit(v)
     end
 end
 
-function Base.string(x::Vmodenv)
+Base.string(x::Vmodenv) = Base.string(x::Vmodenv, false)
+
+function Base.string(x::Vmodenv, ordered::Bool)
     txt = string(
-        (@streachline_blocksplit x.prms.val),
-        (@streachline_blocksplit x.prts.val),
-        (@streachline_blocksplit x.lprms.val),
+        (@streachline_blocksplit (ordered ? sort(x.prms.val, by=x->getname(x)) : x.prms.val)),
+        (@streachline_blocksplit (ordered ? sort(x.prts.val, by=x->getname(x)) : x.prts.val)),
+        (@streachline_blocksplit (ordered ? sort(x.lprms.val, by=x->getname(x)) : x.lprms.val)),
         # (@streachline x.dcls.val)
     )
-    tend = @streachline x.dcls.val
+    tend = @streachline (ordered ? sort(x.dcls.val, by=x->getname(x)) : x.dcls.val)
     if tend == ""
         return txt[begin:end-1]
     else

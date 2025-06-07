@@ -154,7 +154,7 @@ function posedgeSyncTest()
     end
 
     for (ind, w) in enumerate(wsync)
-        wn, pkg = nonegedge(w, getname(w))
+        wn, pkg = nonegedge(w)
         vpush!(v, pkg)
         vpush!(v, @always tp[$(ind-1+length(wsync))] = $wn)
     end

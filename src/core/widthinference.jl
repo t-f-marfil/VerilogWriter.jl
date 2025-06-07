@@ -561,31 +561,35 @@ end
 function Base.showerror(io::IO, e::WidthRemainUnresolved)
     println(io, "Wire width cannot be inferred for the following wires.")
     visitedRoot = Set{Int}()
-    ind = 1
+
+    wiregroups = Vector{Vector{Wireexpr}}(undef, 0)
+    sizehint!(wiregroups, length(e.unresolvedId))
+    
     for (count, widId) in enumerate(e.unresolvedId)
         root = getRoot(widId, e.unifyTree)
         if !(root in visitedRoot)
             push!(visitedRoot, root)
             isFirstItem = true
+            
+            groupnow = Vector{Wireexpr}(undef,0)
+            sizehint!(groupnow, length(e.widthGroup[root]))
+
             for w in sort(collect(e.widthGroup[root]))
                 wireNow = e.constraint.id2wireAll[w]
                 if wireNow.operation != literal
-                    if isFirstItem
-                        print(io, "$ind. $(string(wireNow))")
-                        isFirstItem = false
-                    else
-                        print(io, " = $(string(wireNow))")
-                    end
+                    push!(groupnow, wireNow)
                 end
             end
-            # if all items are of literal then no newline
-            if !isFirstItem
-                if (count != length(e.unresolvedId))
-                    println(io, "")
-                end
-                ind += 1
-            end
+            push!(wiregroups, groupnow)
         end
+    end
+
+    wirenames = [[getname(w) for w in v] for v in wiregroups]
+    sort!(wirenames)
+    for (ind, v) in enumerate(wirenames)
+        print(io, "$ind. ")
+        print(io, join(v, " = "))
+        print(io, "\n")
     end
 end
 
@@ -734,9 +738,9 @@ julia> c = @ifcontent (
        end
        ); 
 
-julia> status, venv = autodecl(c, env); vshow(venv);
-input [15:0] din
+julia> status, venv = autodecl(c, env); vshow(venv, true);
 input b1
+input [15:0] din
 
 logic [3:0] reg1;
 logic [15:0] reg2;
@@ -774,18 +778,18 @@ julia> env = Vmodenv(Parameters(), ps, Localparams(), ds);
 
 julia> status, nenv = autodecl(ab.content, env);
 
-julia> vshow(nenv);
+julia> vshow(nenv, true);
 input [1:0] x
 input [B-1:0] y
 output reg [A-1:0] z
 
-wire [B-1:0] w1;
-wire [B-1:0] w2;
 logic [A-1:0] r1;
 logic [A-1:0] r2;
-logic [B-1:0] r5;
 logic [A-1:0] r3;
 logic [B-1:0] r4;
+logic [B-1:0] r5;
+wire [B-1:0] w1;
+wire [B-1:0] w2;
 type: Vmodenv
 
 julia> widthInferenceCompleted(status)
