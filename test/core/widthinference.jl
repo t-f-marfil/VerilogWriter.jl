@@ -7,9 +7,10 @@ c = @always (
 
 _, (d, _) = autodeclCore(c)
 
-@test string(d) == """
-logic [31:0] reg1;
-logic [9:0] reg2;"""
+@test d == @decls (
+    @logic 32 reg1;
+    @logic 10 reg2;
+)
 
 # Bitwise and reduction unary operator
 c = @always (
@@ -19,9 +20,10 @@ c = @always (
 
 _, (d, _) = autodeclCore(c)
 
-@test string(d) == """
-logic reg1;
-logic [9:0] reg2;"""
+@test d == @decls (
+    @logic reg1;
+    @logic 10 reg2;
+)
 
 # parameter width
 env = Vmodenv(
@@ -41,9 +43,9 @@ _, (d, _) = autodeclCore(
     )), 
     env
 )
-@test string(d) == """
-logic [(A + B)-1:0] reg4;
-logic [(A + B)-1:0] reg3;"""
+@test d == @decls (
+    @logic A+B reg3,reg4;
+)
 
 # recursive check for '==' and reductions
 c = @always (
@@ -52,10 +54,7 @@ c = @always (
     end
 )
 _, (d, _) = autodeclCore(c)
-@test string(d) == """
-logic c;
-logic b;
-logic a;"""
+@test d == @decls (@logic a,b,c)
 
 # error message 
 c = @always (
@@ -83,8 +82,7 @@ c = @always (
 
 _, (dc, _) = autodeclCore(c, Vmodenv(d))
 
-@test string(dc) == """
-logic [9:0] c;"""
+@test dc == @decls (@logic 10 c)
 
 # 2d reg error message
 d = @decls (
@@ -110,15 +108,15 @@ alempty = @always (
     end
 )
 _, dempty = autodecl(alempty)
-@test string(dempty) == "logic a;"
+# TODO: check if fields other than dcls are empty
+@test dempty.dcls == @decls (@logic a)
 
 # inference on ipselm
 _, ret = autodecl(@always (a = b[A-:B]))
-@test string(ret) == """
-logic [unknown] B;
-logic [unknown] A;
-logic [unknown] b;
-logic [B-1:0] a;"""
+@test ret.dcls == @decls (
+    @logic -1 A,B,b;
+    @logic B a
+)
 
 
 # Inference accross multiple modules
