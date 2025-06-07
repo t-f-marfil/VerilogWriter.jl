@@ -53,6 +53,19 @@ function Base.:(==)(uno::Oneport, dos::Oneport)
     hash(uno) == hash(dos)
 end
 
+function Base.:(==)(uno::Onedecl, dos::Onedecl)
+    hash(uno) == hash(dos)
+end
+
+"""
+    Base.:(==)(uno::Decls, dos::Decls)
+
+Equality for `Decls`. Ignore order in which Onedecl is stored.
+"""
+function Base.:(==)(uno::Decls, dos::Decls)
+    return issetequal(Set(uno.val), Set(dos.val))
+end
+
 macro basehashgen(tt...)
     qs = [
         esc(
