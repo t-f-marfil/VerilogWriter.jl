@@ -561,31 +561,35 @@ end
 function Base.showerror(io::IO, e::WidthRemainUnresolved)
     println(io, "Wire width cannot be inferred for the following wires.")
     visitedRoot = Set{Int}()
-    ind = 1
+
+    wiregroups = Vector{Vector{Wireexpr}}(undef, 0)
+    sizehint!(wiregroups, length(e.unresolvedId))
+    
     for (count, widId) in enumerate(e.unresolvedId)
         root = getRoot(widId, e.unifyTree)
         if !(root in visitedRoot)
             push!(visitedRoot, root)
             isFirstItem = true
+            
+            groupnow = Vector{Wireexpr}(undef,0)
+            sizehint!(groupnow, length(e.widthGroup[root]))
+
             for w in sort(collect(e.widthGroup[root]))
                 wireNow = e.constraint.id2wireAll[w]
                 if wireNow.operation != literal
-                    if isFirstItem
-                        print(io, "$ind. $(string(wireNow))")
-                        isFirstItem = false
-                    else
-                        print(io, " = $(string(wireNow))")
-                    end
+                    push!(groupnow, wireNow)
                 end
             end
-            # if all items are of literal then no newline
-            if !isFirstItem
-                if (count != length(e.unresolvedId))
-                    println(io, "")
-                end
-                ind += 1
-            end
+            push!(wiregroups, groupnow)
         end
+    end
+
+    wirenames = [[getname(w) for w in v] for v in wiregroups]
+    sort!(wirenames)
+    for (ind, v) in enumerate(wirenames)
+        print(io, "$ind. ")
+        print(io, join(v, " = "))
+        print(io, "\n")
     end
 end
 
