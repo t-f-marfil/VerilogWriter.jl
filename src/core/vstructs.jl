@@ -37,6 +37,8 @@ in an association exists.
     ipselm
     # hex 
     # dec
+
+    concat
 end
 
 "`&&` and `||` are invalid identifier in julia."

@@ -47,6 +47,22 @@ _, (d, _) = autodeclCore(
     @logic A+B reg3,reg4;
 )
 
+# no error even with concatentated wires
+r = @always (
+    b <= c;
+    c <= c + $(Wireexpr(32, 1));
+    if a[0]
+        a <= {b,c}
+    else
+        a <=  a + $(Wireexpr(32, 1))
+    end
+)
+s, nenv = autodecl(r)
+@test widthInferenceCompleted(s)
+@test string(nenv, true) == """logic [31:0] a;
+logic [31:0] b;
+logic [31:0] c;"""
+
 # recursive check for '==' and reductions
 c = @always (
     if |(a & b) 

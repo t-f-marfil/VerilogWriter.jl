@@ -118,6 +118,8 @@ function Base.string(x::Wireexpr)
         txt = string("(", string(x.subnodes[1]), spacewrap(wbinopdict[x.operation]), string(x.subnodes[2]), ")")
     # elseif x.operation == dec 
     #     txt = string(string(x.bitwidth), "'d", string(x.value))
+    elseif x.operation == concat
+        txt = "{ $(join(string.(x.subnodes), ", ")) }"
     else
         throw(error("string undef with $(x.operation)."))
     end

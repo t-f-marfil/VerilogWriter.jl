@@ -656,6 +656,10 @@ function wireexpr(expr::Expr, ::Val{:$})
     return :(Wireexpr($(esc(expr.args[]))))
 end
 
+function wireexpr(expr::Expr, ::Val{:braces})
+    return :(Wireexpr(concat, $(wireexpr.(expr.args)...)))
+end
+
 """
     wireexpr(expr::Wireexpr)
 
