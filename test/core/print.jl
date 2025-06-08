@@ -109,6 +109,16 @@ w = @wireexpr a[(P<<Q)-:(A+B)]
 w = @wireexpr b[P-:4]
 @test string(w) == "b[P -: 4]"
 
+## wire concatenation
+w = @wireexpr {a,b,c}
+@test string(w) == "{ a, b, c }"
+
+w = @wireexpr {a,b,{c,{d,e}}, f}
+@test string(w) == "{ a, b, { c, { d, e } }, f }"
+
+w = @wireexpr {a,b[10:0], c[1], f << 3, $(Wireexpr(32, 2))}
+@test string(w) == "{ a, b[10:0], c[1], (f << 3), 32'd2 }"
+
 # Alassign 
 a = oneblock(:( x <= y ))[2] |> eval
 @test string(a) == "x <= y;"
