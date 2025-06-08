@@ -33,7 +33,10 @@ function extract2dreg(x::Vmodule)
     extract2dreg(x.decls)
 end
 
-"""Store values needed to infer wire widths."""
+"""Store values needed to infer wire widths.
+
+`dumpConstraint` is available to dump its content.
+"""
 struct WidthConstraint
     equality::Vector{NTuple{2, Int}}
     name2id::Dict{String, Int}
@@ -42,7 +45,7 @@ struct WidthConstraint
     "id whose width can be inferred from wire, preprocess and convert into id2wid"
     id2wire::Dict{Int, Wireexpr}
 
-    "store all wires associated with id for debugging purpose"
+    "store all wires associated with id for debugging purpose, wire at index i is of id i"
     id2wireAll::Vector{Wireexpr}
 end
 
@@ -165,6 +168,14 @@ function extractConstraintsCore!(x::Wireexpr, constraint::WidthConstraint)::Int
         end
         push!(constraint.id2wireAll, x)
         return widvarId
+    elseif op == concat
+        extractConstraintsCore!.(x.subnodes, constraint)
+        # TODO: infer when possible the width of the concatenated wire
+
+        push!(constraint.id2wireAll, x)
+        return generateWidvarId()
+    else
+        error("unknown operation : $(string(x))")
     end
 end
 
@@ -584,7 +595,7 @@ function Base.showerror(io::IO, e::WidthRemainUnresolved)
         end
     end
 
-    wirenames = [[getname(w) for w in v] for v in wiregroups]
+    wirenames = [sort([string(w) for w in v]) for v in wiregroups]
     sort!(wirenames)
     for (ind, v) in enumerate(wirenames)
         print(io, "$ind. ")
@@ -811,7 +822,7 @@ julia> c = @always (
 julia> status, _ = autodecl(c); throwIfInferenceIsIncomplete(status);
 ERROR: Wire width cannot be inferred for the following wires.
 1. b1
-2. reg2 = din
+2. din = reg2
 ```
 """
 function autodecl(x, env::Vmodenv, instInterfaces::VinstInterfaces)::Tuple{WidthInferenceStatus, Vmodenv}

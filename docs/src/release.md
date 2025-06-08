@@ -2,6 +2,12 @@
 
 ## History
 
+### 0.5.1 (WIP)
+
++ Wires in width inference error are now displayed in an alphabetical order
++ Items in `Vmodenv` can be displayed in an alphabetial order with `Base.string(::Vmodenv, true)`
++ `Wireexpr` for Verilog wire concatentaion is implemented (e.g. `{a, b[10:0]}`)
+
 ### 0.5.0
 
 + Start building documents with github actions
