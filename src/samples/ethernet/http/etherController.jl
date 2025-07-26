@@ -234,9 +234,11 @@ function generateEtherCoreController()
     transadd!(fsm_settings, @wireexpr(readintrdone), @tstate setreadintr => verify_read_intr)
     transadd!(fsm_settings, @wireexpr(verify_read_intr_done), @tstate verify_read_intr => donesettings)
 
-    fsm_packet = @FSM state_packet idle_packet, get_packet_size, clear_recv_packet_field
+    fsm_packet = @FSM state_packet idle_packet, get_packet_size, get_packet_full, clear_recv_packet_field
     transadd!(fsm_packet, @wireexpr(startreadpacket), @tstate idle_packet => get_packet_size)
-    transadd!(fsm_packet, @wireexpr(rlast & rvalid & rready), @tstate get_packet_size => clear_recv_packet_field)
+    transadd!(fsm_packet, @wireexpr(rlast & packet_size_known), @tstate get_packet_size => get_packet_full)
+    transadd!(fsm_packet, @wireexpr(rlast & ~packet_size_known), @tstate get_packet_size => clear_recv_packet_field)
+    transadd!(fsm_packet, @wireexpr(rlast), @tstate get_packet_full => clear_recv_packet_field)
     transadd!(fsm_packet, @wireexpr(recv_flag_cleared), @tstate clear_recv_packet_field => idle_packet)
 
     alfsm = @always (
@@ -249,16 +251,8 @@ function generateEtherCoreController()
         recv_flag_cleared = awdone_clear_recv_flag & wdone_clear_recv_flag;
     )
     almisc = @cpalways (
-        # awdone_settings = 0;
-        # wdone_settings = 0;
-        # ardone_vgs = 0;
-        # rdone_vgs = 0;
-        # awdone_setreadintr = 0;
-        # wdone_setreadintr = 0;
-        # awdone_clear_recv_flag = 0;
-        # wdone_clear_recv_flag = 0;
-
         wait_after_rst_axi_spec <= $(Wireexpr(1, 1));
+
         if state_settings == giesettings
             awdone_settings = awdone_settings_buf | (awvalid & awready)
             wdone_settings = wdone_settings_buf | (wvalid & wready)
@@ -306,6 +300,12 @@ function generateEtherCoreController()
             wdone_clear_recv_flag = 0
             awdone_clear_recv_flag_buf <= 0
             wdone_clear_recv_flag_buf <= 0
+        end;
+
+        if state_packet == get_packet_full
+            ardone_get_packet_full_buf <= ardone_get_packet_full_buf | (arvalid & arready)
+        else
+            ardone_get_packet_full_buf <= 0
         end
     )
     almain = @always (
@@ -334,7 +334,7 @@ function generateEtherCoreController()
 
             rready = ~rdone_vgs_buf
 
-            debug_data = (0x20 << 32) | {$(Wireexpr(debug_width - 32, 0)), rdata} | ({$(Wireexpr(debug_width - 1, 0)), rlast} << $(32)) | (clk_counter << 40);
+            debug_data = (0x20 << 32) | {$(Wireexpr(debug_width - 32, 0)), rdata} | ({$(Wireexpr(debug_width - 1, 0)), rlast} << 32) | (clk_counter << 40);
             debug_valid = rvalid
         elseif state_settings == setreadintr
             awvalid = ~awdone_setreadintr_buf
@@ -370,6 +370,21 @@ function generateEtherCoreController()
 
                 debug_data = (0x40 << 32) | (clk_counter << 40) | {$(Wireexpr(debug_width - 32, 0)), rdata}
                 debug_valid = rready & rvalid
+
+                packet_size_known = rlast & ((ether_type == 0x0806) || (ether_type == 0x0800))
+            elseif state_packet == get_packet_full
+                arvalid = ~ardone_get_packet_full_buf
+                araddr = recv_buf_addr + $initial_read_dword
+                arlen = remainder_arlen
+
+                rready = 1
+                if ~ardone_get_packet_full_buf
+                    debug_valid = arready
+                    debug_data = (0xD0 << 32) | (clk_counter << 40) | {$(Wireexpr(debug_width - 32, 0)),ether_type, ip_length}
+                else
+                    debug_data = (0x70 << 32) | (clk_counter << 40) | {$(Wireexpr(debug_width - 32, 0)), rdata} | ({$(Wireexpr(debug_width - 1, 0)), rlast} << 32)
+                    debug_valid = rready & rvalid
+                end
             elseif state_packet == clear_recv_packet_field
                 awvalid = ~awdone_clear_recv_flag_buf
                 awaddr = recv_ctrl_addr
@@ -412,10 +427,56 @@ function generateEtherCoreController()
         end;
     )
 
+    algetsizeutil = @always (
+        if state_packet == get_packet_size
+            if rvalid & rready
+                initial_read_dword_counter <= initial_read_dword_counter + $(Wireexpr(3, 1))
+                if initial_read_dword_counter == 3
+                    ether_type <= {rdata[7:0], rdata[15:8]}
+                end
+                if initial_read_dword_counter == 4
+                    ip_length <= ip_length_comb
+                    if ether_type == 0x0806
+                        # ARP, 28 bytes of payload (7 DWORDs)
+                        # additional 6 DWORD needed
+                        remainder_arlen <= 5
+                    elseif ether_type == 0x0800
+                        # IP, (ip_length >> 2) + (1 if ip_length[1:0]) DWORDs in total
+                        # (ip_length >> 2) + (1 or 0) - 1 additional DWORDs needed
+                        # = (ip_length >> 2) - (0 or 1) DWORDS
+                        if |(ip_length_comb[1:0])
+                            remainder_arlen <= ip_length_comb[9:2] + minusone_arlen
+                        else
+                            remainder_arlen <= ip_length_comb[9:2] + minustwo_arlen
+                        end
+                    end
+                end
+            end
+        # elseif state_packet == get_packet_full
+        #     # pass, preserve ip_length and ether_type
+        else
+            initial_read_dword_counter <= 0
+            if state_packet == get_packet_full
+                # pass, preserve ip_length and ether_type
+            else
+                ether_type <= $(Wireexpr(16, 0))
+                ip_length <= $(Wireexpr(16, 0))
+            end
+        end
+    )
+    algetsizeutil_comb = @always (
+        ip_length_comb = {rdata[7:0], rdata[15:8]};
+        minusone_arlen = ~$(Wireexpr(8, 0));
+        minustwo_arlen = ~$(Wireexpr(8, 1));
+    )
+
     vpush!(v, prts)
     vpush!(v, fsm_settings)
     vpush!(v, fsm_packet)
-    vpush!.(v, (alfsm, almisc..., almain, alpacket...))
+    vpush!.(v, (
+        alfsm, almisc..., almain, alpacket...,
+        algetsizeutil, algetsizeutil_comb
+    ))
 
     return v
 end
