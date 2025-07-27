@@ -9,7 +9,7 @@ let
     # freq = 4baud
     dwid = 64 + 8
 
-    vs = generateAsciiEncoder!(g, @ports (@in $dwid data))
+    vs = generateAsciiEncoder!(g, @ports(@in $dwid data), 512, "")
 
     send = uartSend(baud, freq, name="UartSend_etherPassthru")
     g(
@@ -48,6 +48,7 @@ function generateAxiControllerForEtherCore()
         @out @logic awready_out;
         
         @in wvalid_in;
+        @in wlast_in;
         @in $datalen wdata_in;
         @out @logic wready_out;
 
@@ -109,27 +110,29 @@ function generateAxiControllerForEtherCore()
             wacceptable = 1
         end;
 
-        # not awvalid_in
-        if awvalid
-            awlen_in_buffer <= awlen_in
-        end;
+        # # not awvalid_in
+        # if awvalid
+        #     awlen_in_buffer <= awlen_in
+        # end;
 
-        # 0 if wptr is ahead
-        wlast = 0;
-        if awptr == wptr + ptrincr
-            wlast = (awlen_in_buffer == wcounter) & wvalid
-        elseif awptr == wptr
-            # awlen == 0
-            wlast = awvalid & (awlen_in == wcounter)
-        end;
+        # # 0 if wptr is ahead
+        # # TEST: wlast when awlen_in == 0
+        # wlast = 0;
+        # if awptr == wptr + ptrincr
+        #     wlast = (awlen_in_buffer == wcounter) & wvalid
+        # elseif awptr == wptr
+        #     # awlen == 0
+        #     wlast = awvalid & (awlen_in == wcounter)
+        # end;
+        wlast = wlast_in;
 
-        if wvalid & wready
-            if wlast
-                wcounter <= 0
-            else
-                wcounter <= wcounter + 1
-            end
-        end
+        # if wvalid & wready
+        #     if wlast
+        #         wcounter <= 0
+        #     else
+        #         wcounter <= wcounter + 1
+        #     end
+        # end
     )
     alread = @always (
         araddr = araddr_in;
@@ -193,6 +196,7 @@ function generateEtherCoreController()
         @out @logic wvalid;
         @out @logic 32 wdata;
         @in wready;
+        @out @logic wlast;
 
         @out @logic arvalid;
         @out @logic 13 araddr;
@@ -204,15 +208,22 @@ function generateEtherCoreController()
         @in rlast;
         @in 32 rdata;
 
-        @out @logic 32 rdata_out;
         @in 32 wdata_in;
 
         # rupdate <=> raccept
         @in rupdate;
         @out @logic raccept;
+        @out @logic 32 rdata_out;
 
         @out @logic rvalid_out;
         @out @logic rlast_out; # when one packet is fully read
+
+        @in 8 awlen_in;
+        @in awvalid_in;
+        @out @logic awready_out;
+        @in wvalid_in;
+        @in wlast_in;
+        @out @logic wready_out;
 
         @out @logic $debug_width debug_data;
         @out @logic debug_valid;
@@ -225,6 +236,15 @@ function generateEtherCoreController()
     recv_buf_ping_addr = 0x1000
     recv_buf_pong_addr = 0x1800
 
+    send_ctrl_ping_addr = 0x07FC
+    send_ctrl_pong_addr = 0x0FFC
+
+    send_length_ping_addr = 0x07F4
+    send_length_pong_addr = 0x0FF4
+
+    send_buf_ping_addr = 0x0000
+    send_buf_pong_addr = 0x0800
+
     # include ip total size
     initial_read_dword = 5
     
@@ -234,12 +254,20 @@ function generateEtherCoreController()
     transadd!(fsm_settings, @wireexpr(readintrdone), @tstate setreadintr => verify_read_intr)
     transadd!(fsm_settings, @wireexpr(verify_read_intr_done), @tstate verify_read_intr => donesettings)
 
-    fsm_packet = @FSM state_packet idle_packet, get_packet_size, get_packet_full, clear_recv_packet_field
-    transadd!(fsm_packet, @wireexpr(startreadpacket), @tstate idle_packet => get_packet_size)
+    # NOTE: prioritize packet read operation over write here
+    fsm_packet = @FSM state_packet idle_packet, get_packet_size, get_packet_full, clear_recv_packet_field, test_send_possible, set_packet_data, set_send_packet_field, set_send_packet_length, trigger_send_packet
+    transadd!(fsm_packet, @wireexpr(startreadpacket & arready & arvalid), @tstate idle_packet => get_packet_size)
     transadd!(fsm_packet, @wireexpr(rlast & packet_size_known), @tstate get_packet_size => get_packet_full)
     transadd!(fsm_packet, @wireexpr(rlast & ~packet_size_known), @tstate get_packet_size => clear_recv_packet_field)
     transadd!(fsm_packet, @wireexpr(rlast), @tstate get_packet_full => clear_recv_packet_field)
     transadd!(fsm_packet, @wireexpr(recv_flag_cleared), @tstate clear_recv_packet_field => idle_packet)
+    
+    transadd!(fsm_packet, @wireexpr(startreadsendctrl & arready & arvalid), @tstate idle_packet => test_send_possible)
+    transadd!(fsm_packet, @wireexpr(tx_buffer_full), @tstate test_send_possible => idle_packet)
+    transadd!(fsm_packet, @wireexpr(tx_buffer_empty), @tstate test_send_possible => set_send_packet_field)
+    transadd!(fsm_packet, @wireexpr(tx_buffer_filled), @tstate set_send_packet_field => set_send_packet_length)
+    transadd!(fsm_packet, @wireexpr(send_length_set), @tstate set_send_packet_length => trigger_send_packet)
+    transadd!(fsm_packet, @wireexpr(send_flag_set), @tstate trigger_send_packet => idle_packet)
 
     alfsm = @always (
         giesettingsdone = awdone_settings & wdone_settings;
@@ -247,11 +275,23 @@ function generateEtherCoreController()
         readintrdone = awdone_setreadintr & wdone_setreadintr;
         verify_read_intr_done = ardone_verify_read_intr & rdone_verify_read_intr;
 
-        startreadpacket = (state_settings == donesettings) & arvalid & arready;
+        # # TODO: separate transition condition in idle_packet
+        # # but do not want to write in al_main for readability
+        # startreadpacket = (state_settings == donesettings) & trigger_read_packet & arvalid & arready;
+        # startreadsendctrl = (state_settings == donesettings) & (~trigger_read_packet) & awvalid_in & arvalid & arready;
+        
         recv_flag_cleared = awdone_clear_recv_flag & wdone_clear_recv_flag;
+        tx_buffer_full = rready & rvalid & rlast & rdata[0];
+        tx_buffer_empty = rready & rvalid & rlast & (~rdata[0]);
+        tx_buffer_filled = awdone_set_send_packet & wdone_set_send_packet;
+        send_flag_set = awdone_trigger_send_packet & wdone_trigger_send_packet;
+        send_length_set = awdone_set_send_length & wdone_set_send_length
     )
     almisc = @cpalways (
         wait_after_rst_axi_spec <= $(Wireexpr(1, 1));
+
+        # rupdate & ()
+        # trigger_read_packet = 1 & ~(intr_counter_prev == intr_counter_post)
 
         if state_settings == giesettings
             awdone_settings = awdone_settings_buf | (awvalid & awready)
@@ -306,16 +346,83 @@ function generateEtherCoreController()
             ardone_get_packet_full_buf <= ardone_get_packet_full_buf | (arvalid & arready)
         else
             ardone_get_packet_full_buf <= 0
+        end;
+
+        # if state_packet == test_send_possible
+        #     tx_buffer_empty = (rlast & (~rdata[0])) | tx_buffer_empty_buf
+        #     tx_buffer_empty_buf <= tx_buffer_empty
+
+        #     awlen_buf_test_send_possible <= awlen
+        # else
+        #     tx_buffer_empty = 0
+        #     tx_buffer_empty_buf <= 0
+
+        #     if ~(state_packet == set_send_packet_field)
+        #         awlen_buf_test_send_possible <= 0
+        #     end
+        # end;
+
+        if state_packet == set_send_packet_field
+            awdone_set_send_packet = (awready & awvalid) | awdone_set_send_packet_buf
+            awdone_set_send_packet_buf <= awdone_set_send_packet
+
+            wdone_set_send_packet = (wvalid & wready & wlast) | wdone_set_send_packet_buf
+            wdone_set_send_packet_buf <= wdone_set_send_packet
+
+            if awvalid & awready
+                awlen_buf_set_send_packet <= awlen
+            end
+        else
+            if ~(state_packet == set_send_packet_length)
+                awlen_buf_set_send_packet <= 0
+            end
+            awdone_set_send_packet = 0
+            awdone_set_send_packet_buf <= 0
+
+            wdone_set_send_packet = 0
+            wdone_set_send_packet_buf <= 0
+        end;
+
+        if state_packet == set_send_packet_length
+            awdone_set_send_length = (awready & awvalid) | awdone_set_send_length_buf
+            awdone_set_send_length_buf <= awdone_set_send_length
+
+            wdone_set_send_length = (wvalid & wready) | wdone_set_send_length_buf
+            wdone_set_send_length_buf <= wdone_set_send_length
+        else
+            awdone_set_send_length = 0
+            awdone_set_send_length_buf <= 0
+
+            wdone_set_send_length = 0
+            wdone_set_send_length_buf <= 0
+        end;
+
+        if state_packet == trigger_send_packet
+            awdone_trigger_send_packet = awdone_trigger_send_packet_buf | (awvalid & awready)
+            awdone_trigger_send_packet_buf <= awdone_trigger_send_packet
+            
+            wdone_trigger_send_packet = wdone_trigger_send_packet_buf | (wvalid & wready)
+            wdone_trigger_send_packet_buf <= wdone_trigger_send_packet
+        else
+            awdone_trigger_send_packet = 0
+            awdone_trigger_send_packet_buf <= 0
+            
+            wdone_trigger_send_packet = 0
+            wdone_trigger_send_packet_buf <= 0
         end
     )
     almain = @always (
         {awvalid, awaddr, awlen} = 0;
-        {wvalid, wdata} = 0;
+        {wvalid, wdata, wlast} = 0;
         {arvalid, araddr, arlen} = 0;
         rready = 0;
+        {awready_out, wready_out} = 0;
 
         debug_valid = 0;
         debug_data = 0;
+
+        startreadpacket = 0;
+        startreadsendctrl = 0;
 
         if state_settings == giesettings
             awvalid = wait_after_rst_axi_spec & ~awdone_settings_buf
@@ -324,9 +431,10 @@ function generateEtherCoreController()
 
             wdata = $(Wireexpr(32, 0x8000_0000))
             wvalid = ~wdone_settings_buf
+            wlast = ~wdone_settings_buf
 
             debug_valid = awdone_settings & wdone_settings
-            debug_data = (0xC0 << 32) | (clk_counter << 40)
+            debug_data = (0x10 << 32) | (clk_counter << 40)
         elseif state_settings == verifygiesettings
             arvalid = ~ardone_vgs_buf
             araddr = $gie_addr
@@ -344,6 +452,7 @@ function generateEtherCoreController()
             # force clear buffer at the same time for simplicity
             wdata = 0x8
             wvalid = ~wdone_setreadintr_buf
+            wlast = ~wdone_setreadintr_buf
 
             debug_data = (0x30 << 32) | (clk_counter << 40)
             debug_valid = awdone_setreadintr & wdone_setreadintr
@@ -354,21 +463,32 @@ function generateEtherCoreController()
 
             rready = ~rdone_verify_read_intr_buf
 
-            debug_data = (0x60 << 32) | (clk_counter << 40) | {$(Wireexpr(debug_width - 32, 0)), rdata}
+            debug_data = (0x40 << 32) | (clk_counter << 40) | {$(Wireexpr(debug_width - 32, 0)), rdata}
             # debug_valid = 1
             debug_valid = rvalid
         else
             if state_packet == idle_packet
                 # if (rupdate & ())
                 if (1 & ~(intr_counter_prev == intr_counter_post))
+                # if trigger_read_packet
                     arvalid = 1
                     araddr = recv_buf_addr
                     arlen = $(initial_read_dword-1)
+
+                    startreadpacket = 1
+                elseif awvalid_in
+                    # query if transmit buffer is empty
+                    # TODO: check if interval from last tx is wide enough
+                    arvalid = 1
+                    araddr = send_ctrl_addr
+                    arlen = 0
+
+                    startreadsendctrl = 1
                 end
             elseif state_packet == get_packet_size
                 rready = 1
 
-                debug_data = (0x40 << 32) | (clk_counter << 40) | {$(Wireexpr(debug_width - 32, 0)), rdata}
+                debug_data = (0x50 << 32) | (clk_counter << 40) | {$(Wireexpr(debug_width - 32, 0)), rdata}
                 debug_valid = rready & rvalid
 
                 packet_size_known = rlast & ((ether_type == 0x0806) || (ether_type == 0x0800))
@@ -380,7 +500,7 @@ function generateEtherCoreController()
                 rready = 1
                 if ~ardone_get_packet_full_buf
                     debug_valid = arready
-                    debug_data = (0xD0 << 32) | (clk_counter << 40) | {$(Wireexpr(debug_width - 32, 0)),ether_type, ip_length}
+                    debug_data = (0x60 << 32) | (clk_counter << 40) | {$(Wireexpr(debug_width - 32, 0)),ether_type, ip_length}
                 else
                     debug_data = (0x70 << 32) | (clk_counter << 40) | {$(Wireexpr(debug_width - 32, 0)), rdata} | ({$(Wireexpr(debug_width - 1, 0)), rlast} << 32)
                     debug_valid = rready & rvalid
@@ -391,6 +511,7 @@ function generateEtherCoreController()
                 awlen = 0
 
                 wvalid = ~wdone_clear_recv_flag_buf
+                wlast = ~wdone_clear_recv_flag_buf
                 if recv_ctrl_addr == $recv_ctrl_ping_addr
                     wdata = 0x8
                 else
@@ -398,7 +519,58 @@ function generateEtherCoreController()
                 end
 
                 debug_valid = awdone_clear_recv_flag & wdone_clear_recv_flag
-                debug_data = (0x50 << 32) | (clk_counter << 40)
+                debug_data = (0x80 << 32) | (clk_counter << 40)
+            elseif state_packet == test_send_possible
+                # wvalid = wvalid_in;
+                # if ~tx_buffer_empty_buf
+                rready = 1
+                # end
+                # if tx_buffer_empty
+                #     # start filling in tx buffer
+                #     awvalid = 1
+                #     # awready_out = awready
+                #     awaddr = send_buf_addr
+                #     awlen = awlen_in
+                # end
+
+
+                debug_valid = rlast & rready & rvalid
+                debug_data = (0x90 << 32) | (clk_counter << 40) | {$(Wireexpr(debug_width-1, 0)), rdata[0]}
+            elseif state_packet == set_send_packet_field
+                awvalid = awvalid_in & ~awdone_set_send_packet_buf
+                awready_out = awready & ~awdone_set_send_packet_buf
+                awaddr = send_buf_addr
+                awlen = awlen_in
+                
+                wvalid = wvalid_in & ~wdone_set_send_packet_buf
+                wready_out = wready & ~wdone_set_send_packet_buf
+                wdata = wdata_in
+                wlast = wlast_in & ~wdone_set_send_packet_buf
+
+                debug_data = ({$(Wireexpr(debug_width-1,0)), wlast} << 32) | (0xA0 << 32) | (clk_counter << 40) | {$(Wireexpr(debug_width-32,0)), wdata}
+                debug_valid = wready & wvalid
+            elseif state_packet == set_send_packet_length
+                awvalid = ~awdone_set_send_length_buf
+                awlen = 0
+                awaddr = send_length_addr
+
+                wvalid = ~wdone_set_send_length_buf
+                wlast = ~wdone_set_send_length_buf
+                wdata = ({$(Wireexpr(32 - 8, 0)), awlen_buf_set_send_packet} << 2) + 2
+
+                debug_data = (0xC0 << 32) | (clk_counter << 40)
+                debug_valid = wdone_set_send_length & awdone_set_send_length
+            elseif state_packet == trigger_send_packet
+                awvalid = ~awdone_trigger_send_packet_buf
+                awaddr = send_ctrl_addr
+                awlen = 0
+
+                wvalid = ~wdone_trigger_send_packet_buf
+                wlast = ~wdone_trigger_send_packet_buf
+                wdata = 0x1
+
+                debug_valid = wdone_trigger_send_packet & awdone_trigger_send_packet
+                debug_data = (0xB0 << 32) | (clk_counter << 40)
             end
         end
     )
@@ -409,6 +581,10 @@ function generateEtherCoreController()
         
         recv_ctrl_addr = $(Wireexpr(13, 0));
         recv_buf_addr = $(Wireexpr(13, 0));
+
+        send_ctrl_addr = $(Wireexpr(13, 0));
+        send_buf_addr = $(Wireexpr(13, 0));
+        send_length_addr = $(Wireexpr(13, 0));
 
         if intr_counter_prev[0]
             recv_buf_addr = $recv_buf_ping_addr
@@ -425,6 +601,20 @@ function generateEtherCoreController()
         if $(transcond(fsm_packet, @tstate clear_recv_packet_field => idle_packet))
             intr_counter_post <= intr_counter_post + $(Wireexpr(2, 1))
         end;
+
+        if write_parity == $(Wireexpr(1, 0))
+            send_buf_addr = $send_buf_ping_addr
+            send_ctrl_addr = $send_ctrl_ping_addr
+            send_length_addr = $send_length_ping_addr
+        else
+            send_buf_addr = $send_buf_pong_addr
+            send_ctrl_addr = $send_ctrl_pong_addr
+            send_length_addr = $send_length_pong_addr
+        end;
+
+        if $(transcond(fsm_packet, @tstate trigger_send_packet => idle_packet))
+            write_parity <= ~write_parity
+        end
     )
 
     algetsizeutil = @always (
@@ -481,6 +671,79 @@ function generateEtherCoreController()
     return v
 end
 
+function sampleArpPacketGen()
+    v = Vmodule("sampleArpInput")
+    prts = @ports (
+        @in CLK, RST;
+        @in awready;
+        @out @logic awvalid;
+        @out @logic 8 awlen;
+
+        @in wready;
+        @out @logic wvalid;
+        @out @logic wlast;
+        @out @logic 32 wdata;
+
+        @in btn;
+    )
+
+    data = [
+        0xFFFF_FFFF,
+        0x0000_FFFF,
+        0xCEFA_005E,
+        0x0100_0608,
+        0x0406_0008,
+        0x0000_0100,
+        0xCEFA_005E,
+        0x0000_0000,
+        0x0000_0000,
+        0xFEA9_0000,
+        0x0000_0A0A
+    ]
+    @assert length(data) > 0
+    
+    (datavalid, outdata), p = readOnlyQueueComb(32, data, @wireexpr(wready), @wireexpr(restart))
+
+    al = @cpalways (
+        awlen = $(length(data) - 1);
+        awvalid = ~(wcounter == $(length(data)));
+
+        wlast = 0;
+        wdata = $outdata;
+        restart = 0;
+        wvalid = $datavalid & ~(wcounter == $(length(data)));
+        if wcounter == awlen
+            # if wvalid & wready
+            #     wcounter <= 0
+            # end
+            wlast = 1;
+        end;
+
+        if wvalid & wready
+            wcounter <= wcounter + 1
+        end;
+
+        if btn
+            if (wcounter == $(length(data))) & (~(wvalid & wready))
+                restart = $(Wireexpr(1,1))
+                wcounter <= 0
+            end
+        end
+    )
+
+    vpush!.(v, (prts, p, al...))
+    return v
+end
+
+let
+    v = sampleArpPacketGen()
+    v = vfinalize(v)
+
+    vexport(v)
+    wrapper = wrappergen(v)
+    vexport("$(getname(wrapper)).v", wrapper)
+end
+
 let
     g = Vmodgraph()
 
@@ -496,6 +759,7 @@ let
 
             wvalid => wvalid_in,
             wdata => wdata_in,
+            wlast => wlast_in,
 
             arvalid => arvalid_in,
             araddr => araddr_in,
@@ -555,4 +819,7 @@ let
     open("$(getname(vwrapper)).v", "w") do io
         write(io, string(vwrapper, false))
     end
+
+    dot = dotgen(g)
+    println(dot)
 end
