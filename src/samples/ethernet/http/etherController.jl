@@ -1,6 +1,10 @@
-let
-    include("samples/ethernet/dhcp/uartMisc.jl")
-    include("samples/ethernet/dhcp/asciiEncoder.jl")
+# let
+include("../dhcp/uartMisc.jl")
+include("../dhcp/asciiEncoder.jl")
+
+function generateAsciiEncoderForServer()
+    # include("samples/ethernet/dhcp/uartMisc.jl")
+    # include("samples/ethernet/dhcp/asciiEncoder.jl")
 
     g = Vmodgraph()
 
@@ -29,6 +33,7 @@ let
     vs = vfinalize(layer2vmod!(g, name="AsciiEncoder"))
     vexport(vs), vexport("$(getname(vs[begin]))_wrapper.v", wrappergen(vs[begin]))
 end
+
 
 function generateAxiControllerForEtherCore()
     prts = VerilogWriter.Core.generateAxi4Port(13, 32, 4, 4, true, "")
@@ -110,29 +115,7 @@ function generateAxiControllerForEtherCore()
             wacceptable = 1
         end;
 
-        # # not awvalid_in
-        # if awvalid
-        #     awlen_in_buffer <= awlen_in
-        # end;
-
-        # # 0 if wptr is ahead
-        # # TEST: wlast when awlen_in == 0
-        # wlast = 0;
-        # if awptr == wptr + ptrincr
-        #     wlast = (awlen_in_buffer == wcounter) & wvalid
-        # elseif awptr == wptr
-        #     # awlen == 0
-        #     wlast = awvalid & (awlen_in == wcounter)
-        # end;
         wlast = wlast_in;
-
-        # if wvalid & wready
-        #     if wlast
-        #         wcounter <= 0
-        #     else
-        #         wcounter <= wcounter + 1
-        #     end
-        # end
     )
     alread = @always (
         araddr = araddr_in;
@@ -290,9 +273,6 @@ function generateEtherCoreController()
     almisc = @cpalways (
         wait_after_rst_axi_spec <= $(Wireexpr(1, 1));
 
-        # rupdate & ()
-        # trigger_read_packet = 1 & ~(intr_counter_prev == intr_counter_post)
-
         if state_settings == giesettings
             awdone_settings = awdone_settings_buf | (awvalid & awready)
             wdone_settings = wdone_settings_buf | (wvalid & wready)
@@ -347,20 +327,6 @@ function generateEtherCoreController()
         else
             ardone_get_packet_full_buf <= 0
         end;
-
-        # if state_packet == test_send_possible
-        #     tx_buffer_empty = (rlast & (~rdata[0])) | tx_buffer_empty_buf
-        #     tx_buffer_empty_buf <= tx_buffer_empty
-
-        #     awlen_buf_test_send_possible <= awlen
-        # else
-        #     tx_buffer_empty = 0
-        #     tx_buffer_empty_buf <= 0
-
-        #     if ~(state_packet == set_send_packet_field)
-        #         awlen_buf_test_send_possible <= 0
-        #     end
-        # end;
 
         if state_packet == set_send_packet_field
             awdone_set_send_packet = (awready & awvalid) | awdone_set_send_packet_buf
@@ -521,18 +487,7 @@ function generateEtherCoreController()
                 debug_valid = awdone_clear_recv_flag & wdone_clear_recv_flag
                 debug_data = (0x80 << 32) | (clk_counter << 40)
             elseif state_packet == test_send_possible
-                # wvalid = wvalid_in;
-                # if ~tx_buffer_empty_buf
                 rready = 1
-                # end
-                # if tx_buffer_empty
-                #     # start filling in tx buffer
-                #     awvalid = 1
-                #     # awready_out = awready
-                #     awaddr = send_buf_addr
-                #     awlen = awlen_in
-                # end
-
 
                 debug_valid = rlast & rready & rvalid
                 debug_data = (0x90 << 32) | (clk_counter << 40) | {$(Wireexpr(debug_width-1, 0)), rdata[0]}
@@ -642,8 +597,6 @@ function generateEtherCoreController()
                     end
                 end
             end
-        # elseif state_packet == get_packet_full
-        #     # pass, preserve ip_length and ether_type
         else
             initial_read_dword_counter <= 0
             if state_packet == get_packet_full
@@ -744,7 +697,7 @@ let
     vexport("$(getname(wrapper)).v", wrapper)
 end
 
-let
+function generateServerAll()
     g = Vmodgraph()
 
     v_axi_controller = generateAxiControllerForEtherCore()
@@ -823,3 +776,7 @@ let
     dot = dotgen(g)
     println(dot)
 end
+
+
+generateAsciiEncoderForServer()
+generateServerAll()
