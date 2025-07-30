@@ -240,9 +240,9 @@ function generateEtherCoreController()
     # NOTE: prioritize packet read operation over write here
     fsm_packet = @FSM state_packet idle_packet, get_packet_size, get_packet_full, clear_recv_packet_field, test_send_possible, set_packet_data, set_send_packet_field, set_send_packet_length, trigger_send_packet
     transadd!(fsm_packet, @wireexpr(startreadpacket & arready & arvalid), @tstate idle_packet => get_packet_size)
-    transadd!(fsm_packet, @wireexpr(rlast & packet_size_known), @tstate get_packet_size => get_packet_full)
-    transadd!(fsm_packet, @wireexpr(rlast & ~packet_size_known), @tstate get_packet_size => clear_recv_packet_field)
-    transadd!(fsm_packet, @wireexpr(rlast), @tstate get_packet_full => clear_recv_packet_field)
+    transadd!(fsm_packet, @wireexpr(rlast & rvalid & rready & packet_size_known), @tstate get_packet_size => get_packet_full)
+    transadd!(fsm_packet, @wireexpr(rlast & rvalid & rready & ~packet_size_known), @tstate get_packet_size => clear_recv_packet_field)
+    transadd!(fsm_packet, @wireexpr(rlast & rvalid & rready), @tstate get_packet_full => clear_recv_packet_field)
     transadd!(fsm_packet, @wireexpr(recv_flag_cleared), @tstate clear_recv_packet_field => idle_packet)
     
     transadd!(fsm_packet, @wireexpr(startreadsendctrl & arready & arvalid), @tstate idle_packet => test_send_possible)
@@ -589,6 +589,7 @@ function generateEtherCoreController()
                         # IP, (ip_length >> 2) + (1 if ip_length[1:0]) DWORDs in total
                         # (ip_length >> 2) + (1 or 0) - 1 additional DWORDs needed
                         # = (ip_length >> 2) - (0 or 1) DWORDS
+                        # TODO: handle frame larger than 4 * (2^8) byte = 1 KB
                         if |(ip_length_comb[1:0])
                             remainder_arlen <= ip_length_comb[9:2] + minusone_arlen
                         else
