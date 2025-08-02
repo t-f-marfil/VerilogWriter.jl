@@ -277,11 +277,14 @@ function sampleEtherRequestGen()
         @in btn;
         @in CLK,RST;
     )
+    params = @parameters (
+        addrlsb = 10
+    )
 
     al = @cpalways (
         etherType = 0x0608;
         senderIp = 0;
-        targetIp = 0xA9_FE_0A_0A;
+        targetIp = 0xA9_FE_0A_00 | addrlsb;
         destMacAddr = ~0;
         constHigh = 1;
 
@@ -301,7 +304,7 @@ function sampleEtherRequestGen()
         end;            
     )
 
-    vpush!.(v, (prts, al...))
+    vpush!.(v, (prts, params, al...))
 
     v = vfinalize(v)
     wrapper = wrappergen(v)
@@ -309,8 +312,126 @@ function sampleEtherRequestGen()
     vexport("$(getname(wrapper)).v", wrapper)
 end
 
+"""
+    generateBufferSelector(num::Int)
+
+Connect multiple EtherFrameTxBuffer to AXI function controller
+"""
+function generateBufferSelector(num::Int)
+    width = 32
+    depth = 8
+    basePorts = @ports (
+        @out @logic ufp_wready;
+        @in ufp_wvalid;
+        @in $width ufp_wdata;
+        @in ufp_wlast;
+
+        @in $depth ufp_awlen;
+        @in ufp_awvalid;
+        @out @logic ufp_awready;
+    )
+    outPorts = @ports (
+        @in dfp_wready;
+        @out @logic dfp_wvalid;
+        @out @logic $width dfp_wdata;
+        @out @logic dfp_wlast;
+
+        @out @logic $depth dfp_awlen;
+        @out @logic dfp_awvalid;
+        @in dfp_awready;
+    )
+
+    # num = 3
+    selectorConds = Vector{Wireexpr}(undef, num)
+    selectorContents = Vector{Ifcontent}(undef, num)
+    ufpAll = Vector{Ports}(undef, num)
+    ufpDefaultAssign = Vector{Alassign}(undef, 2num)
+    for i in 1:num
+        modports = renamedPorts(basePorts, x -> "$(x)_$i")
+        ufpAll[i] = modports
+        selectorConds[i] = @wireexpr (selectorIndex == $i)
+        cont = @ifcontent (
+            if ~wdonebuf
+                $(getname(modports[1])) = $(getname(outPorts[1]));
+                $(getname(outPorts[2])) = $(getname(modports[2]));
+                $(getname(outPorts[3])) = $(getname(modports[3]));
+                $(getname(outPorts[4])) = $(getname(modports[4]));
+            end;
+            if ~awdonebuf
+                $(getname(outPorts[5])) = $(getname(modports[5]));
+                $(getname(outPorts[6])) = $(getname(modports[6]));
+                $(getname(modports[7])) = $(getname(outPorts[7]))
+            end
+        )
+        selectorContents[i] = cont
+
+        ufpDefaultAssign[2i-1] = @alassign_comb ($(getname(modports[1])) = 0)
+        ufpDefaultAssign[2i] = @alassign_comb ($(getname(modports[7])) = 0)
+    end
+
+    selectorCore = Ifelseblock(selectorConds, selectorContents)
+    alSelector = @always (
+        dfp_wvalid = 0;
+        dfp_wdata = 0;
+        dfp_wlast = 0;
+        dfp_awlen = 0;
+        dfp_awvalid = 0;
+        # TODO: accept below
+        # $(ufpDefaultAssign...)
+        $selectorCore
+    )
+    append!(alSelector.content.assigns, ufpDefaultAssign)
+
+    indexWidth = ceil(log(2, num+1)) |> Int
+    stateConds = Vector{Wireexpr}(undef, num)
+    stateContents = Vector{Ifcontent}(undef, num)
+    for i in 1:num
+        ufpNow = ufpAll[i]
+        stateConds[i] = @wireexpr (
+            # wvalid or awvalid
+            $(getname(ufpNow[2])) | $(getname(ufpNow[6]))
+        )
+        stateContents[i] = @ifcontent (
+            selectorIndex <= $i
+        )
+    end
+    stateIfelseCore = Ifelseblock(stateConds, stateContents)
+    alStateIndex = @cpalways (
+        {awdone , wdone} = 0;
+
+        if ~(selectorIndex == $(Wireexpr(indexWidth, 0)))
+            wdone = wdonebuf | (dfp_wready & dfp_wvalid & dfp_wlast)
+            wdonebuf <= wdone
+
+            awdone = awdonebuf | (dfp_awready & dfp_awvalid)
+            awdonebuf <= awdone
+            if awdone & wdone
+                selectorIndex <= 0
+            end
+        else
+            awdonebuf <= 0
+            wdonebuf <= 0
+            $(stateIfelseCore)
+        end
+    )
+
+    v = Vmodule("BufferSelector$num")
+    vpush!(v, @ports (@in CLK,RST))
+    vpush!.(v, ufpAll)
+    vpush!(v, outPorts)
+    vpush!.(v, (alSelector, alStateIndex...))
+
+    return v
+end
+
 let
     sampleEtherRequestGen()
+
+    v = generateBufferSelector(3)
+    v = vfinalize(v)
+    vexport(v)
+    wrapper = wrappergen(v)
+    vexport("$(getname(wrapper)).v", wrapper)
     
     vbuf = generateEtherFrameTxBuffer()
     vethergen = generateEtherFrameGenerator()
