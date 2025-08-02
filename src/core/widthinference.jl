@@ -399,7 +399,7 @@ Exclude items in `info` from target of wire width inference.
 Localparam with explicit width declaration is not yet implemented.
 As a workaround we treat localparam as wire of unknown width.
 """
-function addParameterInfo!(constraint::WidthConstraint, info::T) where {T <: Union{Localparams}}
+function addParameterInfo!(constraint::WidthConstraint, info::T) where {T <: Union{Localparams,Parameters}}
     for item in info
         # localparam is not the target of width inference
         pop!(constraint.name2id, item.name, nothing)
@@ -682,6 +682,7 @@ function autodeclCore(x, env::Vmodenv, instInterfaces::VinstInterfaces)
     
     resolveSliceWidth!(constraint, info)
     addDeclarationInfo!.(constraint, (env.prts, env.dcls))
+    addParameterInfo!(constraint, env.prms)
     addParameterInfo!(constraint, env.lprms)
 
     tree = unifyEquality(constraint.equality)
