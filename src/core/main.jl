@@ -99,7 +99,7 @@ macro exportCore()
 
         export
             getname, getwidth, getsensitivity, getifcont,
-            getdirec, getports, vrename, portsNameMod
+            getdirec, getports, vrename, renamedPorts
 
         export addAxiLitePort!, generateAxiLitePort
 
