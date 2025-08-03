@@ -30,9 +30,9 @@ function generateRamSdpRfInst(width::Integer, addrlen::Integer, enread, enwrite,
     return dout, raminst
 end
 
-function generateEtherFrameTxBuffer()
+function generateEtherFrameTxBuffer(name)
     # first word fall through
-    v = Vmodule("etherFrameTxBuffers")
+    v = Vmodule("etherFrameTxBuffers_$name")
     @sym2wire enread, enwrite, addrin, addrout, din
     width = 32
     depth = 8
@@ -110,8 +110,8 @@ function generateEtherFrameTxBuffer()
     return v
 end
 
-function generateEtherFrameGenerator()
-    v = Vmodule("etherFrameGenerator")
+function generateEtherFrameGenerator(name)
+    v = Vmodule("etherFrameGenerator_$name")
 
     prts = @ports (
         @in CLK, RST;
@@ -180,7 +180,7 @@ function generateEtherFrameGenerator()
             headerCounter <= 0
         end;
         if state == idle
-            wdataHalfWordBuf <= etherType
+            wdataHalfWordBuf <= {etherType[7:0], etherType[15:8]}
         elseif state == payload
             if wvalid & wready
                 wdataHalfWordBuf <= wdata_in[31:16]
@@ -282,7 +282,7 @@ function sampleEtherRequestGen()
     )
 
     al = @cpalways (
-        etherType = 0x0608;
+        etherType = 0x0806;
         senderIp = 0;
         targetIp = 0xA9_FE_0A_00 | addrlsb;
         destMacAddr = ~0;
@@ -433,8 +433,8 @@ let
     wrapper = wrappergen(v)
     vexport("$(getname(wrapper)).v", wrapper)
     
-    vbuf = generateEtherFrameTxBuffer()
-    vethergen = generateEtherFrameGenerator()
+    vbuf = generateEtherFrameTxBuffer("arp")
+    vethergen = generateEtherFrameGenerator("arp")
     varpreqgen = generateArpRequestGenerator()
 
     g = Vmodgraph()
