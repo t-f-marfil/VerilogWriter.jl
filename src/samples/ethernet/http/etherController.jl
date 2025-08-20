@@ -193,11 +193,9 @@ function generateEtherCoreController()
 
         @in 32 wdata_in;
 
-        # rupdate <=> raccept
-        @in rupdate;
-        @out @logic raccept;
+        @in rready_in;
+        # @out @logic raccept;
         @out @logic 32 rdata_out;
-
         @out @logic rvalid_out;
         @out @logic rlast_out; # when one packet is fully read
 
@@ -390,6 +388,12 @@ function generateEtherCoreController()
         startreadpacket = 0;
         startreadsendctrl = 0;
 
+        rlast_out = 0;
+        rdata_out = 0;
+        rvalid_out = 0;
+
+        packet_size_known = 0;
+
         if state_settings == giesettings
             awvalid = wait_after_rst_axi_spec & ~awdone_settings_buf
             awaddr = $gie_addr
@@ -435,7 +439,8 @@ function generateEtherCoreController()
         else
             if state_packet == idle_packet
                 # if (rupdate & ())
-                if (1 & ~(intr_counter_prev == intr_counter_post))
+                if (rready_in & ~(intr_counter_prev == intr_counter_post))
+                # if (1 & ~(intr_counter_prev == intr_counter_post))
                 # if trigger_read_packet
                     arvalid = 1
                     araddr = recv_buf_addr
@@ -452,18 +457,24 @@ function generateEtherCoreController()
                     startreadsendctrl = 1
                 end
             elseif state_packet == get_packet_size
-                rready = 1
+                rready = rready_in
+                rvalid_out = rvalid
+                rdata_out = rdata
 
                 debug_data = (0x50 << 32) | (clk_counter << 40) | {$(Wireexpr(debug_width - 32, 0)), rdata}
                 debug_valid = rready & rvalid
 
                 packet_size_known = rlast & ((ether_type == 0x0806) || (ether_type == 0x0800))
+                rlast_out = rlast & ~packet_size_known
             elseif state_packet == get_packet_full
                 arvalid = ~ardone_get_packet_full_buf
                 araddr = recv_buf_addr + $initial_read_dword
                 arlen = remainder_arlen
 
-                rready = 1
+                rready = rready_in
+                rvalid_out = rvalid
+                rlast_out = rlast
+                rdata_out = rdata
                 if ~ardone_get_packet_full_buf
                     debug_valid = arready
                     debug_data = (0x60 << 32) | (clk_counter << 40) | {$(Wireexpr(debug_width - 32, 0)),ether_type, ip_length}
