@@ -673,14 +673,14 @@ function generateServerAll()
         )
     )
 
-    vs = layer2vmod!(g, name="VServer")
+    vs = layer2vmod!(g, name="EtherCoreSimpleInterface")
     vs = vfinalize(vs)
     vexport(vs)
 
 
     wrapper_raw = wrappergen(vs[begin])
 
-    vwrapper = Vmodule("VServer_wrapper")
+    vwrapper = Vmodule("EtherCoreSimpleInterface_wrapper")
     vpush!(vwrapper, wrapper_raw.insts)
 
     axi_controller_name = getname(v_axi_controller)
@@ -718,79 +718,6 @@ function generateServerAll()
     run(pipeline(cmd, stdin=IOBuffer(txt)))
 end
 
-# function sampleArpPacketGen()
-#     v = Vmodule("sampleArpInput")
-#     prts = @ports (
-#         @in CLK, RST;
-#         @in awready;
-#         @out @logic awvalid;
-#         @out @logic 8 awlen;
-
-#         @in wready;
-#         @out @logic wvalid;
-#         @out @logic wlast;
-#         @out @logic 32 wdata;
-
-#         @in btn;
-#     )
-
-#     data = [
-#         0xFFFF_FFFF,
-#         0x0000_FFFF,
-#         0xCEFA_005E,
-#         0x0100_0608,
-#         0x0406_0008,
-#         0x0000_0100,
-#         0xCEFA_005E,
-#         0x0000_0000,
-#         0x0000_0000,
-#         0xFEA9_0000,
-#         0x0000_0A0A
-#     ]
-#     @assert length(data) > 0
-    
-#     (datavalid, outdata), p = readOnlyQueueComb(32, data, @wireexpr(wready), @wireexpr(restart))
-
-#     al = @cpalways (
-#         awlen = $(length(data) - 1);
-#         awvalid = ~(wcounter == $(length(data)));
-
-#         wlast = 0;
-#         wdata = $outdata;
-#         restart = 0;
-#         wvalid = $datavalid & ~(wcounter == $(length(data)));
-#         if wcounter == awlen
-#             # if wvalid & wready
-#             #     wcounter <= 0
-#             # end
-#             wlast = 1;
-#         end;
-
-#         if wvalid & wready
-#             wcounter <= wcounter + 1
-#         end;
-
-#         if btn
-#             if (wcounter == $(length(data))) & (~(wvalid & wready))
-#                 restart = $(Wireexpr(1,1))
-#                 wcounter <= 0
-#             end
-#         end
-#     )
-
-#     vpush!.(v, (prts, p, al...))
-#     return v
-# end
-
-
-# let
-#     v = sampleArpPacketGen()
-#     v = vfinalize(v)
-
-#     vexport(v)
-#     wrapper = wrappergen(v)
-#     vexport("$(getname(wrapper)).v", wrapper)
-# end
 
 generateAsciiEncoderForServer()
 generateServerAll()
