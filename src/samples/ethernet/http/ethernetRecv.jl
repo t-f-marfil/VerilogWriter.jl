@@ -131,7 +131,7 @@ function generateBufferWithReadRandomAccess()
         @in 32 ufp_wdata;
         @out @logic ufp_wready;
 
-        @in 13 dfp_araddr;
+        @in 13 dfp_araddr; # word addressing
         @in dfp_arvalid;
         @out @logic dfp_arready;
 
@@ -175,13 +175,20 @@ function generateBufferWithReadRandomAccess()
     )
 
     alreadstallusage = @cpalways (
-        if read_stalling
+        if prev_read_stalling
             addrout = dfp_araddr_buf
         else
             addrout = dfp_araddr
+        end;
+        if read_stalling & ~prev_read_stalling
             dfp_araddr_buf <= dfp_araddr
         end;
-        prev_read_stalling <= read_stalling;
+
+        if dfp_full & dfp_flush
+            prev_read_stalling <= 0
+        else
+            prev_read_stalling <= read_stalling
+        end;
         dfp_arready = ~prev_read_stalling;
     )
     alread = @cpalways (

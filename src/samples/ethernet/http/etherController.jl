@@ -468,7 +468,7 @@ function generateEtherCoreController()
                 rlast_out = rlast & ~packet_size_known
             elseif state_packet == get_packet_full
                 arvalid = ~ardone_get_packet_full_buf
-                araddr = recv_buf_addr + $initial_read_dword
+                araddr = recv_buf_addr + $(initial_read_dword << 2)
                 arlen = remainder_arlen
 
                 rready = rready_in
