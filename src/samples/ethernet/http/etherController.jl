@@ -1,4 +1,3 @@
-# let
 include("../dhcp/uartMisc.jl")
 include("../dhcp/asciiEncoder.jl")
 
@@ -717,7 +716,3 @@ function generateServerAll()
     cmd = `dot -Tpng -oEtherCoreController.png`
     run(pipeline(cmd, stdin=IOBuffer(txt)))
 end
-
-
-generateAsciiEncoderForServer()
-generateServerAll()

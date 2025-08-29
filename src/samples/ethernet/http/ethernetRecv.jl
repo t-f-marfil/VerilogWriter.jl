@@ -35,10 +35,10 @@ function generateRecvBufferSelector()
         explicitFlushBuffer
     )
     transadd!(fsm, @wireexpr(ufp_wvalid & ufp_wready), @tstate idle => testEther)
-    transadd!(fsm, @wireexpr((dwordCounter == 3) & (ethertype == $(Wireexpr(16, 0x0806)))), @tstate testEther => connectArp)
+    transadd!(fsm, @wireexpr((dwordCounter == 3) & (ethertype == $(Wireexpr(16, 0x0806))) & (ufp_wvalid & ufp_wready)), @tstate testEther => connectArp)
     # transadd!(fsm, @wireexpr((dwordCounter == 3)), @tstate testEther => connectArp)
-    transadd!(fsm, @wireexpr((dwordCounter == 3) & (ethertype == $(Wireexpr(16, 0x0800)))), @tstate testEther => testIp)
-    transadd!(fsm, @wireexpr((dwordCounter == 3) & ethertype_unknown), @tstate testEther => explicitFlushBuffer)
+    transadd!(fsm, @wireexpr((dwordCounter == 3) & (ethertype == $(Wireexpr(16, 0x0800))) & (ufp_wvalid & ufp_wready)), @tstate testEther => testIp)
+    transadd!(fsm, @wireexpr((dwordCounter == 3) & ethertype_unknown & (ufp_wvalid & ufp_wready)), @tstate testEther => explicitFlushBuffer)
 
     transadd!(fsm, @wireexpr(bufout_wlast & bufout_wvalid & bufout_wready), @tstate connectArp => idle)
     transadd!(fsm, @wireexpr(bufout_wlast & bufout_wvalid & bufout_wready), @tstate testIp => idle)
@@ -228,72 +228,4 @@ function generateBufferWithReadRandomAccess()
 
     vpush!.(v, (prts, raminst, alctrl..., alreadstallusage..., alread..., alwrite))
     return v
-end
-
-let
-    vbuf = generateEtherFrameTxBuffer("recv")
-    vrecvsel = generateRecvBufferSelector()
-    vinter = generateControllerRecvInterface()
-
-    g = Vmodgraph()
-
-    g(
-        vinter => vbuf,
-        @pconnect (
-            dfp_valid => ufp_valid,
-            dfp_data => ufp_data,
-            dfp_last => ufp_last
-        )
-    )
-    g(
-        vbuf => vinter,
-        @pconnect (
-            ufp_ready => dfp_ready
-        )
-    )
-    g(
-        vinter => vrecvsel,
-        @pconnect (
-            dfp_valid => ufp_wvalid,
-            dfp_data => ufp_wdata,
-            dfp_last => ufp_wlast
-        )
-    )
-
-    g(
-        vbuf => vrecvsel,
-        @pconnect (
-            ufp_ready => ufp_wready,
-
-            dfp_awlen => bufout_awlen,
-            dfp_awvalid => bufout_awvalid,
-
-            dfp_wvalid => bufout_wvalid,
-            dfp_wdata => bufout_wdata,
-            dfp_wlast => bufout_wlast
-        )
-    )
-    g(
-        vrecvsel => vbuf,
-        @pconnect (
-            bufout_wready => dfp_wready,
-            bufout_awready => dfp_awready,
-        )
-    )
-
-    vs = layer2vmod!(g, name="RecvSelector")
-    vs = vfinalize(vs)
-    vexport(vs)
-    wrapper = wrappergen(vs[begin])
-    vexport("$(getname(wrapper)).v", wrapper)
-
-    txt = dotgen(g)
-    run(pipeline(`dot -Tpng -oRecvSelector.png`, stdin=IOBuffer(txt)))
-
-
-    vendbuf = generateBufferWithReadRandomAccess()
-    vendbuf = vfinalize(vendbuf)
-    vexport(vendbuf)
-    wrapper = wrappergen(vendbuf)
-    vexport("$(getname(wrapper)).v", wrapper)
 end

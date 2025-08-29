@@ -25,6 +25,9 @@ function generateLinkLocalIpClaimer(probe_timeout_cycle, probe_initial_wait_cycl
 
         @out @logic debug_valid;
         @out @logic 72 debug_data;
+
+        @out @logic ip_addr_valid;
+        @out @logic 32 ip_addr;
     )
 
     PROBE_NUM = 3
@@ -230,7 +233,7 @@ function generateLinkLocalIpClaimer(probe_timeout_cycle, probe_initial_wait_cycl
     transadd!(tx_probe_timeout_fsm, @wireexpr(probe_initial_wait_done), @tstate probe_initial_wait => trigger_probe)
     transadd!(tx_probe_timeout_fsm, @wireexpr(probe_triggered), @tstate trigger_probe => probe_interval)
     transadd!(tx_probe_timeout_fsm, @wireexpr(end_probe_interval & ~probe_all_done), @tstate probe_interval => trigger_probe)
-    transadd!(tx_probe_timeout_fsm, @wireexpr(end_probe_interval & probe_all_done), @tstate probe_interval => probe_idle)
+    transadd!(tx_probe_timeout_fsm, @wireexpr((end_probe_interval & probe_all_done) | probe_conflict), @tstate probe_interval => probe_idle)
 
     transadd!(tx_probe_timeout_fsm, @wireexpr(probe_conflict), @tstate probe_initial_wait => probe_idle)
     transadd!(tx_probe_timeout_fsm, @wireexpr(probe_conflict), @tstate trigger_probe => probe_idle)
@@ -290,6 +293,13 @@ function generateLinkLocalIpClaimer(probe_timeout_cycle, probe_initial_wait_cycl
         probe_done = $(transcond(tx_probe_timeout_fsm, @tstate probe_interval => probe_idle))
     )
 
+    aloutinfo = @cpalways (
+        if $(transcond(tx_fsm, @tstate announcing1 => configured))
+            ip_addr_valid <= 1
+        end;
+        ip_addr = claiming_ip
+    )
+
     aldebug = @always (
         debug_valid = 0;
         debug_data = 0;
@@ -310,21 +320,10 @@ function generateLinkLocalIpClaimer(probe_timeout_cycle, probe_initial_wait_cycl
         alrx, al_second_announce, alrxmisc, rx_flush_fsm, alrxflushfsm, alrxctrl,
         tx_probe_timeout_fsm, altxprobefsm, altxprobe..., 
 
-        almisc, aldebug
+        almisc, aloutinfo..., aldebug
     ))
 
     return v
-end
-
-let
-    v = generateLinkLocalIpClaimer(100, 100, 50)
-    v = generateLinkLocalIpClaimer(1 << 25, 7 << 23, 3 << 24)
-
-    v = vfinalize(v)
-    wrapper = wrappergen(v)
-
-    vexport(v)
-    vexport("$(getname(v))_wrapper.v", wrapper)
 end
 
 function generateSampleArpFrameBuffer()
@@ -389,12 +388,4 @@ function generateSampleArpFrameBuffer()
 
     vpush!.(v, (prts, al..., algenerated))
     return v
-end
-
-let
-    v = vfinalize(generateSampleArpFrameBuffer())
-    wrapper = wrappergen(v)
-
-    vexport(v)
-    vexport("$(getname(v))_wrapper.v", wrapper)
 end
