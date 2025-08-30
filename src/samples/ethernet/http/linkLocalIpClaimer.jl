@@ -85,7 +85,7 @@ function generateLinkLocalIpClaimer(probe_timeout_cycle, probe_initial_wait_cycl
             tx_arpReqCommandValid = ~tx_arpReqCommandDone_buf
         end
     )
-    max_rx_words = 5
+    max_rx_words = 4
     dcls = @decls (
         @logic 32 rx_sender_ip, rx_target_ip;
         @logic 48 rx_sender_mac;
@@ -150,15 +150,14 @@ function generateLinkLocalIpClaimer(probe_timeout_cycle, probe_initial_wait_cycl
                 if rx_rvalid
                     rx_rcounter <= rx_rcounter + $(Wireexpr(8, 1))
                     if rx_rcounter == 0
-                        rx_sender_mac[47:32] <= {rx_rdata[23:16], rx_rdata[31:24]}
+                        rx_sender_mac[47:16] <= {rx_rdata[7:0], rx_rdata[15:8], rx_rdata[23:16], rx_rdata[31:24]}
                     elseif rx_rcounter == 1
-                        rx_sender_mac[31:0] <= {rx_rdata[7:0], rx_rdata[15:8], rx_rdata[23:16], rx_rdata[31:24]}
+                        rx_sender_mac[15:0] <= {rx_rdata[7:0], rx_rdata[15:8]}
+                        rx_sender_ip[31:16] <= {rx_rdata[23:16], rx_rdata[31:24]}
                     elseif rx_rcounter == 2
-                        rx_sender_ip <= {rx_rdata[7:0], rx_rdata[15:8], rx_rdata[23:16], rx_rdata[31:24]}
+                        rx_sender_ip[15:0] <= {rx_rdata[7:0], rx_rdata[15:8]}
                     elseif rx_rcounter == 3
-                        rx_target_ip[31:16] <= {rx_rdata[23:16], rx_rdata[31:24]}
-                    elseif rx_rcounter == 4
-                        rx_target_ip[15:0] <= {rx_rdata[7:0], rx_rdata[15:8]}
+                        rx_target_ip <= {rx_rdata[7:0], rx_rdata[15:8], rx_rdata[23:16], rx_rdata[31:24]}
                     end
                 end
 
@@ -211,15 +210,13 @@ function generateLinkLocalIpClaimer(probe_timeout_cycle, probe_initial_wait_cycl
                 rx_arvalid = ~(rx_arcounter == $max_rx_words)
 
                 if rx_arcounter == 0
-                    rx_araddr = 5
+                    rx_araddr = 2
                 elseif rx_arcounter == 1
-                    rx_araddr = 6
+                    rx_araddr = 3
                 elseif rx_arcounter == 2
-                    rx_araddr = 7
+                    rx_araddr = 4
                 elseif rx_arcounter == 3
-                    rx_araddr = 9
-                elseif rx_arcounter == 4
-                    rx_araddr = 10
+                    rx_araddr = 6
                 end
             elseif rx_flush_state == rx_flush_frame_now
                 rx_flush = 1
@@ -351,8 +348,8 @@ function generateSampleArpFrameBuffer()
         0x0000_100A, # 10
     ]
 
-    # delay_max = 4000
-    delay_max = 10
+    delay_max = 4000
+    # delay_max = 10
     al = @cpalways (
         wlast = localCounter == $(arppacketdwordcount-1);
         wvalid = (delayCounter == $(Wireexpr(48, delay_max))) & ~(totalCounter == $(length(dbuf)));

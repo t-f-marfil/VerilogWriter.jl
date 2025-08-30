@@ -137,64 +137,13 @@ let
 end
 
 let
-    vbuf = generateEtherFrameTxBuffer("recv")
-    vrecvsel = generateRecvBufferSelector()
-    vinter = generateControllerRecvInterface()
+    v = generateRecvBufferSelector()
+    v = vfinalize(v)
 
-    g = Vmodgraph()
+    wrapper = wrappergen(v)
 
-    g(
-        vinter => vbuf,
-        @pconnect (
-            dfp_valid => ufp_valid,
-            dfp_data => ufp_data,
-            dfp_last => ufp_last
-        )
-    )
-    g(
-        vbuf => vinter,
-        @pconnect (
-            ufp_ready => dfp_ready
-        )
-    )
-    g(
-        vinter => vrecvsel,
-        @pconnect (
-            dfp_valid => ufp_wvalid,
-            dfp_data => ufp_wdata,
-            dfp_last => ufp_wlast
-        )
-    )
-
-    g(
-        vbuf => vrecvsel,
-        @pconnect (
-            ufp_ready => ufp_wready,
-
-            dfp_awlen => bufout_awlen,
-            dfp_awvalid => bufout_awvalid,
-
-            dfp_wvalid => bufout_wvalid,
-            dfp_wdata => bufout_wdata,
-            dfp_wlast => bufout_wlast
-        )
-    )
-    g(
-        vrecvsel => vbuf,
-        @pconnect (
-            bufout_wready => dfp_wready,
-            bufout_awready => dfp_awready,
-        )
-    )
-
-    vs = layer2vmod!(g, name="RecvSelector")
-    vs = vfinalize(vs)
-    vexport(vs)
-    wrapper = wrappergen(vs[begin])
-    vexport("$(getname(wrapper)).v", wrapper)
-
-    txt = dotgen(g)
-    run(pipeline(`dot -Tpng -oRecvSelector.png`, stdin=IOBuffer(txt)))
+    vexport(v)
+    vexport("$(getname(v))_wrapper.v", wrapper)
 
 
     vendbuf = generateBufferWithReadRandomAccess()

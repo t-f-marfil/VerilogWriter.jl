@@ -2,120 +2,102 @@ function generateRecvBufferSelector()
     depth = 8
     prts = @ports (
         @in CLK,RST;
-        # ufp : connection between buffer and axicorecontroller
-        @in ufp_wvalid, ufp_wready, ufp_wlast;
-        @in 32 ufp_wdata;
-
-        @out @logic bufout_wready;
-        @in bufout_wvalid;
-        @in 32 bufout_wdata;
-        @in bufout_wlast;
-
-        # port to ignore here
-        @in $depth bufout_awlen;
-        @in bufout_awvalid;
-        @out @logic bufout_awready;
+        @in ufp_valid, ufp_last;
+        @out @logic ufp_ready;
+        @in 32 ufp_data;
 
         @out @logic debug_valid;
         @out @logic 72 debug_data
     )
     basePorts = @ports (
-        @in dfp_wready;
-        @out @logic dfp_wvalid;
-        @out @logic 32 dfp_wdata;
-        @out @logic dfp_wlast;
+        @in dfp_ready;
+        @out @logic dfp_valid;
+        @out @logic 32 dfp_data;
+        @out @logic dfp_last;
     )
 
     arpPorts = renamedPorts(basePorts, x->"$(x)_arp")
 
     fsm = @FSM state (
-        idle, 
-        testEther, connectArp,
-        testIp,
+        init, 
+        # testEther, connectArp,
+        connectArp, connectIpv4,
+        # testIp,
         explicitFlushBuffer
     )
-    transadd!(fsm, @wireexpr(ufp_wvalid & ufp_wready), @tstate idle => testEther)
-    transadd!(fsm, @wireexpr((dwordCounter == 3) & (ethertype == $(Wireexpr(16, 0x0806))) & (ufp_wvalid & ufp_wready)), @tstate testEther => connectArp)
-    # transadd!(fsm, @wireexpr((dwordCounter == 3)), @tstate testEther => connectArp)
-    transadd!(fsm, @wireexpr((dwordCounter == 3) & (ethertype == $(Wireexpr(16, 0x0800))) & (ufp_wvalid & ufp_wready)), @tstate testEther => testIp)
-    transadd!(fsm, @wireexpr((dwordCounter == 3) & ethertype_unknown & (ufp_wvalid & ufp_wready)), @tstate testEther => explicitFlushBuffer)
+    transadd!(fsm, @wireexpr(header_read_done & htype_arp), @tstate init => connectArp)
+    transadd!(fsm, @wireexpr(header_read_done & htype_ipv4), @tstate init => connectIpv4)
+    transadd!(fsm, @wireexpr(header_read_done), @tstate init => explicitFlushBuffer)
 
-    transadd!(fsm, @wireexpr(bufout_wlast & bufout_wvalid & bufout_wready), @tstate connectArp => idle)
-    transadd!(fsm, @wireexpr(bufout_wlast & bufout_wvalid & bufout_wready), @tstate testIp => idle)
-    transadd!(fsm, @wireexpr(bufout_wlast & bufout_wvalid & bufout_wready), @tstate explicitFlushBuffer => idle)
-
-
-    alPortPassThrough = @always (
-        debug_data = {$(Wireexpr(8-3, 0)), state, ufp_wdata, $(Wireexpr(32-8-16-1, 0)), ethertype_unknown, ethertype, dwordCounter};
-        debug_valid = ufp_wvalid & ufp_wready;
-
-        if state == connectArp
-            bufout_wready = dfp_wready_arp
-        elseif state == testIp
-            bufout_wready = 1
-        elseif state == explicitFlushBuffer
-            bufout_wready = 1
-        else
-            bufout_wready = 0
-        end;
-
-        if state == connectArp
-            dfp_wvalid_arp = bufout_wvalid
-            dfp_wdata_arp = bufout_wdata
-            dfp_wlast_arp = bufout_wlast
-        else
-            dfp_wvalid_arp = 0
-            dfp_wdata_arp = 0
-            dfp_wlast_arp = 0
-        end;
-    )
+    transadd!(fsm, @wireexpr(ufp_valid & ufp_ready & ufp_last), @tstate connectArp => init)
+    transadd!(fsm, @wireexpr(ufp_valid & ufp_ready & ufp_last), @tstate connectIpv4 => init)
+    transadd!(fsm, @wireexpr(ufp_valid & ufp_ready & ufp_last), @tstate explicitFlushBuffer => init)
     
-    almisc = @always (
-        if state == idle
-            dwordCounter <= $(Wireexpr(8, 1))
-        elseif state == testEther
-            if ufp_wready & ufp_wvalid
-                dwordCounter <= dwordCounter + 1
+    # include first payload 2bytes
+    header_dword_count = 4
+    alfsm = @always (
+        header_read_done = (header_read_counter == $(header_dword_count-1)) & ufp_ready & ufp_valid;
+        htype_arp = ethertype_earliest == $(Wireexpr(16, 0x0806));
+        htype_ipv4 = ethertype_earliest == $(Wireexpr(16, 0x0800))
+    )
+    alio = @always (
+        if state == init
+            ufp_ready = ~(header_read_counter == $header_dword_count)
+        elseif state == connectArp
+            ufp_ready = dfp_ready_arp
+        elseif state == connectIpv4
+            ufp_ready = 1
+        else
+            ufp_ready = 1
+        end;
+
+        if state == connectArp
+            dfp_valid_arp = ufp_valid
+            dfp_last_arp = ufp_last
+            dfp_data_arp = {ufp_data[15:0], payload_fallthrough}
+        else
+            dfp_valid_arp = 0
+            dfp_last_arp = 0
+            dfp_data_arp = 0
+        end
+    )
+    alheadercomb = @always (
+        # only used at the cycle where ufp_data is assigned to ethertype
+        ethertype_earliest = {ufp_data[7:0],ufp_data[15:8]}
+    )
+    dcls = @decls (
+        @logic 48 dest_addr, src_addr;
+        @logic 16 ethertype;
+    )
+    aldata = @always (
+        if state == init
+            if ufp_ready & ufp_valid
+                header_read_counter <= header_read_counter + $(Wireexpr(8, 1))
+
+                if header_read_counter == 0
+                    dest_addr[47:16] <= {ufp_data[7:0],ufp_data[15:8], ufp_data[23:16], ufp_data[31:24]}
+                elseif header_read_counter == 1
+                    dest_addr[15:0] <= {ufp_data[7:0],ufp_data[15:8]}
+                    src_addr[47:32] <= {ufp_data[23:16], ufp_data[31:24]}
+                elseif header_read_counter == 2
+                    src_addr[31:0] <= {ufp_data[7:0],ufp_data[15:8], ufp_data[23:16], ufp_data[31:24]}
+                elseif header_read_counter == 3
+                    ethertype <= {ufp_data[7:0],ufp_data[15:8]}
+                    payload_fallthrough <= ufp_data[31:16]
+                end
+            end
+        else
+            header_read_counter <= 0
+            if ufp_valid & ufp_ready
+                payload_fallthrough <= ufp_data[31:16]
             end
         end
     )
 
-    alconst = @always (
-        bufout_awready = 1;
-        ethertype = {ufp_wdata[7:0], ufp_wdata[15:8]};
-        ethertype_unknown = ~((ethertype == 0x0806) | (ethertype == 0x0800))
-    )
-
-    v = Vmodule("RecvBufferSelector")
+    v = Vmodule("RecvBufferSelector_v2")
     vpush!.(v, (prts, arpPorts))
-    vpush!.(v, (fsm, alPortPassThrough, almisc, alconst))
+    vpush!.(v, (fsm, alfsm, alio, alheadercomb, aldata, dcls))
 
-    return v
-end
-
-function generateControllerRecvInterface()
-    v = Vmodule("ControllerRecvInterface")
-
-    prts = @ports (
-        @in ufp_rvalid;
-        @in 32 ufp_rdata;
-        @in ufp_rlast;
-        @out @logic ufp_rready;
-
-        @out @logic dfp_valid;
-        @out @logic 32 dfp_data;
-        @out @logic dfp_last;
-        @in dfp_ready;
-    )
-    al = @always (
-        ufp_rready = dfp_ready;
-        
-        dfp_valid = ufp_rvalid;
-        dfp_data = ufp_rdata;
-        dfp_last = ufp_rlast;
-    )
-
-    vpush!.(v, (prts, al))
     return v
 end
 
