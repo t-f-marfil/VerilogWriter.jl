@@ -235,3 +235,66 @@ function generateIcmpRecvParser()
 
     return v
 end
+
+function generateSampleIcmpEchoRequestBuffer()
+    v = Vmodule("sampleIcmpEchoRequestBuffer")
+
+    prts = @ports (
+        @in CLK, RST;
+        @in wready;
+        @out @logic wvalid, wlast;
+        @out @logic 32 wdata
+    )
+    dbuf = [
+        0xFFFF_FFFF,
+        0x0000_FFFF,
+        0xCEFA_005E,
+        # _type = 0x0800
+        # version = 4, header length = 5
+        # diffserv = 0
+        0x0045_0008,
+        # total length = 0x0020
+        # id = 0
+        0x0000_2000,
+        # flags = 0, fragment offset = 0
+        # ttl = 0x80 = 0d128, proto = 01
+        0x0180_0000,
+        0xFEA9_C2D2,
+        0xFEA9_0B0A,
+        0x0008_0C0A,
+        0x9A78_63C1,
+        0xCDAB_3412,
+        0x0000_1234,
+    ]
+
+    delay_max = 10
+    al = @cpalways (
+        if ~($delay_max == delay_counter)
+            delay_counter <= delay_counter + $(Wireexpr(48, 1))
+        end;
+
+        if wvalid & wready
+            counter <= counter + $(Wireexpr(48, 1))
+        end;
+
+        wvalid = (delay_counter == $delay_max) & ~(counter == $(length(dbuf)));
+        wlast = (counter == $(length(dbuf)-1));
+    )
+
+    ifconds = Vector{Wireexpr}(undef, 0)
+    contents = Vector{Ifcontent}(undef, 0)
+
+    for i in 1:length(dbuf)
+        push!(ifconds, @wireexpr(counter == $(i-1)))
+        push!(contents, @ifcontent (
+            wdata = $(Wireexpr(32, dbuf[i]))
+        ))
+    end
+    algenerated = @always (
+        $(Ifelseblock(ifconds, contents))
+    )
+
+    vpush!.(v, (prts, al..., algenerated))
+
+    return v
+end

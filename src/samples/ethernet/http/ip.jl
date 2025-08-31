@@ -18,6 +18,7 @@ function generateIpPacketSimpleGenerator()
 
         @in commandValid;
         @out @logic commandReady;
+        # total length of ip data field only
         @in 16 totalLength;
         @in 32 sourceAddr, destAddr;
         @in 8 protocol;

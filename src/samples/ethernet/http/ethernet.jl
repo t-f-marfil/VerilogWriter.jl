@@ -31,7 +31,7 @@ function generateRamSdpRfInst(width::Integer, addrlen::Integer, enread, enwrite,
 end
 
 function generateEtherFrameTxBuffer(name)
-    # first word fall through
+    # first word fall through FIFO
     v = Vmodule("etherFrameTxBuffers_$name")
     @sym2wire enread, enwrite, addrin, addrout, din
     width = 32

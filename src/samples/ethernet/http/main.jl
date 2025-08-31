@@ -187,3 +187,10 @@ let
     wrapper = wrappergen(vicmprecv)
     vexport("$(getname(wrapper)).v", wrapper)
 end
+
+let
+    v = generateSampleIcmpEchoRequestBuffer() |> vfinalize
+    vexport(v)
+    wrapper = wrappergen(v)
+    vexport("$(getname(wrapper)).v", wrapper)
+end
