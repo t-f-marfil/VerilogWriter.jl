@@ -173,3 +173,17 @@ let
     vexport(v)
     vexport("$(getname(v))_wrapper.v", wrapper)
 end
+
+let
+    vipv4sel = generateIpv4BufferSelector() |> vfinalize
+
+    vicmprecv = generateIcmpRecvParser() |> vfinalize
+
+    vexport(vipv4sel)
+    wrapper = wrappergen(vipv4sel)
+    vexport("$(getname(wrapper)).v", wrapper)
+
+    vexport(vicmprecv)
+    wrapper = wrappergen(vicmprecv)
+    vexport("$(getname(wrapper)).v", wrapper)
+end

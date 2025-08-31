@@ -6,6 +6,9 @@ function generateRecvBufferSelector()
         @out @logic ufp_ready;
         @in 32 ufp_data;
 
+        # valid at any dfp_valid cycle
+        @out @logic 48 dest_addr, src_addr;
+
         @out @logic debug_valid;
         @out @logic 72 debug_data
     )
@@ -17,6 +20,7 @@ function generateRecvBufferSelector()
     )
 
     arpPorts = renamedPorts(basePorts, x->"$(x)_arp")
+    ipv4Ports = renamedPorts(basePorts, x->"$(x)_ipv4")
 
     fsm = @FSM state (
         init, 
@@ -46,7 +50,7 @@ function generateRecvBufferSelector()
         elseif state == connectArp
             ufp_ready = dfp_ready_arp
         elseif state == connectIpv4
-            ufp_ready = 1
+            ufp_ready = dfp_ready_ipv4
         else
             ufp_ready = 1
         end;
@@ -59,16 +63,26 @@ function generateRecvBufferSelector()
             dfp_valid_arp = 0
             dfp_last_arp = 0
             dfp_data_arp = 0
-        end
+        end;
+
+        if state == connectIpv4
+            dfp_valid_ipv4 = ufp_valid
+            dfp_last_ipv4 = ufp_last
+            dfp_data_ipv4 = {ufp_data[15:0], payload_fallthrough}
+        else
+            dfp_valid_ipv4 = 0
+            dfp_last_ipv4 = 0
+            dfp_data_ipv4 = 0
+        end;
     )
     alheadercomb = @always (
         # only used at the cycle where ufp_data is assigned to ethertype
         ethertype_earliest = {ufp_data[7:0],ufp_data[15:8]}
     )
-    dcls = @decls (
-        @logic 48 dest_addr, src_addr;
-        @logic 16 ethertype;
-    )
+    # dcls = @decls (
+    #     # @logic 48 dest_addr, src_addr;
+    #     # @logic 16 ethertype;
+    # )
     aldata = @always (
         if state == init
             if ufp_ready & ufp_valid
@@ -82,7 +96,7 @@ function generateRecvBufferSelector()
                 elseif header_read_counter == 2
                     src_addr[31:0] <= {ufp_data[7:0],ufp_data[15:8], ufp_data[23:16], ufp_data[31:24]}
                 elseif header_read_counter == 3
-                    ethertype <= {ufp_data[7:0],ufp_data[15:8]}
+                    # ethertype <= {ufp_data[7:0],ufp_data[15:8]}
                     payload_fallthrough <= ufp_data[31:16]
                 end
             end
@@ -95,8 +109,8 @@ function generateRecvBufferSelector()
     )
 
     v = Vmodule("RecvBufferSelector_v2")
-    vpush!.(v, (prts, arpPorts))
-    vpush!.(v, (fsm, alfsm, alio, alheadercomb, aldata, dcls))
+    vpush!.(v, (prts, arpPorts, ipv4Ports))
+    vpush!.(v, (fsm, alfsm, alio, alheadercomb, aldata))
 
     return v
 end
