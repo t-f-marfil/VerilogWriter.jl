@@ -65,9 +65,9 @@ end
 
 
 let
-    buf = generateEtherFrameTxBuffer("echo")
-    ethergen = generateEtherFrameGenerator("echo")
-    ipgen = generateIpPacketSimpleGenerator()
+    buf = generateEtherFrameTxBuffer("echoreq")
+    ethergen = generateEtherFrameGenerator("echoreq")
+    ipgen = generateIpPacketSimpleGenerator("echoreq")
     echogen = generateIcmpEchoRequestGenerator()
 
     g = Vmodgraph()
@@ -111,7 +111,7 @@ let
             wlast => wlast_in,
 
             protocol => protocol,
-            totalLength => totalLength
+            totalLength => totalLengthData
         )
     )
     g(
@@ -193,4 +193,20 @@ let
     vexport(v)
     wrapper = wrappergen(v)
     vexport("$(getname(wrapper)).v", wrapper)
+end
+
+
+let
+    vs = generateEchoMessageBlock()
+    vs = vfinalize(vs)
+
+    vexport(vs)
+    wrapper = wrappergen(vs[begin])
+    vexport("$(getname(wrapper)).v", wrapper)
+    
+
+    v = generateSampleEchoMessageGenerator() |> vfinalize
+    vexport(v)
+    wrapper = wrappergen(v)
+    vexport("$(getname(v))_wrapper.v", wrapper)
 end

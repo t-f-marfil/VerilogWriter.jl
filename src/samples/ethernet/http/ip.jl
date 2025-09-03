@@ -1,4 +1,4 @@
-function generateIpPacketSimpleGenerator()
+function generateIpPacketSimpleGenerator(name)
     # no ip opions available
     # ttl = 128
     # diffserv = 0
@@ -16,10 +16,10 @@ function generateIpPacketSimpleGenerator()
         @in wlast_in;
         @out @logic wready_out;
 
-        @in commandValid;
-        @out @logic commandReady;
+        @in ufp_addr_valid, ufp_misc_valid;
+        @out @logic ufp_addr_ready, ufp_misc_ready;
         # total length of ip data field only
-        @in 16 totalLength;
+        @in 16 totalLengthData;
         @in 32 sourceAddr, destAddr;
         @in 8 protocol;
 
@@ -27,7 +27,7 @@ function generateIpPacketSimpleGenerator()
     )
 
     fsm = @FSM state idle, header, payload
-    transadd!(fsm, @wireexpr(commandReady & commandValid), @tstate idle => header)
+    transadd!(fsm, @wireexpr(((ufp_addr_ready & ufp_addr_valid) | ufp_addr_done) & ((ufp_misc_valid & ufp_misc_ready) | ufp_misc_done)), @tstate idle => header)
     transadd!(fsm, @wireexpr((headerCounter == 4) & wvalid & wready), @tstate header => payload)
     transadd!(fsm, @wireexpr(wvalid & wready & wlast), @tstate payload => idle)
     
@@ -65,7 +65,7 @@ function generateIpPacketSimpleGenerator()
     )
     almisc = @cpalways (
         etherType = 0x0800;
-        totalLengthIp = totalLengthBuf + 20;
+        totalLengthIp = totalLengthDataBuf + 20;
         ttl = $(Wireexpr(8, 128));
         
         sumh1 = {$(Wireexpr(4, 0)), $(Wireexpr(16, 0x4500))} + {$(Wireexpr(4, 0)), totalLengthIp};
@@ -77,7 +77,6 @@ function generateIpPacketSimpleGenerator()
         sum_second = ({$(Wireexpr(1, 0)), sum_first[15:0]} + {$(Wireexpr(13, 0)), sum_first[19:16]}) | $(Wireexpr(17, 0));
 
         checksum = 0;
-        commandReady = 0;
         
         if state == header
             if headerCounter == 0
@@ -90,13 +89,24 @@ function generateIpPacketSimpleGenerator()
             end
         end;
         if state == idle
-            commandReady = 1
-            if commandReady & commandValid
-                totalLengthBuf <= totalLength
+            ufp_addr_ready = ~ufp_addr_done
+            ufp_misc_ready = ~ufp_misc_done
+            if ufp_addr_ready & ufp_addr_valid
                 sourceAddrBuf <= sourceAddr
                 destAddrBuf <= destAddr
-                protocolBuf <= protocol
+                ufp_addr_done <= $(Wireexpr(1, 1))
             end
+            if ufp_misc_ready & ufp_misc_valid
+                ufp_misc_done <= $(Wireexpr(1, 1))
+                protocolBuf <= protocol
+                totalLengthDataBuf <= totalLengthData
+            end
+        else
+            ufp_addr_ready = 0
+            ufp_misc_ready = 0
+
+            ufp_addr_done <= 0
+            ufp_misc_done <= 0
         end;
 
         if state == header
@@ -113,7 +123,7 @@ function generateIpPacketSimpleGenerator()
         end
     )
 
-    v = Vmodule("IpPacketSimpleGenerator")
+    v = Vmodule("IpPacketSimpleGenerator_$name")
     vpush!.(v, (prts, fsm, almain, almisc...))
     return v
 end

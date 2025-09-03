@@ -1,4 +1,4 @@
-
+# deprecated
 function generateIcmpEchoRequestGenerator()
     prts = @ports (
         @in CLK,RST;
@@ -77,6 +77,7 @@ function generateIcmpEchoRequestGenerator()
     return v
 end
 
+# deprecated
 function sampleEchoRequestGen()
     prts = @ports (
         @in CLK, RST;
@@ -146,7 +147,7 @@ function generateIcmpRecvParser()
     transadd!(fsm, @wireexpr(header_read_done), @tstate init => busy)
     transadd!(fsm, @wireexpr((ufp_last & ufp_valid & ufp_ready) & ~header_read_done), @tstate init => unknownError)
 
-    transadd!(fsm, @wireexpr((prev_ufp_last | busy_trans_done) & (info_valid & info_ready)), @tstate busy => init)
+    transadd!(fsm, @wireexpr((prev_ufp_last | busy_trans_done) & ((info_valid & info_ready) | info_done)), @tstate busy => init)
 
     transadd!(fsm, @wireexpr(1), @tstate unknownError => init)
 
@@ -156,22 +157,34 @@ function generateIcmpRecvParser()
         header_read_done = (header_read_counter == $(header_dword_length - 1)) & (ufp_valid & ufp_ready);
         
         if state == busy
-            info_valid = prev_ufp_last | busy_trans_done
+            info_valid = (prev_ufp_last | busy_trans_done) & ~info_done
         else
             info_valid = 0
+        end
+    )
+    almisc = @always (
+        if state == busy
+            if info_valid & info_ready
+                info_done <= 1
+            end
+        else
+            info_done <= 0
         end
     )
     alchecksum = @cpalways (
         if state == busy
             if ufp_ready & ufp_valid
-                checksum_with_carry = {$(Wireexpr(2, 0)), checksum} + {$(Wireexpr(2, 0)), ufp_data[31:16]} + {$(Wireexpr(2, 0)), ufp_data[15:0]} | $(Wireexpr(18, 0))
-                checksum_data_only <= checksum_with_carry[15:0] + {$(Wireexpr(14, 0)), checksum_with_carry[17:16]}
+                checksum_with_carry = {$(Wireexpr(2, 0)), checksum_data_only} + {$(Wireexpr(2, 0)), ufp_data[31:16]} + {$(Wireexpr(2, 0)), ufp_data[15:0]} | $(Wireexpr(18, 0))
+                checksum_with_carry_last = {$(Wireexpr(1, 0)), checksum_with_carry[15:0]} + {$(Wireexpr(15, 0)), checksum_with_carry[17:16]} | $(Wireexpr(17, 0))
+                checksum_data_only <= checksum_with_carry_last[15:0] + {$(Wireexpr(15, 0)), checksum_with_carry_last[16]}
             else
                 checksum_with_carry = 0
+                checksum_with_carry_last = 0
             end
         else
-            checksum_with_carry = 0
             checksum_data_only <= 0
+            checksum_with_carry = 0
+            checksum_with_carry_last = 0
         end
     )
     aldata = @always (
@@ -230,7 +243,7 @@ function generateIcmpRecvParser()
     vpush!.(v, (
         prts,
         fsm, alfsm,
-        alchecksum..., aldata, alio
+        alchecksum..., aldata, alio, almisc
     ))
 
     return v
@@ -297,4 +310,284 @@ function generateSampleIcmpEchoRequestBuffer()
     vpush!.(v, (prts, al..., algenerated))
 
     return v
+end
+
+function generateIcmpEchoMessageGenerator()
+    v = Vmodule("icmpEchoMessageGenerator")
+    prts = @ports (
+        @in CLK,RST;
+        
+        @out @logic 32 dfp_data;
+        @out @logic dfp_valid;
+        @out @logic dfp_last;
+        @in dfp_ready;
+        
+        @out @logic dfp_misc_valid;
+        @in dfp_misc_ready;
+        @out @logic 16 total_length;
+        @out @logic 8 protocol;
+
+        @in ufp_misc_valid;
+        @out @logic ufp_misc_ready;
+        # code : 8 for request, 0 for reply
+        @in 8 _type, code;
+        @in 16 identifier, sequence_number;
+        @in 16 total_length_data;
+        # output value to which ~ operation not applied yet
+        @in 16 checksum_data;
+
+        @in ufp_valid, ufp_last;
+        @in 32 ufp_data;
+        @out @logic ufp_ready;
+    )
+
+    header_dword_length = 2
+    fsm = @FSM state read_misc,send_header,send_data_body
+    transadd!(fsm, @wireexpr(ufp_misc_ready & ufp_misc_valid), @tstate read_misc => send_header)
+    transadd!(fsm, @wireexpr(header_send_done & ~dfp_last), @tstate send_header => send_data_body)
+    transadd!(fsm, @wireexpr(header_send_done & dfp_last), @tstate send_header => read_misc)
+    transadd!(fsm, @wireexpr(dfp_valid & dfp_ready & dfp_last), @tstate send_data_body => read_misc)
+
+    alfsm = @always (
+        if state == send_header
+            header_send_done = (header_send_count == $(header_dword_length-1)) & dfp_valid & dfp_ready
+        else
+            header_send_done = 0
+        end
+    )
+    alufp = @always (
+        if state == read_misc
+            ufp_misc_ready = 1
+        else
+            ufp_misc_ready = 0
+        end;
+
+        if state == send_data_body
+            ufp_ready = dfp_ready
+        else
+            ufp_ready = 0
+        end
+    )
+    aldfp = @always (
+        protocol = 0x01;
+        total_length = total_length_data_buf + 8;
+        if (state == send_header) | (state == send_data_body)
+            dfp_misc_valid = ~dfp_misc_done
+        else
+            dfp_misc_valid = 0
+        end;
+
+        if state == send_header
+            dfp_valid = 1
+            if header_send_count == 0
+                dfp_last = 0
+                dfp_data = {checksum_total[7:0], checksum_total[15:8], code_buf, type_buf}
+            elseif header_send_count == 1
+                dfp_last = total_length_data_buf == 0
+                dfp_data = {sequence_number_buf[7:0], sequence_number_buf[15:8], identifier_buf[7:0], identifier_buf[15:8]}
+            else
+                # not supposed to be here
+                dfp_last = 0
+                dfp_data = 0
+            end
+        elseif state == send_data_body
+            # TODO: check if ufp_last satisfies total_length constraint
+            dfp_valid = ufp_valid
+            dfp_last = ufp_last
+            dfp_data = ufp_data
+        else
+            dfp_valid = 0
+            dfp_last = 0
+            dfp_data = 0
+        end
+    )
+    alchecksum = @cpalways (
+        if state == read_misc
+            checksum_with_carry1 = {$(Wireexpr(2, 0)), identifier} + {$(Wireexpr(2, 0)), sequence_number} | $(Wireexpr(18, 0))
+            checksum_with_carry2 = {$(Wireexpr(2, 0)), _type, $(Wireexpr(8, 0))} + {$(Wireexpr(2, 0)), checksum_data}
+            checksum_with_carry_all = checksum_with_carry1 + checksum_with_carry2
+            checksum_total_pre = {$(Wireexpr(1, 0)), checksum_with_carry_all[15:0]} + {$(Wireexpr(15, 0)), checksum_with_carry_all[17:16]} | $(Wireexpr(17, 0))
+            checksum_total <= checksum_total_pre[15:0] + {$(Wireexpr(15, 0)), checksum_total_pre[16]}
+        else
+            checksum_with_carry1 = 0
+            checksum_with_carry2 = 0
+            checksum_with_carry_all = 0
+            checksum_total_pre = 0
+        end
+    )
+    alctrl = @always (
+        if state == send_header
+            if dfp_valid & dfp_ready
+                header_send_count <= header_send_count + $(Wireexpr(8, 1))
+            end
+        else
+            header_send_count <= 0
+        end
+    )
+    almiscctrl = @always (
+        if state == read_misc
+            identifier_buf <= identifier
+            sequence_number_buf <= sequence_number
+            total_length_data_buf <= total_length_data
+            # checksum_data_buf <= checksum_data
+            type_buf <= _type
+            code_buf <= code
+        end;
+
+        if state == read_misc
+            dfp_misc_done <= 0
+        elseif (state == send_header) | (state == send_data_body)
+            if dfp_misc_valid & dfp_misc_ready
+                dfp_misc_done <= $(Wireexpr(1, 1))
+            end
+        end
+    )
+
+    vpush!.(v, (
+        prts, fsm,
+        alfsm,
+        alufp, aldfp,
+        alchecksum...,
+        alctrl, almiscctrl
+    ))
+
+    return v
+end
+
+function generateSampleEchoMessageGenerator()
+    v = Vmodule("sampleEchoMessageGen")
+    prts = @ports (
+        @in CLK, RST;
+        @out @logic 8 _type, code;
+        @out @logic 16 identifier, sequence_number, total_length_data, checksum_data;
+        
+        @out @logic misc_valid;
+        @in misc_ready;
+
+        @out @logic valid, last;
+        @in ready;
+        @out @logic 32 data;
+
+        @out @logic 48 destMacAddr;
+        @out @logic 32 sourceIp, destIp;
+
+        @out @logic etherCommandValid, ipCommandValid;
+        @in etherCommandReady, ipCommandReady;
+
+        @out @logic constHigh
+    )
+
+    al = @always (
+        valid = 1;
+        last = 0;
+        data = 0;
+        constHigh = 1;
+
+        destMacAddr = $(Wireexpr(48, 0x12_34_56_78_9A_BC));
+        sourceIp = $(Wireexpr(32, 0xA9_FE_0A_0B));
+        destIp = $(Wireexpr(32, 0xA9_FE_0A_0C));
+
+        misc_valid = start & ~misc_done;
+        etherCommandValid = start & ~etherCommandDone;
+        ipCommandValid = start & ~ipCommandDone;
+        if start
+            _type = 8
+            code = 0
+            identifier = 0xABCD
+            sequence_number = 0x5678
+            total_length_data = 0
+            checksum_data = 0x12
+        else
+            _type = 0
+            code = 0
+            sequence_number = 0
+            total_length_data = 0
+            checksum_data = 0
+        end
+    )
+
+    alctrl = @always (
+        start <= $(Wireexpr(1, 1));
+
+        if etherCommandReady & etherCommandValid
+            etherCommandDone <= $(Wireexpr(1, 1))
+        end;
+
+        if ipCommandReady & ipCommandValid
+            ipCommandDone <= $(Wireexpr(1,1))
+        end;
+        if misc_ready & misc_valid
+            misc_done <= $(Wireexpr(1, 1))
+        end
+    )
+
+    vpush!.(v, (
+        prts, al, alctrl
+    ))
+
+    return v
+end
+
+
+function generateEchoMessageBlock()
+    buf = generateEtherFrameTxBuffer("echo")
+    ethergen = generateEtherFrameGenerator("echo")
+    ipgen = generateIpPacketSimpleGenerator("echo")
+    echogen = generateIcmpEchoMessageGenerator()
+
+    g = Vmodgraph()
+    g(
+        ethergen => buf,
+        @pconnect (
+            wvalid => ufp_valid,
+            wdata => ufp_data,
+            wlast => ufp_last
+        )
+    )
+    g(
+        buf => ethergen,
+        @pconnect (
+            ufp_ready => wready
+        )
+    )
+
+
+    g(
+        ipgen => ethergen,
+        @pconnect (
+            wdata => wdata_in,
+            wvalid => wvalid_in,
+            wlast => wlast_in,
+            etherType => etherType
+        )
+    )
+    g(
+        ethergen => ipgen,
+        @pconnect (
+            wready_out => wready
+        )
+    )
+
+    g(
+        echogen => ipgen,
+        @pconnect (
+            dfp_data => wdata_in,
+            dfp_valid => wvalid_in,
+            dfp_last => wlast_in,
+
+            dfp_misc_valid => ufp_misc_valid,
+            protocol => protocol,
+            total_length => totalLengthData
+        )
+    )
+    g(
+        ipgen => echogen,
+        @pconnect (
+            wready_out => dfp_ready,
+            ufp_misc_ready => dfp_misc_ready
+        )
+    )
+
+    vs = layer2vmod!(g, name="IcmpEchoMessageBlock")
+    return vs
 end
