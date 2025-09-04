@@ -130,15 +130,22 @@ function generateIcmpRecvParser()
         @in ufp_valid, ufp_last;
         @out @logic ufp_ready;
         @in 32 ufp_data;
+        # IP address input
+        @in 32 ufp_src_addr, ufp_dest_addr;
+        @in 16 ufp_total_length_data;
 
         @out @logic dfp_valid, dfp_last;
         @out @logic 32 dfp_data;
         @in dfp_ready;
 
         # info
+        @out @logic 16 total_length_data;
+        @out @logic 32 src_addr, dest_addr; # ip address of the packet
+        @out @logic no_data_payload;
         @out @logic 8 _type,code;
         @out @logic 16 checksum, identifier, sequence_number;
         @out @logic 16 checksum_data_only;
+        # info_core_valid has no ready output, asserted when info other than checksum_data_only is already valid
         @out @logic info_core_valid, info_valid;
         @in info_ready;
     )
@@ -190,14 +197,18 @@ function generateIcmpRecvParser()
     aldata = @always (
         if state == init
             if ufp_valid & ufp_ready
+                src_addr <= ufp_src_addr;
+                dest_addr <= ufp_dest_addr;
+                total_length_data <= ufp_total_length_data + 1 + ~$(Wireexpr(16, 8));
+
                 header_read_counter <= header_read_counter + $(Wireexpr(8, 1))
                 if header_read_counter == 0
-                    _type <= ufp_data[31:24]
-                    code <= ufp_data[23:16]
-                    checksum <= {ufp_data[7:0], ufp_data[15:8]}
+                    _type <= ufp_data[7:0]
+                    code <= ufp_data[15:8]
+                    checksum <= {ufp_data[23:16], ufp_data[31:24]}
                 elseif header_read_counter == 1
-                    identifier <= {ufp_data[23:16], ufp_data[31:24]}
-                    sequence_number <= {ufp_data[7:0], ufp_data[15:8]}
+                    identifier <= {ufp_data[7:0], ufp_data[15:8]}
+                    sequence_number <= {ufp_data[23:16], ufp_data[31:24]}
                 end
             end
         else
@@ -219,6 +230,7 @@ function generateIcmpRecvParser()
         end;
     )
     alio = @always (
+        no_data_payload = prev_ufp_last;
         info_core_valid = state == busy;
 
         if (state == busy) & ~(busy_trans_done)
@@ -256,19 +268,22 @@ function generateSampleIcmpEchoRequestBuffer()
         @in CLK, RST;
         @in wready;
         @out @logic wvalid, wlast;
-        @out @logic 32 wdata
+        @out @logic 32 wdata;
+
+        @out @logic constHigh;
+        @out @logic 32 dest_ip;
     )
     dbuf = [
         0xFFFF_FFFF,
         0x0000_FFFF,
-        0xCEFA_005E,
+        0xCBFA_005E,
         # _type = 0x0800
         # version = 4, header length = 5
         # diffserv = 0
         0x0045_0008,
         # total length = 0x0020
         # id = 0
-        0x0000_2000,
+        0x0000_2400,
         # flags = 0, fragment offset = 0
         # ttl = 0x80 = 0d128, proto = 01
         0x0180_0000,
@@ -277,11 +292,15 @@ function generateSampleIcmpEchoRequestBuffer()
         0x0008_0C0A,
         0x9A78_63C1,
         0xCDAB_3412,
-        0x0000_1234,
+        0x5678_1234,
+        0x0000_9999,
     ]
 
     delay_max = 10
     al = @cpalways (
+        constHigh = 1;
+        dest_ip = $(Wireexpr(32, 0xA9FE_0A0C));
+
         if ~($delay_max == delay_counter)
             delay_counter <= delay_counter + $(Wireexpr(48, 1))
         end;

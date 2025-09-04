@@ -115,9 +115,10 @@ function generateRecvBufferSelector()
     return v
 end
 
-function generateBufferWithReadRandomAccess()
+function generateBufferWithReadRandomAccess(name)
     # read as fifo, randomly accessible from dfp
-    vname = "randomReadAccessBuffer"
+    # TODO: implement dfp_rready using enread pin
+    vname = "randomReadAccessBuffer_$name"
     v = Vmodule(vname)
     prts = @ports (
         @in CLK, RST;
@@ -138,6 +139,8 @@ function generateBufferWithReadRandomAccess()
         @in dfp_flush;
         @out @logic dfp_full;
 
+        @out @logic 13 stored_length;
+
         @out @logic debug_valid;
         @out @logic 72 debug_data;
     )
@@ -150,6 +153,7 @@ function generateBufferWithReadRandomAccess()
     alctrl = @cpalways (
         dfp_full = full;
         ufp_wready = ~full;
+        stored_length = wptr;
 
         debug_data = 0;
         debug_valid = 0;

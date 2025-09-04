@@ -146,7 +146,7 @@ let
     vexport("$(getname(v))_wrapper.v", wrapper)
 
 
-    vendbuf = generateBufferWithReadRandomAccess()
+    vendbuf = generateBufferWithReadRandomAccess("etherrecv")
     vendbuf = vfinalize(vendbuf)
     vexport(vendbuf)
     wrapper = wrappergen(vendbuf)

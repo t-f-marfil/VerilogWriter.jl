@@ -141,6 +141,7 @@ function generateIpv4BufferSelector()
         @out @logic 72 debug_data;
 
         @out @logic 32 source_address, destination_address;
+        @out @logic 16 total_length_data;
 
         # TODO: this is not ipv4
         @in 48 ether_src_addr_in, ether_dest_addr_in;
@@ -192,6 +193,7 @@ function generateIpv4BufferSelector()
     )
 
     alio = @always (
+        total_length_data = total_length + 1 + ~({$(Wireexpr(12, 0)), ihl} << 2);
         if state == init
             ufp_ready = (header_read_counter < $common_header_dword_count) | (header_read_counter < {$(Wireexpr(4, 0)), ihl})
         elseif state == connectIcmp
