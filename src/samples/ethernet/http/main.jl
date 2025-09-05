@@ -210,3 +210,12 @@ let
     wrapper = wrappergen(v)
     vexport("$(getname(v))_wrapper.v", wrapper)
 end
+
+
+let
+    v = generateIcmpEchoServer() |> vfinalize
+    vexport(v)
+
+    wrapper = wrappergen(v)
+    vexport("$(getname(wrapper)).v", wrapper)
+end
