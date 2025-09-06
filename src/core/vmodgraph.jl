@@ -112,7 +112,7 @@ end
 # using ..Core: wirenamemodgen
 
 """
-    outerportnamegen(portname::String, mlay::Midmodule)
+    outerportnamegen(portname::String, mlay)
 
 Given the name of a port and the vmodule object the port belongs to,
 return the name of a wire which is connected to the port at the top module.
@@ -199,29 +199,55 @@ function layerconnInstantiate_mlay!(v::Vmodule, x::Vmodgraph)
     return nothing
 end
 
+struct TopPortNameCollision{T} <: Exception where {T <: AbstractString}
+    names::Vector{T}
+    mangledNames::Vector{T}
+end
+function Base.showerror(io::IO, e::TopPortNameCollision)
+    println(io, e.names)
+    println(io, e.mangledNames)
+end
 
 """
-    bypassUnconnected_mlay!(v::Vmodule, x::Mmodgraph)
+    bypassUnconnected_mlay!(v::Vmodule, x::Vmodgraph)
 
 Add to the top-level module ports that are connected to counterparts of 
-submodules, which are not connected to ports of other `Midmodule` objects.
+submodules, which are not connected to ports of other `Vmodule` objects.
 """
-function bypassUnconnected_mlay!(v::Vmodule, x::Vmodgraph)
+function bypassUnconnected_mlay!(v::Vmodule, x::Vmodgraph, mangle::Bool)
     unconnectedvec::Vector{Pair{Vmodule, Set{Oneport}}} = unconnectedports_mlay(x)
 
     npvec = Vector{Oneport}(undef, sum([length(s) for (_, s) in unconnectedvec]))
+    mangledName = Vector{String}(undef, sum([length(s) for (_, s) in unconnectedvec]))
     ci = 1
     for (vmod, d) in unconnectedvec
         for p in d
-            nname = outerportnamegen(getname(p), vmod)
+            nname = mangle ? outerportnamegen(getname(p), vmod) : getname(p)
             newport = vrename(p, nname)
 
             npvec[ci] = newport
+            mangledName[ci] = outerportnamegen(getname(p), vmod)
             ci += 1
         end
     end
 
-    vpush!(v, alloutwire(Ports(npvec)))
+    if !mangle
+        if length(Set([getname(p) for p in npvec])) != length(mangledName)
+            throw(TopPortNameCollision([getname(p) for p in npvec], mangledName))
+        end
+        alassignvec = Vector{Alassign}(undef, sum([length(s) for (_, s) in unconnectedvec]))
+        for (i, (p,n)) in enumerate(zip(npvec, mangledName))
+            if getdirec(p) == pout
+                alassignvec[i] = @alassign_comb ($(getname(p)) = $n)
+            else
+                alassignvec[i] = @alassign_comb ($n = $(getname(p)))
+            end
+        end
+
+        vpush!(v, @always ($(Ifcontent(alassignvec))))
+    end
+
+    vpush!(v, mangle ? alloutwire(Ports(npvec)) : Ports(npvec))
 
     return nothing
 end
@@ -261,6 +287,9 @@ function connectCommonPorts_mlay!(v::Vmodule, x::Vmodgraph)
 end
 
 # using ..Core: vinstnamemod
+function layer2vmod!(x::Vmodgraph ; name = "Layer")
+    layer2vmod!(x, true ; name=name)
+end
 
 """
     layer2vmod!(x::Mmodgraph; name = "Layers")::Vector{Vmodule}
@@ -269,7 +298,7 @@ Generate a list of `Vmodule` objects from `Mmodgraph`.
 
 `x` may change its content through the evaluation.
 """
-function layer2vmod!(x::Vmodgraph; name = "Layers")::Vector{Vmodule}
+function layer2vmod!(x::Vmodgraph, mangle::Bool; name = "Layer")::Vector{Vmodule}
     # toplevel module 
     v = Vmodule(name)
 
@@ -283,7 +312,7 @@ function layer2vmod!(x::Vmodgraph; name = "Layers")::Vector{Vmodule}
     # connect unconnected ports to outer ports
     # currently doing this before `vfinalize`,
     # port of unknown width should not exist at this time
-    bypassUnconnected_mlay!(v, x)
+    bypassUnconnected_mlay!(v, x, mangle)
 
     connectCommonPorts_mlay!(v, x)
 
