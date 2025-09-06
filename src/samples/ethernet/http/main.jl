@@ -17,7 +17,7 @@ let
     vbuf = generateEtherFrameTxBuffer("arp")
     vethergen = generateEtherFrameGenerator("arp")
     # varpreqgen = generateArpRequestGenerator()
-    varpreqgen = generateArpMessageGenerator()
+    varpreqgen = generateArpMessageGenerator("arp")
 
     g = Vmodgraph()
 
@@ -217,5 +217,25 @@ let
     vexport(v)
 
     wrapper = wrappergen(v)
+    vexport("$(getname(wrapper)).v", wrapper)
+end
+
+let
+    vs = generateLinkLocalIpClaimerSystem("1")
+    vs = vfinalize(vs)
+
+    vexport(vs)
+
+    wrapper = wrappergen(vs[begin])
+    vexport("$(getname(wrapper)).v", wrapper)
+end
+
+
+let
+    vs = generateIcmpEchoServerSystem("1")
+    vs = vfinalize(vs)
+    vexport(vs)
+
+    wrapper = wrappergen(vs[begin])
     vexport("$(getname(wrapper)).v", wrapper)
 end

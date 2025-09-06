@@ -263,8 +263,8 @@ function generateArpRequestGenerator()
     return v
 end
 
-function generateArpMessageGenerator()
-    v = Vmodule("ArpMessageGenerator")
+function generateArpMessageGenerator(name)
+    v = Vmodule("ArpMessageGenerator_$name")
     prts = @ports (
         @in CLK, RST;
         # static source MAC address
@@ -272,8 +272,8 @@ function generateArpMessageGenerator()
         @in 32 senderProtAddr;
         @in 32 targetProtAddr;
         @in 16 opcode;
-        @in commandValid;
-        @out @logic commandReady;
+        @in arp_command_valid;
+        @out @logic arp_command_ready;
 
         @out @logic 32 wdata;
         @out @logic wlast;
@@ -282,7 +282,7 @@ function generateArpMessageGenerator()
     )
 
     fsm = @FSM state idle, busy
-    transadd!(fsm, @wireexpr(commandReady & commandValid), @tstate idle => busy)
+    transadd!(fsm, @wireexpr(arp_command_ready & arp_command_valid), @tstate idle => busy)
     transadd!(fsm, @wireexpr(wlast & wvalid & wready), @tstate busy => idle)
 
     almain = @always (
@@ -317,7 +317,7 @@ function generateArpMessageGenerator()
         end
     )
     almisc = @cpalways (
-        commandReady = state == idle;
+        arp_command_ready = state == idle;
         if state == idle
             wcounter <= $(Wireexpr(4, 0))
             senderProtAddrBuf <= senderProtAddr

@@ -1,5 +1,5 @@
-function generateLinkLocalIpClaimer(probe_timeout_cycle, probe_initial_wait_cycle, second_announce_wait_cycle)
-    v = Vmodule("LinkLocalIpClaimer")
+function generateLinkLocalIpClaimer(probe_timeout_cycle, probe_initial_wait_cycle, second_announce_wait_cycle, name)
+    v = Vmodule("LinkLocalIpClaimer_$name")
 
     prts = @ports (
         @in CLK,RST;

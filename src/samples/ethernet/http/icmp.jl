@@ -122,8 +122,8 @@ function sampleEchoRequestGen()
     return v
 end
 
-function generateIcmpRecvParser()
-    v = Vmodule("icmpRecvParser")
+function generateIcmpRecvParser(name)
+    v = Vmodule("icmpRecvParser_$name")
     prts = @ports (
         @in CLK, RST;
 
@@ -337,8 +337,8 @@ function generateSampleIcmpEchoRequestBuffer()
     return v
 end
 
-function generateIcmpEchoMessageGenerator()
-    v = Vmodule("icmpEchoMessageGenerator")
+function generateIcmpEchoMessageGenerator(name)
+    v = Vmodule("icmpEchoMessageGenerator_$name")
     prts = @ports (
         @in CLK,RST;
         
@@ -554,11 +554,11 @@ function generateSampleEchoMessageGenerator()
 end
 
 
-function generateEchoMessageBlock()
-    buf = generateEtherFrameTxBuffer("echo")
-    ethergen = generateEtherFrameGenerator("echo")
-    ipgen = generateIpPacketSimpleGenerator("echo")
-    echogen = generateIcmpEchoMessageGenerator()
+function generateEchoMessageBlock(name)
+    buf = generateEtherFrameTxBuffer("echo_$name")
+    ethergen = generateEtherFrameGenerator("echo_$name")
+    ipgen = generateIpPacketSimpleGenerator("echo_$name")
+    echogen = generateIcmpEchoMessageGenerator("echo_$name")
 
     g = Vmodgraph()
     g(
@@ -613,12 +613,12 @@ function generateEchoMessageBlock()
         )
     )
 
-    vs = layer2vmod!(g, name="IcmpEchoMessageBlock")
+    vs = layer2vmod!(g, false, name="IcmpEchoMessageBlock_$name")
     return vs
 end
 
-function generateIcmpEchoServer()
-    v = Vmodule("icmpEchoServer")
+function generateIcmpEchoServer(name)
+    v = Vmodule("icmpEchoServer_$name")
 
     prts = @ports (
         @in CLK, RST;
