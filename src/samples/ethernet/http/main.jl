@@ -155,8 +155,8 @@ end
 
 
 let
-    v = generateLinkLocalIpClaimer(100, 100, 50)
-    v = generateLinkLocalIpClaimer(13 << 23, 7 << 24, 14 << 23)
+    v = generateLinkLocalIpClaimer(100, 100, 50, "")
+    v = generateLinkLocalIpClaimer(13 << 23, 7 << 24, 14 << 23, "")
 
     v = vfinalize(v)
     wrapper = wrappergen(v)
@@ -177,7 +177,7 @@ end
 let
     vipv4sel = generateIpv4BufferSelector() |> vfinalize
 
-    vicmprecv = generateIcmpRecvParser() |> vfinalize
+    vicmprecv = generateIcmpRecvParser("") |> vfinalize
 
     vexport(vipv4sel)
     wrapper = wrappergen(vipv4sel)
@@ -197,7 +197,7 @@ end
 
 
 let
-    vs = generateEchoMessageBlock()
+    vs = generateEchoMessageBlock("")
     vs = vfinalize(vs)
 
     vexport(vs)
@@ -213,7 +213,7 @@ end
 
 
 let
-    v = generateIcmpEchoServer() |> vfinalize
+    v = generateIcmpEchoServer("") |> vfinalize
     vexport(v)
 
     wrapper = wrappergen(v)
@@ -237,5 +237,20 @@ let
     vexport(vs)
 
     wrapper = wrappergen(vs[begin])
+    vexport("$(getname(wrapper)).v", wrapper)
+end
+
+let
+    v = generateTcpRecvParser("1") |> vfinalize
+    vexport(v)
+
+    wrapper = wrappergen(v)
+    vexport("$(getname(wrapper)).v", wrapper)
+
+
+    v = generateSampleTcpPacketBuffer() |> vfinalize
+    vexport(v)
+
+    wrapper = wrappergen(v)
     vexport("$(getname(wrapper)).v", wrapper)
 end

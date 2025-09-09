@@ -162,19 +162,23 @@ function generateIpv4BufferSelector()
     )
 
     icmpPorts = renamedPorts(basePorts, x->"$(x)_icmp")
+    tcpPorts = renamedPorts(basePorts, x->"$(x)_tcp")
 
     # least prioritize transition to explicitFlushBuffer (except for unknownError)
     fsm = @FSM state (
         init,
         connectIcmp,
+        connectTcp,
         explicitFlushBuffer,
         unknownError
     )
 
     transadd!(fsm, @wireexpr(header_read_done & protocol_icmp), @tstate init => connectIcmp)
+    transadd!(fsm, @wireexpr(header_read_done & protocol_tcp), @tstate init => connectTcp)
     transadd!(fsm, @wireexpr(invalid_ip_packet | header_read_done), @tstate init => explicitFlushBuffer)
 
     transadd!(fsm, @wireexpr(ufp_valid & ufp_ready & ufp_last), @tstate connectIcmp => init)
+    transadd!(fsm, @wireexpr(ufp_valid & ufp_ready & ufp_last), @tstate connectTcp => init)
     transadd!(fsm, @wireexpr(ufp_valid & ufp_ready & ufp_last), @tstate explicitFlushBuffer => init)
 
     transadd!(fsm, @wireexpr(ufp_valid & ufp_ready & ufp_last), @tstate init => unknownError)
@@ -189,6 +193,13 @@ function generateIpv4BufferSelector()
 
             header_read_done = (header_read_counter == {$(Wireexpr(4, 0)), ihl_minusone}) & ufp_valid & ufp_ready
             protocol_icmp = protocol == 0x01
+            protocol_tcp = protocol == 0x06
+        else
+            invalid_ip_packet = 0
+
+            header_read_done = 0
+            protocol_icmp = 0
+            protocol_tcp = 0
         end
     )
 
@@ -198,6 +209,8 @@ function generateIpv4BufferSelector()
             ufp_ready = (header_read_counter < $common_header_dword_count) | (header_read_counter < {$(Wireexpr(4, 0)), ihl})
         elseif state == connectIcmp
             ufp_ready = dfp_ready_icmp
+        elseif state == connectTcp
+            ufp_ready = dfp_ready_tcp
         elseif state == explicitFlushBuffer
             ufp_ready = 1
         else
@@ -212,6 +225,16 @@ function generateIpv4BufferSelector()
             dfp_valid_icmp = 0
             dfp_last_icmp = 0
             dfp_data_icmp = 0
+        end;
+
+        if state == connectTcp
+            dfp_valid_tcp = ufp_valid
+            dfp_last_tcp = ufp_last
+            dfp_data_tcp = ufp_data
+        else
+            dfp_valid_tcp = 0
+            dfp_last_tcp = 0
+            dfp_data_tcp = 0
         end
     )
 
@@ -245,7 +268,7 @@ function generateIpv4BufferSelector()
     )
 
     vpush!.(v, (
-        prts, icmpPorts,
+        prts, icmpPorts, tcpPorts,
         alnonipv4,
         fsm, alfsm,
         alio, aldata
