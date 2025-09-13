@@ -359,6 +359,7 @@ function generateIcmpEchoMessageGenerator(name)
         @in 16 identifier, sequence_number;
         @in 16 total_length_data;
         # output value to which ~ operation not applied yet
+        # endian same as other fields (little endian)
         @in 16 checksum_data;
 
         @in ufp_valid, ufp_last;

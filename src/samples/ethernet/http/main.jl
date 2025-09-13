@@ -254,3 +254,20 @@ let
     wrapper = wrappergen(v)
     vexport("$(getname(wrapper)).v", wrapper)
 end
+
+let
+    vs = generateTcpPacketSendBlock("1") |> vfinalize
+
+    vexport(vs)
+
+    wrapper = wrappergen(vs[begin])
+    vexport("$(getname(wrapper)).v", wrapper)
+
+
+    v = generateSampleTcpSendCommand() |> vfinalize
+    vexport(v)
+
+    wrapper = wrappergen(v)
+    vexport("$(getname(wrapper)).v", wrapper)
+
+end
