@@ -24,6 +24,7 @@ function generateTcpRecvParser(name)
         @out @logic 32 seq_number, ack_number;
         @out @logic 6 flags;
         @out @logic 16 window, checksum, urg_pointer;
+        @out @logic 16 payload_length;
 
         @in info_ready;
         @out @logic info_valid;
@@ -38,6 +39,8 @@ function generateTcpRecvParser(name)
     transadd!(fsm, @wireexpr(option_read_done & dfp_no_data_payload), @tstate read_option => explicitWaitDfpInfo)
 
     transadd!(fsm, @wireexpr(info_done), @tstate explicitWaitDfpInfo => read_header_core)
+    transadd!(fsm, @wireexpr(dfp_valid & dfp_ready & dfp_last & (info_done | (info_ready & info_valid))), @tstate read_data => read_header_core)
+    transadd!(fsm, @wireexpr(dfp_valid & dfp_ready & dfp_last & ~(info_done | (info_ready & info_valid))), @tstate read_data => explicitWaitDfpInfo)
 
     alfsm = @always (
         if state == read_header_core
@@ -54,6 +57,11 @@ function generateTcpRecvParser(name)
             option_read_done = ufp_valid & ufp_ready & (header_read_dword_count + 1 == data_offset)
         else
             option_read_done = 0
+        end
+    )
+    altotallength = @always (
+        if state == read_header_core
+            payload_length <= total_length_data_buf + $(Wireexpr(16, 1)) + ~({$(Wireexpr(12,0)), data_offset} << 2)
         end
     )
     alio = @always (
@@ -133,7 +141,7 @@ function generateTcpRecvParser(name)
     vpush!.(v, (
         prts, fsm,
         alfsm, alio, alinfoctrl..., aldata,
-        almisc
+        almisc, altotallength
     ))
 
     return v
@@ -147,11 +155,12 @@ function generateSampleTcpPacketBuffer()
         @out @logic valid, last;
         @out @logic 32 data;
         @out @logic 32 sampleAddr1, sampleAddr2;
+        @out @logic 16 samplePort;
         @in ready;
         @out @logic constHigh
     )
 
-    databuf = [
+    databuf1 = [
         0xFFFF_FFFF,
         0x0000_FFFF,
         0xCBFA_005E,
@@ -159,9 +168,9 @@ function generateSampleTcpPacketBuffer()
         # version = 4, header length = 5
         # diffserv = 0
         0x0045_0008,
-        # total length = 0x0020
+        # total length = 0x0028
         # id = 0
-        0x0000_3000,
+        0x0000_2800,
         # flags = 0, fragment offset = 0
         # ttl = 0x80 = 0d128, proto = 06 (TCP)
         0x0680_0000,
@@ -179,34 +188,220 @@ function generateSampleTcpPacketBuffer()
         # window = 9876, checksum = 11
         0x1100_7698,
         # urg ptr = 0x4503,
-        0x0123_0345,
-        0x0789_0456,
-        0x0000_0abc,
+        0x0000_0345,
     ]
 
+
+    databuf2 = [
+        0xFFFF_FFFF,
+        0x0000_FFFF,
+        0xCBFA_005E,
+        # _type = 0x0800
+        # version = 4, header length = 5
+        # diffserv = 0
+        0x0045_0008,
+        # total length = 0x0028
+        # id = 0
+        0x0000_2800,
+        # flags = 0, fragment offset = 0
+        # ttl = 0x80 = 0d128, proto = 06 (TCP)
+        0x0680_0000,
+        0xFEA9_C2D2,
+        0xFEA9_0B0A,
+        # src port 0x0090
+        0x9000_0C0A,
+        # dest port 0x0080
+        # seq num 0x12345678 + 1
+        0x3412_8000,
+        # ack num 0x9876_1234 + 1
+        0x7698_7956,
+        # header = 5, flags = ack
+        0x1050_3512,
+        # window = 9876, checksum = 11
+        0x1100_7698,
+        # urg ptr = 0x4503,
+        0x0000_0345,
+    ]
+
+
+    databuf3 = [
+        0xFFFF_FFFF,
+        0x0000_FFFF,
+        0xCBFA_005E,
+        # _type = 0x0800
+        # version = 4, header length = 5
+        # diffserv = 0
+        0x0045_0008,
+        # total length = 0x0030
+        # id = 0
+        0x0000_3000,
+        # flags = 0, fragment offset = 0
+        # ttl = 0x80 = 0d128, proto = 06 (TCP)
+        0x0680_0000,
+        0xFEA9_C2D2,
+        0xFEA9_0B0A,
+        # src port 0x0090
+        0x9000_0C0A,
+        # dest port 0x0080
+        # seq num 0x12345678 + 1
+        0x3412_8000,
+        # ack num 0x9876_1234 + 1
+        0x7698_7956,
+        # header = 5, flags = ack
+        0x1050_3512,
+        # window = 9876, checksum = 11
+        0x1100_7698,
+        # urg ptr = 0x4503,
+        0x5665_0345,
+        0x1221_3443,
+        0x0000_6556,
+    ]
+
+    databuf4 = [
+        0xFFFF_FFFF,
+        0x0000_FFFF,
+        0xCBFA_005E,
+        # _type = 0x0800
+        # version = 4, header length = 5
+        # diffserv = 0
+        0x0045_0008,
+        # total length = 0x0028
+        # id = 0
+        0x0000_2800,
+        # flags = 0, fragment offset = 0
+        # ttl = 0x80 = 0d128, proto = 06 (TCP)
+        0x0680_0000,
+        0xFEA9_C2D2,
+        0xFEA9_0B0A,
+        # src port 0x0090
+        0x9000_0C0A,
+        # dest port 0x0080
+        # seq num 0x12345678 + 1 + 8
+        0x3412_8000,
+        # ack num 0x9876_1234 + 1
+        0x7698_8156,
+        # header = 5, flags = ack, fin
+        0x1150_3512,
+        # window = 9876, checksum = 11
+        0x1100_7698,
+        # urg ptr = 0x4503,
+        0x0000_0345,
+    ]
+
+
+
+    databuf5 = [
+        0xFFFF_FFFF,
+        0x0000_FFFF,
+        0xCBFA_005E,
+        # _type = 0x0800
+        # version = 4, header length = 5
+        # diffserv = 0
+        0x0045_0008,
+        # total length = 0x0028
+        # id = 0
+        0x0000_2800,
+        # flags = 0, fragment offset = 0
+        # ttl = 0x80 = 0d128, proto = 06 (TCP)
+        0x0680_0000,
+        0xFEA9_C2D2,
+        0xFEA9_0B0A,
+        # src port 0x0090
+        0x9000_0C0A,
+        # dest port 0x0080
+        # seq num 0x12345678 + 1 + 8 + 1
+        0x3412_8000,
+        # ack num 0x9876_1234 + 1 + 1
+        0x7698_8256,
+        # header = 5, flags = ack
+        0x1050_3612,
+        # window = 9876, checksum = 11
+        0x1100_7698,
+        # urg ptr = 0x4503,
+        0x0000_0345,
+    ]
+
+    packetcount4waitmax = 20
     al = @cpalways (
         constHigh = 1;
-        sampleAddr1 = $(Wireexpr(32, 0x1200_3400));
+        sampleAddr1 = $(Wireexpr(32, 0xA9FE_0A0C));
         sampleAddr2 = $(Wireexpr(32, 0x0056_0078));
-        valid = counter < $(length(databuf));
-        last = counter == $(length(databuf) - 1);
+        samplePort = 0x0080;
+
+        if packetcount == 4
+            if packetcount4wait < $packetcount4waitmax
+                packetcount4wait <= packetcount4wait + $(Wireexpr(32, 1))
+            end
+        else
+            packetcount4wait <= 0
+        end;
+
+        if packetcount == 0
+            valid = counter < $(length(databuf1))
+            last = counter == $(length(databuf1) - 1)
+        elseif packetcount == 1
+            valid = counter < $(length(databuf2))
+            last = counter == $(length(databuf2) - 1)
+        elseif packetcount == 2
+            valid = counter < $(length(databuf3))
+            last = counter == $(length(databuf3) - 1)
+        elseif packetcount == 3
+            valid = counter < $(length(databuf4))
+            last = counter == $(length(databuf4) - 1)
+        elseif packetcount == 4
+            valid = (counter < $(length(databuf5))) & (packetcount4wait == $packetcount4waitmax)
+            last = counter == $(length(databuf5) - 1)
+        else
+            valid = 0
+            last = 0
+        end;
         if valid & ready
-            counter <= counter + $(Wireexpr(32, 1))
+            if last
+                counter <= 0
+            else
+                counter <= counter + $(Wireexpr(32, 1))
+            end
+        end;
+
+        if valid & ready & last
+            packetcount <= packetcount + $(Wireexpr(32, 1))
         end
     )
 
-    
-    ifconds = Vector{Wireexpr}(undef, 0)
-    contents = Vector{Ifcontent}(undef, 0)
+    ifcv = Vector{Vector{Wireexpr}}(undef, 0)
+    contv = Vector{Vector{Ifcontent}}(undef, 0)
 
-    for i in 1:length(databuf)
-        push!(ifconds, @wireexpr(counter == $(i-1)))
-        push!(contents, @ifcontent (
-            data = $(Wireexpr(32, databuf[i]))
-        ))
+    dbufv = [databuf1, databuf2, databuf3, databuf4, databuf5]
+    for v in dbufv
+        ifconds = Vector{Wireexpr}(undef, 0)
+        contents = Vector{Ifcontent}(undef, 0)
+
+        for i in 1:length(v)
+            push!(ifconds, @wireexpr(counter == $(i-1)))
+            push!(contents, @ifcontent (
+                data = $(Wireexpr(32, v[i]))
+            ))
+        end
+
+        push!(ifcv, ifconds)
+        push!(contv, contents)
     end
+
+
     algenerated = @always (
-        $(Ifelseblock(ifconds, contents))
+        if packetcount == 0
+            $(Ifelseblock(ifcv[1], contv[1]))
+        elseif packetcount == 1
+            $(Ifelseblock(ifcv[2], contv[2]))
+        elseif packetcount == 2
+            $(Ifelseblock(ifcv[3], contv[3]))
+        elseif packetcount == 3
+            $(Ifelseblock(ifcv[4], contv[4]))
+        elseif packetcount == 4
+            $(Ifelseblock(ifcv[5], contv[5]))
+        else
+            data = 0
+        end 
     )
 
     vpush!.(v, (prts, al..., algenerated))
@@ -585,5 +780,478 @@ function generateSampleTcpSendCommand()
         alconst, al...
     ))
 
+    return v
+end
+
+function generateSimpleTcpServer(name)
+    v = Vmodule("SimpleTcpServer_$name")
+    prts = @ports (
+        @in CLK, RST;
+
+        # configuration
+        @in config_valid;
+        @in 16 config_src_port;
+        @in 32 config_src_addr;
+
+
+        # rx
+        @in 32 rx_src_addr, rx_dest_addr;
+        @in rx_no_data_payload;
+        @in 16 rx_src_port, rx_dest_port;
+        @in 32 rx_seq_number, rx_ack_number;
+        @in 6 rx_flags;
+        @in 16 rx_window, rx_checksum, rx_urg_pointer;
+        @in 16 rx_payload_length;
+        @in rx_misc_valid;
+        @out @logic rx_misc_ready;
+
+        @in rx_data_valid, rx_data_last;
+        @out @logic rx_data_ready;
+        @in 32 rx_data;
+
+
+        # payload data IO
+        @out @logic 32 dfp_rx_data;
+        # strb but 2'b11 for 32 bit full of data, 2'b10 for 16 bit only
+        @out @logic 2 dfp_rx_data_strb;
+        @out @logic dfp_rx_data_valid;
+        @in dfp_rx_data_ready;
+
+        @in 32 ufp_tx_data;
+        @in ufp_tx_data_valid, ufp_tx_data_last;
+        @out @logic ufp_tx_data_ready;
+
+
+        # tx
+        @out @logic tx_misc_valid;
+        @in tx_misc_ready;
+        @out @logic 32 tx_src_addr, tx_dest_addr;
+        @out @logic 16 tx_src_port, tx_dest_port;
+        @out @logic 32 tx_seq_number, tx_ack_number;
+        @out @logic 6 tx_flags;
+        @out @logic 16 tx_window, tx_urg_pointer;
+        @out @logic 16 tx_checksum_data_only, tx_total_length_data_only;
+
+        @out @logic tx_data_valid, tx_data_last;
+        @out @logic 32 tx_data;
+        @in tx_data_ready;
+
+        @out @logic debug_valid_srv;
+        @out @logic 72 debug_data_srv;
+    )
+
+
+    alconfig = @always (
+        if config_valid
+            config_src_addr_buf <= config_src_addr
+            config_src_port_buf <= config_src_port
+        end
+    )
+
+
+    connection_state = @FSM connection_state closed,listen,syn_rcvd,estab,close_wait,last_ack
+    close_wait_sub_state = @FSM close_wait_sub_state close_wait_init,close_wait_flush_tx,close_wait_send_ack,close_wait_send_fin
+    rx_state = @FSM rx_state rx_read_header,rx_idle,rx_read_data,rx_discard_data
+    tx_state = @FSM tx_state tx_idle,tx_send_header,tx_send_data
+
+    transadd!(rx_state, @wireexpr(rx_misc_ready & rx_misc_valid & ~rx_no_data_payload & ~rx_discard), @tstate rx_read_header => rx_read_data)
+    transadd!(rx_state, @wireexpr(rx_misc_ready & rx_misc_valid & ~rx_no_data_payload & rx_discard), @tstate rx_read_header => rx_discard_data)
+    transadd!(rx_state, @wireexpr(rx_misc_ready & rx_misc_valid & rx_no_data_payload), @tstate rx_read_header => rx_idle)
+    transadd!(rx_state, @wireexpr(rx_data_ready & rx_data_valid & rx_data_last), @tstate rx_read_data => rx_idle)
+    transadd!(rx_state, @wireexpr(rx_data_ready & rx_data_valid & rx_data_last), @tstate rx_discard_data => rx_idle)
+    transadd!(rx_state, @wireexpr(rx_next), @tstate rx_idle => rx_read_header)
+
+    transadd!(tx_state, @wireexpr(tx_next), @tstate tx_idle => tx_send_header)
+    transadd!(tx_state, @wireexpr(tx_misc_ready & tx_misc_valid & (tx_no_data_payload | tx_trans_done_comb)), @tstate tx_send_header => tx_idle)
+    transadd!(tx_state, @wireexpr(tx_misc_ready & tx_misc_valid & (~tx_no_data_payload) & (~tx_trans_done_comb)), @tstate tx_send_header => tx_send_data)
+    transadd!(tx_state, @wireexpr(tx_trans_done_comb), @tstate tx_send_data => tx_idle)
+
+    transadd!(connection_state, @wireexpr(config_valid), @tstate closed => listen)
+    transadd!(connection_state, @wireexpr((syn_detected_buf | syn_detected) & rx_fsm_to_idle), @tstate listen => syn_rcvd)
+    transadd!(connection_state, @wireexpr((syn_ack_detected_buf | syn_ack_detected) & rx_fsm_to_idle), @tstate syn_rcvd => estab)
+    transadd!(connection_state, @wireexpr((fin_detected_buf | fin_detected) & rx_fsm_to_idle), @tstate estab => close_wait)
+    
+    transadd!(close_wait_sub_state, transcond(connection_state, @tstate estab => close_wait), @tstate close_wait_init => close_wait_flush_tx)
+    transadd!(close_wait_sub_state, @wireexpr(tx_state == tx_idle), @tstate close_wait_flush_tx => close_wait_send_ack)
+    transadd!(close_wait_sub_state, transcond(tx_state, @tstate tx_send_header => tx_idle), @tstate close_wait_send_ack => close_wait_send_fin)
+    transadd!(close_wait_sub_state, transcond(tx_state, @tstate tx_send_header => tx_idle), @tstate close_wait_send_fin => close_wait_init)
+    
+    transadd!(connection_state, transcond(close_wait_sub_state, @tstate close_wait_send_fin => close_wait_init), @tstate close_wait => last_ack)
+    transadd!(connection_state, @wireexpr(fin_ack_detected), @tstate last_ack => closed)
+    
+
+    static_init_seq_number = 0x9876_1234
+    static_init_window_size = 0x1000
+    altcb = @always (
+        if $(transcond(connection_state, @tstate listen => syn_rcvd))
+            tx_init_seq_number <= $(Wireexpr(32, static_init_seq_number))
+            tx_rcv_window <= $(Wireexpr(16, static_init_window_size))
+            
+            if rx_state == rx_read_header
+                rx_init_seq_number <= rx_seq_number
+                # rx window but this is send window
+                rx_init_window <= rx_window
+                connection_dest_port <= rx_src_port
+                connection_dest_addr <= rx_src_addr
+            else
+                # in case where syn had some data (discarding them now)
+                rx_init_seq_number <= rx_seq_number_buf
+                rx_init_window <= rx_window_buf
+                connection_dest_port <= rx_src_port_buf
+                connection_dest_addr <= rx_src_addr_buf
+            end
+        end;
+
+        if $(transcond(connection_state, @tstate syn_rcvd => estab))
+            snd_nxt <= tx_init_seq_number + 1
+            snd_una <= tx_init_seq_number + 1
+            snd_wnd <= rx_init_window
+
+            rcv_nxt <= rx_init_seq_number + 1
+        elseif (connection_state == estab) | (connection_state == close_wait) | (connection_state == last_ack)
+            if (rx_misc_ready & rx_misc_valid) & rx_acceptable_packet
+                snd_una <= rx_ack_number
+                # TODO: must be able to reorder recv data
+                if fin_detected
+                    rcv_nxt <= rx_seq_number + {$(Wireexpr(16, 0)), rx_payload_length} + 1
+                else
+                    rcv_nxt <= rx_seq_number + {$(Wireexpr(16, 0)), rx_payload_length}
+                end
+            end
+            
+            # TODO: send data and update snd_nxt, snd_wnd
+            if tx_misc_ready & tx_misc_valid & tx_flags[0]
+                snd_nxt <= snd_nxt + 1
+            end
+        end
+    )
+    altcbutil = @always (
+        if snd_una <= snd_nxt
+            # no wrap
+            rx_ack_valid = (snd_una <= rx_ack_number) & (rx_ack_number <= snd_nxt)
+        else
+            # wrapped
+            rx_ack_valid = (snd_una <= rx_ack_number) | (rx_ack_number <= snd_nxt)
+        end;
+        rx_seq_valid = (rcv_nxt == rx_seq_number)
+    )
+    altcbupdate = @always (
+        prev_rcv_nxt <= rcv_nxt;
+        prev_connection_state <= connection_state;
+        if connection_state == estab
+            # note that on syn_rcvd => estab edge rcv_nxt is initialized, but of course no ack is needed
+            if ~(prev_rcv_nxt == rcv_nxt) & ~(prev_connection_state == syn_rcvd)
+                ack_update_required <= $(Wireexpr(1, 1))
+            elseif $(transcond(tx_state, @tstate tx_idle => tx_send_header))
+                ack_update_required <= 0
+            end
+        else
+            ack_update_required <= 0
+        end
+    )
+
+    alconnection = @cpalways (
+        rx_target_self = (rx_dest_addr == config_src_addr_buf) & (rx_dest_port == config_src_port);
+        rx_acceptable_packet = rx_target_self & rx_ack_valid & rx_seq_valid & rx_flags[4];
+        
+        rx_fsm_to_idle = (
+            $(transcond(rx_state, @tstate rx_read_header => rx_idle))
+            | $(transcond(rx_state, @tstate rx_discard_data => rx_idle))
+            | $(transcond(rx_state, @tstate rx_read_data => rx_idle))
+        );
+        tx_fsm_to_idle = $(transcond(tx_state, @tstate tx_send_header => tx_idle)) | $(transcond(tx_state, @tstate tx_send_data => tx_idle));
+        
+        if connection_state == listen
+            syn_detected_buf <= syn_detected | syn_detected_buf
+            if (rx_state == rx_read_header) & rx_misc_ready & rx_misc_valid
+                syn_detected = rx_target_self & (rx_flags == 0x2)
+            else
+                syn_detected = 0
+            end
+        else
+            syn_detected_buf <= 0
+            syn_detected = 0
+        end;
+
+        if connection_state == syn_rcvd
+            syn_ack_detected_buf <= syn_ack_detected_buf | syn_ack_detected
+            if (rx_state == rx_read_header) & rx_misc_ready & rx_misc_valid
+                syn_ack_detected = rx_target_self & (rx_flags == 0x10) & (rx_ack_number == (tx_init_seq_number + 1)) & (rx_seq_number == (rx_init_seq_number + 1))
+            else
+                syn_ack_detected = 0
+            end
+        else
+            syn_ack_detected = 0
+            syn_ack_detected_buf <= 0
+        end;
+
+        if connection_state == estab
+            fin_detected_buf <= fin_detected_buf | fin_detected
+            if (rx_state == rx_read_header) & rx_misc_ready & rx_misc_valid
+                fin_detected = rx_acceptable_packet & rx_flags[0]
+            else
+                fin_detected = 0
+            end
+        else
+            fin_detected = 0
+            fin_detected_buf <= 0
+        end;
+
+        if connection_state == last_ack
+            if (rx_state == rx_read_header) & rx_misc_ready & rx_misc_valid
+                # last ack
+                fin_ack_detected = rx_acceptable_packet & (rx_ack_number == snd_nxt)
+            else
+                fin_ack_detected = 0
+            end
+        else
+            fin_ack_detected = 0
+        end
+    )
+
+    alrxfsm = @always (
+        if connection_state == listen
+            # rx_discard = syn_detected
+            rx_discard = 1
+        elseif connection_state == syn_rcvd
+            # rx_discard = syn_ack_detected
+            rx_discard = 1
+        elseif connection_state == estab
+            rx_discard = ~rx_acceptable_packet
+        else
+            rx_discard = 0
+        end;
+        
+        rx_next = $(Wireexpr(1, 1))
+    )
+    alrxctrl = @always (
+        if rx_state == rx_read_header
+            rx_misc_ready = 1
+        else
+            rx_misc_ready = 0
+        end;
+
+        if rx_state == rx_read_data
+            dfp_rx_data_valid = rx_data_valid
+            rx_data_ready = dfp_rx_data_ready
+            dfp_rx_data = rx_data
+            if rx_read_data_counter + 1 == rx_payload_dword_count
+                dfp_rx_data_strb = rx_payload_last_strb
+            else
+                dfp_rx_data_strb = ~0
+            end
+        elseif rx_state == rx_discard_data
+            dfp_rx_data_valid = 0
+            rx_data_ready = 1
+            dfp_rx_data = 0
+            dfp_rx_data_strb = 0
+        else
+            dfp_rx_data_valid = 0
+            rx_data_ready = 0
+            dfp_rx_data = 0
+            dfp_rx_data_strb = 0
+        end
+    )
+    alrxutil = @always (
+        if rx_state == rx_read_data
+            rx_read_data_counter <= rx_read_data_counter + 1
+        else
+            rx_read_data_counter <= 0
+        end
+    )
+    alrxstrb = @always (
+        rx_payload_last_strb = rx_payload_length_buf[1:0];
+        rx_payload_not_aligned = |(rx_payload_last_strb);
+        rx_payload_dword_count = (rx_payload_length_buf >> 2) + {$(Wireexpr(15, 0)), rx_payload_not_aligned};
+    )
+    alrxsnapshot = @always (
+        if rx_state == rx_read_header
+            rx_src_addr_buf <= rx_src_addr
+            rx_dest_addr_buf <= rx_dest_addr
+            rx_no_data_payload_buf <= rx_no_data_payload
+            rx_src_port_buf <= rx_src_port
+            rx_dest_port_buf <= rx_dest_port
+            rx_seq_number_buf <= rx_seq_number
+            rx_ack_number_buf <= rx_ack_number
+            rx_flags_buf <= rx_flags
+            rx_window_buf <= rx_window
+            rx_checksum_buf <= rx_checksum
+            rx_urg_pointer_buf <= rx_urg_pointer
+            rx_payload_length_buf <= rx_payload_length
+        end
+    )
+
+
+    altxdispatch = @always (
+        if connection_state == syn_rcvd
+            tx_next = ~tx_dispatched_syn_rcvd
+        elseif connection_state == estab
+            # TODO: send on both 1. updated ack value 2. send data
+            tx_next = ack_update_required
+        elseif connection_state == close_wait
+            if close_wait_sub_state == close_wait_send_ack
+                tx_next = 1
+            elseif close_wait_sub_state == close_wait_send_fin
+                tx_next = 1
+            else
+                tx_next = 0
+            end
+        else
+            tx_next = 0
+        end
+    )
+    altxutil = @always (
+        if connection_state == syn_rcvd
+            if $(transcond(tx_state, @tstate tx_idle => tx_send_header))
+                tx_dispatched_syn_rcvd <= 1
+            end
+        else
+            tx_dispatched_syn_rcvd <= 0
+        end
+    )
+    altxmisc = @always (
+        tx_src_addr = config_src_addr_buf;
+        tx_src_port = config_src_port_buf;
+        
+        tx_dest_addr = connection_dest_addr;
+        tx_dest_port = connection_dest_port;
+
+        if connection_state == syn_rcvd
+            tx_seq_number = tx_init_seq_number
+            tx_ack_number = rx_init_seq_number + 1
+
+            tx_flags = $(Wireexpr(6, 0x12))
+
+            tx_window = tx_rcv_window
+            tx_urg_pointer = 0
+            tx_checksum_data_only = 0
+            tx_total_length_data_only = 0
+        elseif connection_state == estab
+            tx_seq_number = snd_nxt
+            tx_ack_number = rcv_nxt
+
+            tx_flags = 0x10
+
+            # TODO: handle window
+            tx_window = tx_rcv_window
+            # TODO: send data, currently only return ACK
+            tx_urg_pointer = 0
+            tx_checksum_data_only = 0
+            tx_total_length_data_only = 0
+        elseif connection_state == close_wait
+            if close_wait_sub_state == close_wait_send_ack
+                tx_seq_number = snd_nxt
+                tx_ack_number = rcv_nxt
+
+                tx_flags = 0x10
+
+                # TODO: handle window
+                tx_window = tx_rcv_window
+                # TODO: send data, currently only return ACK
+                tx_urg_pointer = 0
+                tx_checksum_data_only = 0
+                tx_total_length_data_only = 0
+            elseif close_wait_sub_state == close_wait_send_fin
+                tx_seq_number = snd_nxt
+                tx_ack_number = rcv_nxt
+
+                # FIN,ACK
+                tx_flags = 0x11
+
+                # TODO: handle window
+                tx_window = tx_rcv_window
+                # TODO: send data, currently only return ACK
+                tx_urg_pointer = 0
+                tx_checksum_data_only = 0
+                tx_total_length_data_only = 0
+            end
+        else
+            tx_seq_number = 0
+            tx_ack_number = 0
+
+            tx_flags = 0
+            tx_window = 0
+            tx_urg_pointer = 0
+            tx_checksum_data_only = 0
+            tx_total_length_data_only = 0
+        end
+    )
+    altxmiscctrl = @always (
+        if tx_state == tx_send_header
+            tx_misc_valid = 1
+        else
+            tx_misc_valid = 0
+        end;
+
+        if connection_state == syn_rcvd
+            tx_no_data_payload = 1
+        else
+            # TODO: send data in estab / close_wait
+            tx_no_data_payload = 1
+        end;
+
+        # put here only to separate always block from altxctrl for assignment order
+        if (tx_state == tx_send_header) | (tx_state == tx_send_data)
+            tx_trans_done_comb = tx_trans_done | (tx_data_last & tx_data_valid & tx_data_ready)
+        else
+            tx_trans_done_comb = 0
+        end
+    )
+    altxctrl = @cpalways (
+        if (tx_state == tx_send_header) | (tx_state == tx_send_data)
+            if (~tx_no_data_payload) & (~tx_trans_done)
+                tx_data_valid = ufp_tx_data_valid
+                tx_data_last = ufp_tx_data_last
+                ufp_tx_data_ready = tx_data_ready
+                tx_data = ufp_tx_data
+            else
+                tx_data_valid = 0
+                tx_data_last = 0
+                ufp_tx_data_ready = 0
+                tx_data = 0
+            end
+
+            if tx_data_last & tx_data_valid & tx_data_ready
+                tx_trans_done <= 1
+            end
+        else
+            tx_trans_done <= 0
+            # tx_trans_done_comb = 0
+
+            tx_data_valid = 0
+            tx_data_last = 0
+            ufp_tx_data_ready = 0
+            tx_data = 0
+        end
+    )
+
+    aldebug = @cpalways (
+        debug_data_srv = {$(Wireexpr(5, 0)), connection_state, $(Wireexpr(6, 0)), rx_state, $(Wireexpr(6, 0)), tx_state, $(Wireexpr(6, 0)), close_wait_sub_state, $(Wireexpr(40, 0))};
+        prev_tx_state <= tx_state;
+        prev_rx_state <= rx_state;
+        prev_close_wait_sub_state <= close_wait_sub_state;
+
+        if (
+            ~(prev_tx_state == tx_state)
+            | ~(prev_rx_state == rx_state)
+            | ~(prev_connection_state == connection_state)
+            | ~(prev_close_wait_sub_state == close_wait_sub_state)
+        )
+            debug_valid_srv = 1
+        else
+            debug_valid_srv = 0
+        end
+    )
+
+    vpush!.(v, (
+        prts,
+        alconfig,
+        connection_state, close_wait_sub_state, rx_state, tx_state,
+        altcb, altcbutil, altcbupdate,
+        alconnection...,
+        alrxfsm, alrxctrl, alrxutil, alrxstrb, alrxsnapshot,
+        altxdispatch, altxutil, altxmisc, altxmiscctrl, altxctrl...,
+        aldebug...
+    ))
     return v
 end

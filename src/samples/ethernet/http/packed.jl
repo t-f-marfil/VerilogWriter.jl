@@ -206,3 +206,143 @@ function generateIcmpEchoServerSystem(name)
     
     return vs
 end
+
+
+function generateSimpleTcpServerSystem(name)
+    g = Vmodgraph()
+
+    server = generateSimpleTcpServer("simTcpSrvSys_$name")
+    rcvparser = generateTcpRecvParser("simTcpSrvSys_$name")
+    vsendblock = generateTcpPacketSendBlock("simTcpSrvSys_$name")
+    sender = vsendblock[begin]
+
+    dummyIo = Vmodule("dummyio_tcpsrvsys_$name")
+    vpush!(dummyIo, @ports (
+        @in dummyin1_1, dummyin1_2;
+        @in 2 dummyin2_1;
+        @in 32 dummyin32_1;
+        @out @logic dummyout1_1, dummyout1_0;
+        @out @logic 16 dummyout16_128;
+        @out @logic 32 dummyout32_0;
+    ))
+    vpush!(dummyIo, @always (
+        dummyout1_1 = 1;
+        dummyout1_0 = 0;
+        dummyout16_128 = 0x80;
+        dummyout32_0 = 0;
+    ))
+
+    macLoopBack = Vmodule("macLoopBack_tcpsrvsys_$name")
+    vpush!(macLoopBack, @ports (
+        @in CLK,RST;
+        @in ufp_hwaddr_valid;
+        @out @logic dfp_valid;
+        @in dfp_ready;
+        @in 48 ufp_hwaddr;
+        @out @logic 48 dfp_hwaddr;
+    ))
+    vpush!(macLoopBack, @always (
+        if ufp_hwaddr_valid
+            dfp_hwaddr <= ufp_hwaddr
+            dfp_valid <= 1
+        end
+    ))
+
+    g(
+        server => dummyIo,
+        @pconnect (
+            dfp_rx_data => dummyin32_1,
+            dfp_rx_data_strb => dummyin2_1,
+            dfp_rx_data_valid => dummyin1_1,
+
+            ufp_tx_data_ready => dummyin1_2
+        )
+    )
+    g(
+        dummyIo => server,
+        @pconnect (
+            dummyout1_1 => dfp_rx_data_ready,
+
+            dummyout1_0 => ufp_tx_data_valid,
+            dummyout1_0 => ufp_tx_data_last,
+            dummyout32_0 => ufp_tx_data,
+
+            dummyout16_128 => config_src_port
+        )
+    )
+    g(
+        macLoopBack => sender,
+        @pconnect (
+            dfp_valid => commandValid,
+            dfp_hwaddr => destMacAddr
+        )
+    )
+    g(
+        sender => macLoopBack,
+        @pconnect (
+            commandReady => dfp_ready
+        )
+    )
+
+    g(
+        rcvparser => server,
+        @pconnect (
+            dfp_valid => rx_data_valid,
+            dfp_last => rx_data_last,
+            dfp_data => rx_data,
+            src_addr => rx_src_addr,
+            dest_addr => rx_dest_addr,
+            dfp_no_data_payload => rx_no_data_payload,
+            src_port => rx_src_port,
+            dest_port => rx_dest_port,
+            seq_number => rx_seq_number,
+            ack_number => rx_ack_number,
+            flags => rx_flags,
+            window => rx_window,
+            checksum => rx_checksum,
+            urg_pointer => rx_urg_pointer,
+            payload_length => rx_payload_length,
+            info_valid => rx_misc_valid
+        )
+    )
+    g(
+        server => rcvparser,
+        @pconnect (
+            rx_misc_ready => info_ready,
+            rx_data_ready => dfp_ready
+        )
+    )
+
+    g(
+        server => sender,
+        @pconnect (
+            tx_misc_valid => ufp_misc_valid,
+            tx_src_addr => src_addr,
+            tx_dest_addr => dest_addr,
+            tx_src_port => src_port,
+            tx_dest_port => dest_port,
+            tx_seq_number => seq_number,
+            tx_ack_number => ack_number,
+            tx_flags => flags,
+            tx_window => window,
+            tx_urg_pointer => urg_pointer,
+            tx_checksum_data_only => checksum_data_only,
+            tx_total_length_data_only => total_length_data_only,
+            tx_data_valid => ufp_data_valid,
+            tx_data_last => ufp_data_last,
+            tx_data => ufp_data,
+        )
+    )
+    g(
+        sender => server,
+        @pconnect (
+            ufp_misc_ready => tx_misc_ready,
+            ufp_data_ready => tx_data_ready
+        )
+    )
+
+    vall = layer2vmod!(g, false, name="TcpServerSystem_$name")
+    append!(vall, vsendblock[2:end])
+
+    return vall
+end

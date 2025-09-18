@@ -271,3 +271,11 @@ let
     vexport("$(getname(wrapper)).v", wrapper)
 
 end
+
+let
+    vsys = generateSimpleTcpServerSystem("1") |> vfinalize
+    vexport(vsys)
+
+    wrapper = wrappergen(vsys[begin])
+    vexport("$(getname(wrapper)).v", wrapper)
+end
