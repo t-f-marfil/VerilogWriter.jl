@@ -348,11 +348,20 @@ function generateBufferSelector(num::Int)
         end
     )
 
+    aldebug = @cpalways (
+        prev_debug_data <= debug_data;
+        debug_valid = ~(prev_debug_data == debug_data);
+        # TODO: add debug
+        debug_data = 0
+    )
+
     v = Vmodule("BufferSelector$num")
     vpush!(v, @ports (@in CLK,RST))
+    vpush!(v, @ports (@out @logic debug_valid ; @out @logic 72 debug_data))
     vpush!.(v, ufpAll)
     vpush!(v, outPorts)
     vpush!.(v, (alSelector, alStateIndex...))
+    vpush!(v, aldebug...)
 
     return v
 end

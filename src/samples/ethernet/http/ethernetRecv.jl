@@ -108,9 +108,20 @@ function generateRecvBufferSelector()
         end
     )
 
+    aldebug = @cpalways (
+        prevstate <= state;
+
+        debug_data = {$(Wireexpr(2, 0)), state, $(Wireexpr(4, 0)), $(Wireexpr(64, 0))};
+        if ~(prevstate == state)
+            debug_valid = 1
+        else
+            debug_valid = 0
+        end;
+    )
+
     v = Vmodule("RecvBufferSelector_v2")
     vpush!.(v, (prts, arpPorts, ipv4Ports))
-    vpush!.(v, (fsm, alfsm, alio, alheadercomb, aldata))
+    vpush!.(v, (fsm, alfsm, alio, alheadercomb, aldata, aldebug...))
 
     return v
 end
@@ -164,7 +175,7 @@ function generateBufferWithReadRandomAccess(name)
         else
             if ufp_wvalid & ufp_wready
                 debug_valid = 1
-                debug_data = {$(Wireexpr(32-13-1, 0)), ufp_wlast, wptr, $(Wireexpr(8, 0)), ufp_wdata}
+                debug_data = {$(Wireexpr(16-1, 0)), ufp_wlast, $(Wireexpr(3, 0)), wptr, $(Wireexpr(8, 0)), ufp_wdata}
 
                 wptr <= wptr + $(Wireexpr(depth, 1))
                 if ufp_wlast

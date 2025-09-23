@@ -842,12 +842,33 @@ function generateIcmpEchoServer(name)
         end
     )
 
+    aldebug = @cpalways (
+        prevstate <= state;
+        prevrx_data_arvalid <= rx_data_arvalid;
+        prevrx_data_arready <= rx_data_arready;
+
+        if ~(prevstate == state)
+            debug_valid = 1
+        elseif rx_data_valid | rx_data_invalid
+            debug_valid = 1
+        elseif ~(prevrx_data_arready == rx_data_arready) | ~(prevrx_data_arvalid == rx_data_arvalid)
+            debug_valid = 1
+        elseif rx_data_arvalid & rx_data_arready
+            debug_valid = 1
+        else
+            debug_valid = 0
+        end;
+
+        debug_data = {$(Wireexpr(2, 0)), state, rx_data_count[3:0], {rx_data_araddr[3:0], buffer_read_done_counter[3:0], buffer_read_addr[3:0], $(Wireexpr(2, 0)), rx_no_data_payload_buf, tx_icmp_data_ready}, {tx_icmp_data_ready, tx_icmp_data_valid, rx_data_arready, rx_data_arvalid,    buffer_state, rx_data_valid, rx_data_invalid, rx_data_full}, rx_data,$(Wireexpr(8, 0))} >> 8
+    )
+
     vpush!.(v, (
         prts,
         fsm,
         almisc, alfsm, alether,
         alsnapshot, aldfp, aldfpctrl, alufpicmp,
-        buffer_fsm, alufpbuf, alufpctrl
+        buffer_fsm, alufpbuf, alufpctrl,
+        aldebug...
     ))
 
     return v

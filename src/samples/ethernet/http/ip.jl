@@ -175,6 +175,7 @@ function generateIpv4BufferSelector()
 
     transadd!(fsm, @wireexpr(header_read_done & protocol_icmp), @tstate init => connectIcmp)
     transadd!(fsm, @wireexpr(header_read_done & protocol_tcp), @tstate init => connectTcp)
+    # TODO: handle other protocols e.g. dhcp
     transadd!(fsm, @wireexpr(invalid_ip_packet | header_read_done), @tstate init => explicitFlushBuffer)
 
     transadd!(fsm, @wireexpr(ufp_valid & ufp_ready & ufp_last), @tstate connectIcmp => init)
@@ -267,11 +268,23 @@ function generateIpv4BufferSelector()
         end
     )
 
+    aldebug = @cpalways (
+        prevstate <= state;
+
+        if ~(prevstate == state)
+            debug_valid = 1
+        else
+            debug_valid = 0
+        end;
+        debug_data = {$(Wireexpr(5, 0)), state, $(Wireexpr(64, 0))};
+    )
+
     vpush!.(v, (
         prts, icmpPorts, tcpPorts,
         alnonipv4,
         fsm, alfsm,
-        alio, aldata
+        alio, aldata,
+        aldebug...
     ))
 
     return v
