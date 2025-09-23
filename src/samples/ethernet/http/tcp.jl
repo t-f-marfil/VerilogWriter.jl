@@ -321,6 +321,35 @@ function generateSampleTcpPacketBuffer()
         0x0000_0345,
     ]
 
+    databuf6 = [
+        0xFFFF_FFFF,
+        0x0000_FFFF,
+        0xCBFA_005E,
+        # _type = 0x0800
+        # version = 4, header length = 5
+        # diffserv = 0
+        0x0045_0008,
+        # total length = 0x0020
+        # id = 0
+        0x0000_2200,
+        # flags = 0, fragment offset = 0
+        # ttl = 0x80 = 0d128, proto = 01
+        0x0180_0000,
+        0xFEA9_C2D2,
+        0xFEA9_0B0A,
+        0x0008_0C0A,
+        0x0100_434d,
+        0x6261_1800,
+        0x6665_6463,
+        0x6a69_6867,
+        0x6e6d_6c6b,
+        0x7271_706f,
+        0x7675_7473,
+        0x6362_6177,
+        0x6766_6564,
+        0x0000_6968,
+    ]
+
     packetcount4waitmax = 20
     al = @cpalways (
         constHigh = 1;
@@ -351,6 +380,9 @@ function generateSampleTcpPacketBuffer()
         elseif packetcount == 4
             valid = (counter < $(length(databuf5))) & (packetcount4wait == $packetcount4waitmax)
             last = counter == $(length(databuf5) - 1)
+        elseif packetcount == 5
+            valid = (counter < $(length(databuf6)))
+            last = counter == $(length(databuf6) - 1)
         else
             valid = 0
             last = 0
@@ -371,7 +403,7 @@ function generateSampleTcpPacketBuffer()
     ifcv = Vector{Vector{Wireexpr}}(undef, 0)
     contv = Vector{Vector{Ifcontent}}(undef, 0)
 
-    dbufv = [databuf1, databuf2, databuf3, databuf4, databuf5]
+    dbufv = [databuf1, databuf2, databuf3, databuf4, databuf5, databuf6]
     for v in dbufv
         ifconds = Vector{Wireexpr}(undef, 0)
         contents = Vector{Ifcontent}(undef, 0)
@@ -399,6 +431,8 @@ function generateSampleTcpPacketBuffer()
             $(Ifelseblock(ifcv[4], contv[4]))
         elseif packetcount == 4
             $(Ifelseblock(ifcv[5], contv[5]))
+        elseif packetcount == 5
+            $(Ifelseblock(ifcv[6], contv[6]))
         else
             data = 0
         end 

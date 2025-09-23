@@ -84,10 +84,10 @@ function generateIcmpEchoServerSystem(name)
 
     dummyIo = Vmodule("dummyio_echosys_$name")
     vpush!(dummyIo, @ports (
-        @in dummy1_1, dummy1_2, dummy1_3;
+        @in dummy1_1, dummy1_2;
         @in 8 dummy8_1;
         @in 16 dummy16_1;
-        @in 72 dummy72_1, dummy72_2;
+        @in 72 dummy72_1;
     ))
 
     g = Vmodgraph()
@@ -193,13 +193,6 @@ function generateIcmpEchoServerSystem(name)
             debug_data => dummy72_1
         )
     )
-    g(
-        echoServer => dummyIo,
-        @pconnect (
-            debug_valid => dummy1_3,
-            debug_data => dummy72_2
-        )
-    )
 
     vs = layer2vmod!(g, false, name="icmpEchoSystem_$name")
     append!(vs, vmessage[2:end])
@@ -240,13 +233,22 @@ function generateSimpleTcpServerSystem(name)
         @in dfp_ready;
         @in 48 ufp_hwaddr;
         @out @logic 48 dfp_hwaddr;
+
+        @in tx_misc_valid, tx_misc_ready;
     ))
-    vpush!(macLoopBack, @always (
+    vpush!(macLoopBack, (@cpalways (
+        if tx_misc_valid & tx_misc_ready
+            # 32 bit is enough, for this logic is removed in the future (after implementing arp table)
+            tx_trans_count <= $(Wireexpr(32, 1)) + tx_trans_count
+        end;
+        if dfp_ready & dfp_valid
+            ether_trans_count <= ether_trans_count + $(Wireexpr(32, 1))
+        end;
         if ufp_hwaddr_valid
             dfp_hwaddr <= ufp_hwaddr
-            dfp_valid <= 1
-        end
-    ))
+        end;
+        dfp_valid = ~(tx_trans_count == ether_trans_count)
+    ))...)
 
     g(
         server => dummyIo,
@@ -271,6 +273,10 @@ function generateSimpleTcpServerSystem(name)
         )
     )
     g(
+        server => macLoopBack,
+        @pconnect (tx_misc_valid => tx_misc_valid)
+    )
+    g(
         macLoopBack => sender,
         @pconnect (
             dfp_valid => commandValid,
@@ -280,7 +286,8 @@ function generateSimpleTcpServerSystem(name)
     g(
         sender => macLoopBack,
         @pconnect (
-            commandReady => dfp_ready
+            commandReady => dfp_ready,
+            ufp_misc_ready => tx_misc_ready
         )
     )
 
