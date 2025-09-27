@@ -28,6 +28,9 @@ function generateTcpRecvParser(name)
 
         @in info_ready;
         @out @logic info_valid;
+
+        @out @logic debug_valid_rcvparse;
+        @out @logic 72 debug_data_rcvparse;
     )
 
     fsm = @FSM state read_header_core, read_option, read_data, explicitWaitDfpInfo
@@ -138,10 +141,23 @@ function generateTcpRecvParser(name)
         end
     )
 
+    aldebug = @cpalways (
+        prev_debug_data_rcvparse <= debug_data_rcvparse;
+        debug_data_rcvparse = {
+            $(Wireexpr(60, 0)),
+            $(Wireexpr(2, 0)), state, 
+            {$(Wireexpr(1, 0)), dfp_last, dfp_valid, dfp_ready},
+            {$(Wireexpr(1, 0)), ufp_last, ufp_valid, ufp_ready}
+            };
+        
+        debug_valid_rcvparse = ~(prev_debug_data_rcvparse == debug_data_rcvparse);
+    )
+
     vpush!.(v, (
         prts, fsm,
         alfsm, alio, alinfoctrl..., aldata,
-        almisc, altotallength
+        almisc, altotallength,
+        aldebug...
     ))
 
     return v
@@ -1072,7 +1088,7 @@ function generateSimpleTcpServer(name)
             if rx_read_data_counter + 1 == rx_payload_dword_count
                 dfp_rx_data_strb = rx_payload_last_strb
             else
-                dfp_rx_data_strb = ~0
+                dfp_rx_data_strb = 0
             end
         elseif rx_state == rx_discard_data
             dfp_rx_data_valid = 0
@@ -1088,7 +1104,9 @@ function generateSimpleTcpServer(name)
     )
     alrxutil = @always (
         if rx_state == rx_read_data
-            rx_read_data_counter <= rx_read_data_counter + 1
+            if rx_data_valid & rx_data_ready
+                rx_read_data_counter <= rx_read_data_counter + 1
+            end
         else
             rx_read_data_counter <= 0
         end
@@ -1233,6 +1251,7 @@ function generateSimpleTcpServer(name)
     )
     altxctrl = @cpalways (
         if (tx_state == tx_send_header) | (tx_state == tx_send_data)
+            # TODO: separate data related  connection to one always block
             if (~tx_no_data_payload) & (~tx_trans_done)
                 tx_data_valid = ufp_tx_data_valid
                 tx_data_last = ufp_tx_data_last
@@ -1260,21 +1279,19 @@ function generateSimpleTcpServer(name)
     )
 
     aldebug = @cpalways (
-        debug_data_srv = {$(Wireexpr(5, 0)), connection_state, $(Wireexpr(6, 0)), rx_state, $(Wireexpr(6, 0)), tx_state, $(Wireexpr(6, 0)), close_wait_sub_state, $(Wireexpr(40, 0))};
-        prev_tx_state <= tx_state;
-        prev_rx_state <= rx_state;
-        prev_close_wait_sub_state <= close_wait_sub_state;
+        transcond_rx_to_read_data = $(transcond(rx_state, @tstate rx_read_header => rx_read_data));
+        debug_data_srv = {
+            $(Wireexpr(12, 0)),
+            $(Wireexpr(1, 0)), connection_state,
+            $(Wireexpr(2, 0)), rx_state,
+            $(Wireexpr(2, 0)), tx_state,
+            {dfp_rx_data_strb, dfp_rx_data_valid, dfp_rx_data_ready},
+            $(Wireexpr(1, 0)), rx_data_last, rx_data_valid, rx_data_ready,
+            dfp_rx_data,
+            $(Wireexpr(8, 0)) };
 
-        if (
-            ~(prev_tx_state == tx_state)
-            | ~(prev_rx_state == rx_state)
-            | ~(prev_connection_state == connection_state)
-            | ~(prev_close_wait_sub_state == close_wait_sub_state)
-        )
-            debug_valid_srv = 1
-        else
-            debug_valid_srv = 0
-        end
+        prev_debug_data_srv <= debug_data_srv;
+        debug_valid_srv = ~(debug_data_srv == prev_debug_data_srv);
     )
 
     vpush!.(v, (

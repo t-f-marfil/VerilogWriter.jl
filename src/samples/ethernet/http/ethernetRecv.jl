@@ -109,14 +109,14 @@ function generateRecvBufferSelector()
     )
 
     aldebug = @cpalways (
-        prevstate <= state;
-
-        debug_data = {$(Wireexpr(2, 0)), state, $(Wireexpr(4, 0)), $(Wireexpr(64, 0))};
-        if ~(prevstate == state)
-            debug_valid = 1
-        else
-            debug_valid = 0
-        end;
+        prev_debug_data <= debug_data;
+        debug_data = {
+            $(Wireexpr(44, 0)),
+            $(Wireexpr(2, 0)), state,
+            {$(Wireexpr(1, 0)), ufp_last, ufp_valid, ufp_ready},
+            {$(Wireexpr(1, 0)), dfp_last_ipv4, dfp_valid_ipv4, dfp_ready_ipv4},
+            payload_fallthrough};
+        debug_valid = ~(prev_debug_data == debug_data);
     )
 
     v = Vmodule("RecvBufferSelector_v2")

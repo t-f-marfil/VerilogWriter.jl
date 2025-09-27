@@ -381,8 +381,8 @@ function generateEtherCoreController()
         rready = 0;
         {awready_out, wready_out} = 0;
 
-        debug_valid = 0;
-        debug_data = 0;
+        # debug_valid = 0;
+        # debug_data = 0;
 
         startreadpacket = 0;
         startreadsendctrl = 0;
@@ -402,8 +402,8 @@ function generateEtherCoreController()
             wvalid = ~wdone_settings_buf
             wlast = ~wdone_settings_buf
 
-            debug_valid = awdone_settings & wdone_settings
-            debug_data = (0x10 << 32) | (clk_counter << 40)
+            # debug_valid = awdone_settings & wdone_settings
+            # debug_data = (0x10 << 32) | (clk_counter << 40)
         elseif state_settings == verifygiesettings
             arvalid = ~ardone_vgs_buf
             araddr = $gie_addr
@@ -411,8 +411,8 @@ function generateEtherCoreController()
 
             rready = ~rdone_vgs_buf
 
-            debug_data = (0x20 << 32) | {$(Wireexpr(debug_width - 32, 0)), rdata} | ({$(Wireexpr(debug_width - 1, 0)), rlast} << 32) | (clk_counter << 40);
-            debug_valid = rvalid
+            # debug_data = (0x20 << 32) | {$(Wireexpr(debug_width - 32, 0)), rdata} | ({$(Wireexpr(debug_width - 1, 0)), rlast} << 32) | (clk_counter << 40);
+            # debug_valid = rvalid
         elseif state_settings == setreadintr
             awvalid = ~awdone_setreadintr_buf
             awaddr = $recv_ctrl_ping_addr
@@ -423,8 +423,8 @@ function generateEtherCoreController()
             wvalid = ~wdone_setreadintr_buf
             wlast = ~wdone_setreadintr_buf
 
-            debug_data = (0x30 << 32) | (clk_counter << 40)
-            debug_valid = awdone_setreadintr & wdone_setreadintr
+            # debug_data = (0x30 << 32) | (clk_counter << 40)
+            # debug_valid = awdone_setreadintr & wdone_setreadintr
         elseif state_settings == verify_read_intr
             arvalid = ~ardone_verify_read_intr_buf
             araddr = $recv_ctrl_ping_addr
@@ -432,9 +432,9 @@ function generateEtherCoreController()
 
             rready = ~rdone_verify_read_intr_buf
 
-            debug_data = (0x40 << 32) | (clk_counter << 40) | {$(Wireexpr(debug_width - 32, 0)), rdata}
-            # debug_valid = 1
-            debug_valid = rvalid
+            # debug_data = (0x40 << 32) | (clk_counter << 40) | {$(Wireexpr(debug_width - 32, 0)), rdata}
+            # # debug_valid = 1
+            # debug_valid = rvalid
         else
             if state_packet == idle_packet
                 # if (rupdate & ())
@@ -460,8 +460,8 @@ function generateEtherCoreController()
                 rvalid_out = rvalid
                 rdata_out = rdata
 
-                debug_data = (0x50 << 32) | (clk_counter << 40) | {$(Wireexpr(debug_width - 32, 0)), rdata}
-                debug_valid = rready & rvalid
+                # debug_data = (0x50 << 32) | (clk_counter << 40) | {$(Wireexpr(debug_width - 32, 0)), rdata}
+                # debug_valid = rready & rvalid
 
                 packet_size_known = rlast & ((ether_type == 0x0806) || (ether_type == 0x0800))
                 rlast_out = rlast & ~packet_size_known
@@ -474,13 +474,13 @@ function generateEtherCoreController()
                 rvalid_out = rvalid
                 rlast_out = rlast
                 rdata_out = rdata
-                if ~ardone_get_packet_full_buf
-                    debug_valid = arready
-                    debug_data = (0x60 << 32) | (clk_counter << 40) | {$(Wireexpr(debug_width - 32, 0)),ether_type, ip_length}
-                else
-                    debug_data = (0x70 << 32) | (clk_counter << 40) | {$(Wireexpr(debug_width - 32, 0)), rdata} | ({$(Wireexpr(debug_width - 1, 0)), rlast} << 32)
-                    debug_valid = rready & rvalid
-                end
+                # if ~ardone_get_packet_full_buf
+                #     debug_valid = arready
+                #     debug_data = (0x60 << 32) | (clk_counter << 40) | {$(Wireexpr(debug_width - 32, 0)),ether_type, ip_length}
+                # else
+                #     debug_data = (0x70 << 32) | (clk_counter << 40) | {$(Wireexpr(debug_width - 32, 0)), rdata} | ({$(Wireexpr(debug_width - 1, 0)), rlast} << 32)
+                #     debug_valid = rready & rvalid
+                # end
             elseif state_packet == clear_recv_packet_field
                 awvalid = ~awdone_clear_recv_flag_buf
                 awaddr = recv_ctrl_addr
@@ -494,13 +494,13 @@ function generateEtherCoreController()
                     wdata = 0
                 end
 
-                debug_valid = awdone_clear_recv_flag & wdone_clear_recv_flag
-                debug_data = (0x80 << 32) | (clk_counter << 40)
+                # debug_valid = awdone_clear_recv_flag & wdone_clear_recv_flag
+                # debug_data = (0x80 << 32) | (clk_counter << 40)
             elseif state_packet == test_send_possible
                 rready = 1
 
-                debug_valid = rlast & rready & rvalid
-                debug_data = (0x90 << 32) | (clk_counter << 40) | {$(Wireexpr(debug_width-1, 0)), rdata[0]}
+                # debug_valid = rlast & rready & rvalid
+                # debug_data = (0x90 << 32) | (clk_counter << 40) | {$(Wireexpr(debug_width-1, 0)), rdata[0]}
             elseif state_packet == set_send_packet_field
                 awvalid = awvalid_in & ~awdone_set_send_packet_buf
                 awready_out = awready & ~awdone_set_send_packet_buf
@@ -512,8 +512,8 @@ function generateEtherCoreController()
                 wdata = wdata_in
                 wlast = wlast_in & ~wdone_set_send_packet_buf
 
-                debug_data = ({$(Wireexpr(debug_width-1,0)), wlast} << 32) | (0xA0 << 32) | (clk_counter << 40) | {$(Wireexpr(debug_width-32,0)), wdata}
-                debug_valid = wready & wvalid
+                # debug_data = ({$(Wireexpr(debug_width-1,0)), wlast} << 32) | (0xA0 << 32) | (clk_counter << 40) | {$(Wireexpr(debug_width-32,0)), wdata}
+                # debug_valid = wready & wvalid
             elseif state_packet == set_send_packet_length
                 awvalid = ~awdone_set_send_length_buf
                 awlen = 0
@@ -523,8 +523,8 @@ function generateEtherCoreController()
                 wlast = ~wdone_set_send_length_buf
                 wdata = ({$(Wireexpr(32 - 8, 0)), awlen_buf_set_send_packet} << 2) + 2
 
-                debug_data = (0xC0 << 32) | (clk_counter << 40)
-                debug_valid = wdone_set_send_length & awdone_set_send_length
+                # debug_data = (0xC0 << 32) | (clk_counter << 40)
+                # debug_valid = wdone_set_send_length & awdone_set_send_length
             elseif state_packet == trigger_send_packet
                 awvalid = ~awdone_trigger_send_packet_buf
                 awaddr = send_ctrl_addr
@@ -534,8 +534,8 @@ function generateEtherCoreController()
                 wlast = ~wdone_trigger_send_packet_buf
                 wdata = 0x1
 
-                debug_valid = wdone_trigger_send_packet & awdone_trigger_send_packet
-                debug_data = (0xB0 << 32) | (clk_counter << 40)
+                # debug_valid = wdone_trigger_send_packet & awdone_trigger_send_packet
+                # debug_data = (0xB0 << 32) | (clk_counter << 40)
             end
         end
     )
@@ -624,12 +624,30 @@ function generateEtherCoreController()
         minustwo_arlen = ~$(Wireexpr(8, 1));
     )
 
+    aldebug = @cpalways (
+        prev_debug_data <= debug_data;
+
+        debug_data = {
+            {$(Wireexpr(1, 0)), state_settings},
+            state_packet,
+            {$(Wireexpr(1, 0)), rlast, rvalid, rready},
+            {$(Wireexpr(1, 0)), rlast_out, rvalid_out, rready_in},
+            {$(Wireexpr(2, 0)), arvalid, arready},
+            {$(Wireexpr(1, 0)), wlast, wvalid, wready},
+            {$(Wireexpr(1, 0)), wlast_in, wvalid_in, wready_out},
+            {$(Wireexpr(2, 0)), awvalid, awready},
+            {$(Wireexpr(2, 0)), awvalid_in, awready_out},
+            $(Wireexpr(36, 0))
+        };
+        debug_valid = ~(prev_debug_data == debug_data)
+    )
+
     vpush!(v, prts)
     vpush!(v, fsm_settings)
     vpush!(v, fsm_packet)
     vpush!.(v, (
         alfsm, almisc..., almain, alpacket...,
-        algetsizeutil, algetsizeutil_comb
+        algetsizeutil, algetsizeutil_comb, aldebug...
     ))
 
     return v

@@ -205,7 +205,7 @@ function generateIpv4BufferSelector()
     )
 
     alio = @always (
-        total_length_data = total_length + 1 + ~({$(Wireexpr(12, 0)), ihl} << 2);
+        total_length_data = total_length + $(Wireexpr(16, 1)) + ~({$(Wireexpr(12, 0)), ihl} << 2);
         if state == init
             ufp_ready = (header_read_counter < $common_header_dword_count) | (header_read_counter < {$(Wireexpr(4, 0)), ihl})
         elseif state == connectIcmp
@@ -269,14 +269,15 @@ function generateIpv4BufferSelector()
     )
 
     aldebug = @cpalways (
-        prevstate <= state;
-
-        if ~(prevstate == state)
-            debug_valid = 1
-        else
-            debug_valid = 0
-        end;
-        debug_data = {$(Wireexpr(5, 0)), state, $(Wireexpr(64, 0))};
+        prev_debug_data <= debug_data;
+        debug_data = {
+            $(Wireexpr(16, 0)),
+            $(Wireexpr(1, 0)), state,
+            {$(Wireexpr(1, 0)), ufp_last, ufp_valid, ufp_ready},
+            {$(Wireexpr(1, 0)), dfp_last_tcp, dfp_valid_tcp, dfp_ready_tcp},
+            total_length_data,
+            $(Wireexpr(28, 0))};
+        debug_valid = ~(debug_data == prev_debug_data)
     )
 
     vpush!.(v, (
