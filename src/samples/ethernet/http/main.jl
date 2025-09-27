@@ -279,3 +279,11 @@ let
     wrapper = wrappergen(vsys[begin])
     vexport("$(getname(wrapper)).v", wrapper)
 end
+
+let
+    v = generateBramFifo("tcp") |> vfinalize
+    vexport(v)
+    
+    wrapper = wrappergen(v)
+    vexport("$(getname(wrapper)).v", wrapper)
+end
