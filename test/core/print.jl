@@ -202,6 +202,9 @@ case (state)
     sdos: begin
         y <= z;
     end
+    default: begin
+        
+    end
 endcase"""
 
 # Alwayscontent
