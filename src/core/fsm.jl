@@ -79,6 +79,9 @@ case (m1)
     s2: begin
         
     end
+    default: begin
+        
+    end
 endcase
 type: FSM
 ```
@@ -117,6 +120,9 @@ case (machine)
     end
     s2: begin
         
+    end
+    default: begin
+
     end
 endcase
 type: FSM
@@ -157,6 +163,9 @@ case (nstate)
     end
     tres: begin
         
+    end
+    default: begin
+
     end
 endcase
 type: Case
@@ -210,6 +219,9 @@ case (fsm)
     end
     s3: begin
         
+    end
+    default: begin
+
     end
 endcase
 type: Case

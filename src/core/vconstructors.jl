@@ -154,6 +154,8 @@ Ifelseblock() = Ifelseblock([], [])
 Ifelseblock(cond::Wireexpr, ifcont::Ifcontent) = Ifelseblock([cond], [ifcont])
 Ifelseblock(cond::Wireexpr, ifcont::Ifcontent, elsecont::Ifcontent) = Ifelseblock([cond], [ifcont, elsecont])
 
+Case(condwire, conds) = Case(condwire, conds, Ifcontent())
+
 Sensitivity() = Sensitivity(unknownedge, Wireexpr())
 
 Alwayscontent(atype::Atype, edge::Edge, sens::Wireexpr, cont::Ifcontent) = Alwayscontent(atype, Sensitivity(edge, sens), cont)

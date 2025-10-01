@@ -188,7 +188,7 @@ function Base.string(x::Case)
     #     subtxt *= "\nend\n"
     # end
 
-    subtxts = Vector{String}(undef, length(x.conds))
+    subtxts = Vector{String}(undef, length(x.conds) + 1)
     for (i, item) in enumerate(x.conds) 
         subtxts[i] = string(
             string(item[1]),
@@ -197,9 +197,11 @@ function Base.string(x::Case)
             "\nend\n"
         )
     end
-    if length(x.conds) > 0
-        subtxts[end] = rstrip(subtxts[end])
-    end
+    subtxts[end] = rstrip(string(
+        "default: begin\n",
+        indent(string(x.defaultblock)),
+        "\nend"
+    ))
 
     # txt *= indent(rstrip(subtxt)) * "\nendcase"
     string(

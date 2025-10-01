@@ -74,6 +74,9 @@ always_ff @( posedge CLK ) begin
             tres: begin
                 
             end
+            default: begin
+                
+            end
         endcase
     end
 end"""
