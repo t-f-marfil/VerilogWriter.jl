@@ -273,6 +273,10 @@ struct Case
             Ifelseblock_inner{Case}, 
             Case
         }}}
+    defaultblock::Ifcontent_inner{
+            Ifelseblock_inner{Case}, 
+            Case
+        }
 end
 
 const Ifelseblock = Ifelseblock_inner{Case}
