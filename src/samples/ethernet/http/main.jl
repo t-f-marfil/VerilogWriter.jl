@@ -287,3 +287,17 @@ let
     wrapper = wrappergen(v)
     vexport("$(getname(wrapper)).v", wrapper)
 end
+
+
+let
+    data = nothing
+    open(joinpath(dirname(@__FILE__), "sample_response.txt")) do io
+        data = read(io)
+    end
+
+    v = generateHttpResponseGenerator(data, "1")
+    v = vfinalize(v)
+    vexport(v)
+    wrapper = wrappergen(v)
+    vexport("$(getname(wrapper)).v", wrapper)
+end

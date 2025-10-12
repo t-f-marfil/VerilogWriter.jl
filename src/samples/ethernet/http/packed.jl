@@ -211,18 +211,18 @@ function generateSimpleTcpServerSystem(name)
 
     dummyIo = Vmodule("dummyio_tcpsrvsys_$name")
     vpush!(dummyIo, @ports (
-        @in dummyin1_1, dummyin1_2;
-        @in 2 dummyin2_1;
-        @in 32 dummyin32_1;
-        @out @logic dummyout1_1, dummyout1_0;
-        @out @logic 16 dummyout16_128;
-        @out @logic 32 dummyout32_0;
+        # @in dummyin1_1, dummyin1_2;
+        # @in 2 dummyin2_1;
+        # @in 32 dummyin32_1;
+        # @out @logic dummyout1_1, dummyout1_0;
+        @out @logic 16 dummyout16_80;
+        # @out @logic 32 dummyout32_0;
     ))
     vpush!(dummyIo, @always (
-        dummyout1_1 = 1;
-        dummyout1_0 = 0;
-        dummyout16_128 = 0x80;
-        dummyout32_0 = 0;
+        # dummyout1_1 = 1;
+        # dummyout1_0 = 0;
+        dummyout16_80 = 80;
+        # dummyout32_0 = 0;
     ))
 
     macLoopBack = Vmodule("macLoopBack_tcpsrvsys_$name")
@@ -250,26 +250,26 @@ function generateSimpleTcpServerSystem(name)
         dfp_valid = ~(tx_trans_count == ether_trans_count)
     ))...)
 
-    g(
-        server => dummyIo,
-        @pconnect (
-            dfp_rx_data => dummyin32_1,
-            dfp_rx_data_strb => dummyin2_1,
-            dfp_rx_data_valid => dummyin1_1,
+    # g(
+    #     server => dummyIo,
+    #     @pconnect (
+    #         dfp_rx_data => dummyin32_1,
+    #         dfp_rx_data_strb => dummyin2_1,
+    #         dfp_rx_data_valid => dummyin1_1,
 
-            ufp_tx_data_ready => dummyin1_2
-        )
-    )
+    #         ufp_tx_data_ready => dummyin1_2
+    #     )
+    # )
     g(
         dummyIo => server,
         @pconnect (
-            dummyout1_1 => dfp_rx_data_ready,
+            # dummyout1_1 => dfp_rx_data_ready,
 
-            dummyout1_0 => ufp_tx_data_valid,
-            dummyout1_0 => ufp_tx_data_last,
-            dummyout32_0 => ufp_tx_data,
+            # dummyout1_0 => ufp_tx_data_valid,
+            # dummyout1_0 => ufp_tx_data_last,
+            # dummyout32_0 => ufp_tx_data,
 
-            dummyout16_128 => config_src_port
+            dummyout16_80 => config_src_port
         )
     )
     g(

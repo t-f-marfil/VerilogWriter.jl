@@ -194,9 +194,9 @@ function generateSampleTcpPacketBuffer()
         0xFEA9_0B0A,
         # src port 0x0090
         0x9000_0C0A,
-        # dest port 0x0080
+        # dest port 0x0050
         # seq num 0x12345678
-        0x3412_8000,
+        0x3412_5000,
         # ack num 90ABCDEF
         0xAB90_7856,
         # header = 5, flags = syn
@@ -226,9 +226,9 @@ function generateSampleTcpPacketBuffer()
         0xFEA9_0B0A,
         # src port 0x0090
         0x9000_0C0A,
-        # dest port 0x0080
+        # dest port 0x0050
         # seq num 0x12345678 + 1
-        0x3412_8000,
+        0x3412_5000,
         # ack num 0x9876_1234 + 1
         0x7698_7956,
         # header = 5, flags = ack
@@ -258,9 +258,9 @@ function generateSampleTcpPacketBuffer()
         0xFEA9_0B0A,
         # src port 0x0090
         0x9000_0C0A,
-        # dest port 0x0080
+        # dest port 0x0050
         # seq num 0x12345678 + 1
-        0x3412_8000,
+        0x3412_5000,
         # ack num 0x9876_1234 + 1
         0x7698_7956,
         # header = 5, flags = ack
@@ -291,9 +291,9 @@ function generateSampleTcpPacketBuffer()
         0xFEA9_0B0A,
         # src port 0x0090
         0x9000_0C0A,
-        # dest port 0x0080
+        # dest port 0x0050
         # seq num 0x12345678 + 1 + 8
-        0x3412_8000,
+        0x3412_5000,
         # ack num 0x9876_1234 + 1
         0x7698_8156,
         # header = 5, flags = ack, fin
@@ -324,9 +324,9 @@ function generateSampleTcpPacketBuffer()
         0xFEA9_0B0A,
         # src port 0x0090
         0x9000_0C0A,
-        # dest port 0x0080
+        # dest port 0x0050
         # seq num 0x12345678 + 1 + 8 + 1
-        0x3412_8000,
+        0x3412_5000,
         # ack num 0x9876_1234 + 1 + 1
         0x7698_8256,
         # header = 5, flags = ack
@@ -870,6 +870,7 @@ function generateSimpleTcpServer(name)
         @in 32 ufp_tx_data;
         @in ufp_tx_data_valid, ufp_tx_data_last;
         @out @logic ufp_tx_data_ready;
+        @in 16 ufp_tx_checksum_data_only, ufp_tx_total_length_data_only;
 
 
         # tx
@@ -941,6 +942,7 @@ function generateSimpleTcpServer(name)
                 rx_init_seq_number <= rx_seq_number
                 # rx window but this is send window
                 rx_init_window <= rx_window
+                # TODO: ignore packets from other ports if once established
                 connection_dest_port <= rx_src_port
                 connection_dest_addr <= rx_src_addr
             else
@@ -970,8 +972,12 @@ function generateSimpleTcpServer(name)
             end
             
             # TODO: send data and update snd_nxt, snd_wnd
-            if tx_misc_ready & tx_misc_valid & tx_flags[0]
-                snd_nxt <= snd_nxt + 1
+            if tx_misc_ready & tx_misc_valid
+                if tx_flags[0]
+                    snd_nxt <= snd_nxt + {$(Wireexpr(16, 0)), tx_total_length_data_only} + 1
+                else
+                    snd_nxt <= snd_nxt + {$(Wireexpr(16, 0)), tx_total_length_data_only}
+                end
             end
         end
     )
@@ -1060,16 +1066,10 @@ function generateSimpleTcpServer(name)
     )
 
     alrxfsm = @always (
-        if connection_state == listen
-            # rx_discard = syn_detected
-            rx_discard = 1
-        elseif connection_state == syn_rcvd
-            # rx_discard = syn_ack_detected
-            rx_discard = 1
-        elseif connection_state == estab
+        if connection_state == estab
             rx_discard = ~rx_acceptable_packet
         else
-            rx_discard = 0
+            rx_discard = 1
         end;
         
         rx_next = $(Wireexpr(1, 1))
@@ -1139,7 +1139,7 @@ function generateSimpleTcpServer(name)
             tx_next = ~tx_dispatched_syn_rcvd
         elseif connection_state == estab
             # TODO: send on both 1. updated ack value 2. send data
-            tx_next = ack_update_required
+            tx_next = ack_update_required | ufp_tx_data_valid
         elseif connection_state == close_wait
             if close_wait_sub_state == close_wait_send_ack
                 tx_next = 1
@@ -1180,6 +1180,7 @@ function generateSimpleTcpServer(name)
             tx_total_length_data_only = 0
         elseif connection_state == estab
             tx_seq_number = snd_nxt
+            # TODO: current implementation may send redundant ack when rcv_nxt is updated during tx_send_header state
             tx_ack_number = rcv_nxt
 
             tx_flags = 0x10
@@ -1188,8 +1189,14 @@ function generateSimpleTcpServer(name)
             tx_window = tx_rcv_window
             # TODO: send data, currently only return ACK
             tx_urg_pointer = 0
-            tx_checksum_data_only = 0
-            tx_total_length_data_only = 0
+
+            if (tx_state == tx_send_header) & ufp_tx_data_valid_buf
+                tx_checksum_data_only = ufp_tx_checksum_data_only_buf
+                tx_total_length_data_only = ufp_tx_total_length_data_only_buf
+            else
+                tx_checksum_data_only = 0
+                tx_total_length_data_only = 0
+            end
         elseif connection_state == close_wait
             if close_wait_sub_state == close_wait_send_ack
                 tx_seq_number = snd_nxt
@@ -1237,6 +1244,16 @@ function generateSimpleTcpServer(name)
 
         if connection_state == syn_rcvd
             tx_no_data_payload = 1
+        elseif (connection_state == estab) | (connection_state == close_wait)
+            if (tx_state == tx_send_header) | (tx_state == tx_send_data)
+                if ufp_tx_data_valid_buf
+                    tx_no_data_payload = 0
+                else
+                    tx_no_data_payload = 1
+                end
+            else
+                tx_no_data_payload = 1
+            end
         else
             # TODO: send data in estab / close_wait
             tx_no_data_payload = 1
@@ -1250,6 +1267,11 @@ function generateSimpleTcpServer(name)
         end
     )
     altxctrl = @cpalways (
+        if tx_state == tx_idle
+            ufp_tx_data_valid_buf <= ufp_tx_data_valid
+            ufp_tx_checksum_data_only_buf <= ufp_tx_checksum_data_only
+            ufp_tx_total_length_data_only_buf <= ufp_tx_total_length_data_only
+        end;
         if (tx_state == tx_send_header) | (tx_state == tx_send_data)
             # TODO: separate data related  connection to one always block
             if (~tx_no_data_payload) & (~tx_trans_done)
@@ -1281,14 +1303,18 @@ function generateSimpleTcpServer(name)
     aldebug = @cpalways (
         transcond_rx_to_read_data = $(transcond(rx_state, @tstate rx_read_header => rx_read_data));
         debug_data_srv = {
-            $(Wireexpr(12, 0)),
+            # $(Wireexpr(12, 0)),
             $(Wireexpr(1, 0)), connection_state,
-            $(Wireexpr(2, 0)), rx_state,
-            $(Wireexpr(2, 0)), tx_state,
-            {dfp_rx_data_strb, dfp_rx_data_valid, dfp_rx_data_ready},
-            $(Wireexpr(1, 0)), rx_data_last, rx_data_valid, rx_data_ready,
-            dfp_rx_data,
-            $(Wireexpr(8, 0)) };
+            # $(Wireexpr(2, 0)), 
+            rx_state,
+            # $(Wireexpr(2, 0)), 
+            tx_state,
+            # {dfp_rx_data_strb, dfp_rx_data_valid, dfp_rx_data_ready},
+            # $(Wireexpr(1, 0)), rx_data_last, rx_data_valid, rx_data_ready,
+            # dfp_rx_data,
+            snd_una, rcv_nxt,
+            # $(Wireexpr(8, 0))
+            };
 
         prev_debug_data_srv <= debug_data_srv;
         debug_valid_srv = ~(debug_data_srv == prev_debug_data_srv);
