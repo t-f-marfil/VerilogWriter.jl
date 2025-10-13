@@ -1,8 +1,8 @@
-function generateLinkLocalIpClaimerSystem(name)
+function generateLinkLocalIpClaimerSystem(probe_timeout_cycle, probe_initial_wait_cycle, second_announce_wait_cycle, name)
     varp = generateArpMessageBlock("llipv4sys_$name")
     varptop = varp[begin]
     buf = generateBufferWithReadRandomAccess("llipv4sys_$name")
-    linklocalipclaimer = generateLinkLocalIpClaimer(13 << 23, 7 << 24, 14 << 23, "llipv4sys_$name")
+    linklocalipclaimer = generateLinkLocalIpClaimer(probe_timeout_cycle, probe_initial_wait_cycle, second_announce_wait_cycle, "llipv4sys_$name")
 
     dummyIo = Vmodule("dummyio_llipv4sys_$name")
     vpush!(dummyIo, @ports (

@@ -128,8 +128,8 @@ function generateIpPacketSimpleGenerator(name)
     return v
 end
 
-function generateIpv4BufferSelector()
-    v = Vmodule("ipv4BufferSelector")
+function generateIpv4BufferSelector(name)
+    v = Vmodule("ipv4BufferSelector_$name")
     prts = @ports (
         @in CLK, RST;
         

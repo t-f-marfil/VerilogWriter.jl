@@ -1,126 +1,126 @@
-# deprecated
-function generateIcmpEchoRequestGenerator()
-    prts = @ports (
-        @in CLK,RST;
+# # deprecated
+# function generateIcmpEchoRequestGenerator()
+#     prts = @ports (
+#         @in CLK,RST;
         
-        @out @logic 32 wdata;
-        @out @logic wvalid;
-        @out @logic wlast;
-        @in wready;
+#         @out @logic 32 wdata;
+#         @out @logic wvalid;
+#         @out @logic wlast;
+#         @in wready;
 
-        # const values
-        @out @logic 8 protocol;
-        @out @logic 16 totalLength;
-    )
+#         # const values
+#         @out @logic 8 protocol;
+#         @out @logic 16 totalLength;
+#     )
 
-    fsm = @FSM state idle, busy
-    transadd!(fsm, @wireexpr(1), @tstate idle => busy)
-    transadd!(fsm, @wireexpr(wvalid & wready & wlast), @tstate busy => idle)
+#     fsm = @FSM state idle, busy
+#     transadd!(fsm, @wireexpr(1), @tstate idle => busy)
+#     transadd!(fsm, @wireexpr(wvalid & wready & wlast), @tstate busy => idle)
 
-    # const data, generate identifier and seqnum internally
-    seqInitOffset = 0x1234
-    idInitOffset = 0x789A
-    almain = @always (
-        if state == busy
-            wvalid = 1
-            wlast = dataCounter == 2
+#     # const data, generate identifier and seqnum internally
+#     seqInitOffset = 0x1234
+#     idInitOffset = 0x789A
+#     almain = @always (
+#         if state == busy
+#             wvalid = 1
+#             wlast = dataCounter == 2
 
-            if dataCounter == 0
-                wdata = {checksum[7:0], checksum[15:8], $(Wireexpr(16, 0x0008))}
-            elseif dataCounter == 1
-                wdata = {seqnum[7:0], seqnum[15:8], identifier[7:0], identifier[15:8]}
-            else
-                wdata = {data[7:0], data[15:8], data[23:16], data[31:24]}
-            end
-        else
-            wdata = 0
-            wlast = 0
-            wvalid = 0
-        end
-    )
+#             if dataCounter == 0
+#                 wdata = {checksum[7:0], checksum[15:8], $(Wireexpr(16, 0x0008))}
+#             elseif dataCounter == 1
+#                 wdata = {seqnum[7:0], seqnum[15:8], identifier[7:0], identifier[15:8]}
+#             else
+#                 wdata = {data[7:0], data[15:8], data[23:16], data[31:24]}
+#             end
+#         else
+#             wdata = 0
+#             wlast = 0
+#             wvalid = 0
+#         end
+#     )
     
     
-    almisc = @cpalways (
-        protocol = 0x01;
-        totalLength = 12;
+#     almisc = @cpalways (
+#         protocol = 0x01;
+#         totalLength = 12;
 
-        seqnum = counter + $seqInitOffset;
-        identifier = counter + $idInitOffset;
-        data = {$(Wireexpr(16, 0xABCD)), counter} | $(Wireexpr(32, 0));
+#         seqnum = counter + $seqInitOffset;
+#         identifier = counter + $idInitOffset;
+#         data = {$(Wireexpr(16, 0xABCD)), counter} | $(Wireexpr(32, 0));
 
-        sumh1 = {$(Wireexpr(3, 0)), $(Wireexpr(16, 0x08_00))} | $(Wireexpr(19, 0));
-        sumh2 = {$(Wireexpr(3, 0)), identifier} + {$(Wireexpr(3, 0)), seqnum};
-        sumh3 = {$(Wireexpr(3, 0)), data[31:16]} + {$(Wireexpr(3, 0)), data[15:0]};
-        sumh1_2 = sumh1 + sumh2;
+#         sumh1 = {$(Wireexpr(3, 0)), $(Wireexpr(16, 0x08_00))} | $(Wireexpr(19, 0));
+#         sumh2 = {$(Wireexpr(3, 0)), identifier} + {$(Wireexpr(3, 0)), seqnum};
+#         sumh3 = {$(Wireexpr(3, 0)), data[31:16]} + {$(Wireexpr(3, 0)), data[15:0]};
+#         sumh1_2 = sumh1 + sumh2;
 
-        sum_second = {$(Wireexpr(1, 0)), sum_first[15:0]} + {$(Wireexpr(14, 0)), sum_first[18:16]} | $(Wireexpr(17, 0));
-        sum_third = sum_second[15:0] + {$(Wireexpr(15, 0)), sum_second[16]};
-        checksum = ~sum_third;
+#         sum_second = {$(Wireexpr(1, 0)), sum_first[15:0]} + {$(Wireexpr(14, 0)), sum_first[18:16]} | $(Wireexpr(17, 0));
+#         sum_third = sum_second[15:0] + {$(Wireexpr(15, 0)), sum_second[16]};
+#         checksum = ~sum_third;
 
 
-        if $(transcond(fsm, @tstate busy => idle))
-            counter <= counter + $(Wireexpr(16, 1))
-        end;
-        if state == idle
-            sum_first <= sumh1_2 + sumh3
+#         if $(transcond(fsm, @tstate busy => idle))
+#             counter <= counter + $(Wireexpr(16, 1))
+#         end;
+#         if state == idle
+#             sum_first <= sumh1_2 + sumh3
 
-            dataCounter <= 0
-        elseif state == busy
-            if wvalid & wready
-                dataCounter <= dataCounter + $(Wireexpr(3, 1))
-            end
-        end
-    )
+#             dataCounter <= 0
+#         elseif state == busy
+#             if wvalid & wready
+#                 dataCounter <= dataCounter + $(Wireexpr(3, 1))
+#             end
+#         end
+#     )
 
-    v = Vmodule("EchoRequestSimpleGenerator")
-    vpush!.(v, (prts, fsm, almain, almisc...))
-    return v
-end
+#     v = Vmodule("EchoRequestSimpleGenerator")
+#     vpush!.(v, (prts, fsm, almain, almisc...))
+#     return v
+# end
 
-# deprecated
-function sampleEchoRequestGen()
-    prts = @ports (
-        @in CLK, RST;
+# # deprecated
+# function sampleEchoRequestGen()
+#     prts = @ports (
+#         @in CLK, RST;
 
-        @in btn;
+#         @in btn;
 
-        @out @logic 48 destMacAddr;
-        @out @logic 32 sourceIp, destIp;
+#         @out @logic 48 destMacAddr;
+#         @out @logic 32 sourceIp, destIp;
 
-        @out @logic etherCommandValid, ipCommandValid;
-        @in etherCommandReady, ipCommandReady;
-    )
+#         @out @logic etherCommandValid, ipCommandValid;
+#         @in etherCommandReady, ipCommandReady;
+#     )
 
-    almain = @cpalways (
-        destMacAddr = $(Wireexpr(48, 0x12_34_56_78_9A_BC));
-        sourceIp = $(Wireexpr(32, 0xA9_FE_0A_0B));
-        destIp = $(Wireexpr(32, 0xA9_FE_0A_0C));
+#     almain = @cpalways (
+#         destMacAddr = $(Wireexpr(48, 0x12_34_56_78_9A_BC));
+#         sourceIp = $(Wireexpr(32, 0xA9_FE_0A_0B));
+#         destIp = $(Wireexpr(32, 0xA9_FE_0A_0C));
 
-        {etherCommandValid, ipCommandValid} = 0;
+#         {etherCommandValid, ipCommandValid} = 0;
 
-        if busy
-            etherDone <= etherDone | (etherCommandValid & etherCommandReady)
-            ipDone <= ipDone | (ipCommandReady & ipCommandValid)
+#         if busy
+#             etherDone <= etherDone | (etherCommandValid & etherCommandReady)
+#             ipDone <= ipDone | (ipCommandReady & ipCommandValid)
 
-            etherCommandValid = ~etherDone
-            ipCommandValid = ~ipDone
+#             etherCommandValid = ~etherDone
+#             ipCommandValid = ~ipDone
 
-            if ipDone & etherDone
-                busy <= 0
-            end
-        else
-            etherDone <= 0
-            ipDone <= 0
-            if btn
-                busy <= $(Wireexpr(1, 1))
-            end
-        end
-    )
+#             if ipDone & etherDone
+#                 busy <= 0
+#             end
+#         else
+#             etherDone <= 0
+#             ipDone <= 0
+#             if btn
+#                 busy <= $(Wireexpr(1, 1))
+#             end
+#         end
+#     )
 
-    v = Vmodule("sampleEchoRequestGen")
-    vpush!.(v, (prts, almain...))
-    return v
-end
+#     v = Vmodule("sampleEchoRequestGen")
+#     vpush!.(v, (prts, almain...))
+#     return v
+# end
 
 function generateIcmpRecvParser(name)
     v = Vmodule("icmpRecvParser_$name")
@@ -261,81 +261,81 @@ function generateIcmpRecvParser(name)
     return v
 end
 
-function generateSampleIcmpEchoRequestBuffer()
-    v = Vmodule("sampleIcmpEchoRequestBuffer")
+# function generateSampleIcmpEchoRequestBuffer()
+#     v = Vmodule("sampleIcmpEchoRequestBuffer")
 
-    prts = @ports (
-        @in CLK, RST;
-        @in wready;
-        @out @logic wvalid, wlast;
-        @out @logic 32 wdata;
+#     prts = @ports (
+#         @in CLK, RST;
+#         @in wready;
+#         @out @logic wvalid, wlast;
+#         @out @logic 32 wdata;
 
-        @out @logic constHigh;
-        @out @logic 32 dest_ip;
-    )
-    dbuf = [
-        0xFFFF_FFFF,
-        0x0000_FFFF,
-        0xCBFA_005E,
-        # _type = 0x0800
-        # version = 4, header length = 5
-        # diffserv = 0
-        0x0045_0008,
-        # total length = 0x0020
-        # id = 0
-        0x0000_2200,
-        # flags = 0, fragment offset = 0
-        # ttl = 0x80 = 0d128, proto = 01
-        0x0180_0000,
-        0xFEA9_C2D2,
-        0xFEA9_0B0A,
-        0x0008_0C0A,
-        0x0100_434d,
-        0x6261_1800,
-        0x6665_6463,
-        0x6a69_6867,
-        0x6e6d_6c6b,
-        0x7271_706f,
-        0x7675_7473,
-        0x6362_6177,
-        0x6766_6564,
-        0x0000_6968,
-    ]
+#         @out @logic constHigh;
+#         @out @logic 32 dest_ip;
+#     )
+#     dbuf = [
+#         0xFFFF_FFFF,
+#         0x0000_FFFF,
+#         0xCBFA_005E,
+#         # _type = 0x0800
+#         # version = 4, header length = 5
+#         # diffserv = 0
+#         0x0045_0008,
+#         # total length = 0x0020
+#         # id = 0
+#         0x0000_2200,
+#         # flags = 0, fragment offset = 0
+#         # ttl = 0x80 = 0d128, proto = 01
+#         0x0180_0000,
+#         0xFEA9_C2D2,
+#         0xFEA9_0B0A,
+#         0x0008_0C0A,
+#         0x0100_434d,
+#         0x6261_1800,
+#         0x6665_6463,
+#         0x6a69_6867,
+#         0x6e6d_6c6b,
+#         0x7271_706f,
+#         0x7675_7473,
+#         0x6362_6177,
+#         0x6766_6564,
+#         0x0000_6968,
+#     ]
 
-    delay_max = 10
-    al = @cpalways (
-        constHigh = 1;
-        dest_ip = $(Wireexpr(32, 0xA9FE_0A0C));
+#     delay_max = 10
+#     al = @cpalways (
+#         constHigh = 1;
+#         dest_ip = $(Wireexpr(32, 0xA9FE_0A0C));
 
-        if ~($delay_max == delay_counter)
-            delay_counter <= delay_counter + $(Wireexpr(48, 1))
-        end;
+#         if ~($delay_max == delay_counter)
+#             delay_counter <= delay_counter + $(Wireexpr(48, 1))
+#         end;
 
-        if wvalid & wready
-            counter <= counter + $(Wireexpr(48, 1))
-        end;
+#         if wvalid & wready
+#             counter <= counter + $(Wireexpr(48, 1))
+#         end;
 
-        wvalid = (delay_counter == $delay_max) & ~(counter == $(length(dbuf)));
-        wlast = (counter == $(length(dbuf)-1));
-    )
+#         wvalid = (delay_counter == $delay_max) & ~(counter == $(length(dbuf)));
+#         wlast = (counter == $(length(dbuf)-1));
+#     )
 
-    ifconds = Vector{Wireexpr}(undef, 0)
-    contents = Vector{Ifcontent}(undef, 0)
+#     ifconds = Vector{Wireexpr}(undef, 0)
+#     contents = Vector{Ifcontent}(undef, 0)
 
-    for i in 1:length(dbuf)
-        push!(ifconds, @wireexpr(counter == $(i-1)))
-        push!(contents, @ifcontent (
-            wdata = $(Wireexpr(32, dbuf[i]))
-        ))
-    end
-    algenerated = @always (
-        $(Ifelseblock(ifconds, contents))
-    )
+#     for i in 1:length(dbuf)
+#         push!(ifconds, @wireexpr(counter == $(i-1)))
+#         push!(contents, @ifcontent (
+#             wdata = $(Wireexpr(32, dbuf[i]))
+#         ))
+#     end
+#     algenerated = @always (
+#         $(Ifelseblock(ifconds, contents))
+#     )
 
-    vpush!.(v, (prts, al..., algenerated))
+#     vpush!.(v, (prts, al..., algenerated))
 
-    return v
-end
+#     return v
+# end
 
 function generateIcmpEchoMessageGenerator(name)
     v = Vmodule("icmpEchoMessageGenerator_$name")
@@ -480,79 +480,79 @@ function generateIcmpEchoMessageGenerator(name)
     return v
 end
 
-function generateSampleEchoMessageGenerator()
-    v = Vmodule("sampleEchoMessageGen")
-    prts = @ports (
-        @in CLK, RST;
-        @out @logic 8 _type, code;
-        @out @logic 16 identifier, sequence_number, total_length_data, checksum_data;
+# function generateSampleEchoMessageGenerator()
+#     v = Vmodule("sampleEchoMessageGen")
+#     prts = @ports (
+#         @in CLK, RST;
+#         @out @logic 8 _type, code;
+#         @out @logic 16 identifier, sequence_number, total_length_data, checksum_data;
         
-        @out @logic misc_valid;
-        @in misc_ready;
+#         @out @logic misc_valid;
+#         @in misc_ready;
 
-        @out @logic valid, last;
-        @in ready;
-        @out @logic 32 data;
+#         @out @logic valid, last;
+#         @in ready;
+#         @out @logic 32 data;
 
-        @out @logic 48 destMacAddr;
-        @out @logic 32 sourceIp, destIp;
+#         @out @logic 48 destMacAddr;
+#         @out @logic 32 sourceIp, destIp;
 
-        @out @logic etherCommandValid, ipCommandValid;
-        @in etherCommandReady, ipCommandReady;
+#         @out @logic etherCommandValid, ipCommandValid;
+#         @in etherCommandReady, ipCommandReady;
 
-        @out @logic constHigh
-    )
+#         @out @logic constHigh
+#     )
 
-    al = @always (
-        valid = 1;
-        last = 0;
-        data = 0;
-        constHigh = 1;
+#     al = @always (
+#         valid = 1;
+#         last = 0;
+#         data = 0;
+#         constHigh = 1;
 
-        destMacAddr = $(Wireexpr(48, 0x12_34_56_78_9A_BC));
-        sourceIp = $(Wireexpr(32, 0xA9_FE_0A_0B));
-        destIp = $(Wireexpr(32, 0xA9_FE_0A_0C));
+#         destMacAddr = $(Wireexpr(48, 0x12_34_56_78_9A_BC));
+#         sourceIp = $(Wireexpr(32, 0xA9_FE_0A_0B));
+#         destIp = $(Wireexpr(32, 0xA9_FE_0A_0C));
 
-        misc_valid = start & ~misc_done;
-        etherCommandValid = start & ~etherCommandDone;
-        ipCommandValid = start & ~ipCommandDone;
-        if start
-            _type = 8
-            code = 0
-            identifier = 0xABCD
-            sequence_number = 0x5678
-            total_length_data = 0
-            checksum_data = 0x12
-        else
-            _type = 0
-            code = 0
-            sequence_number = 0
-            total_length_data = 0
-            checksum_data = 0
-        end
-    )
+#         misc_valid = start & ~misc_done;
+#         etherCommandValid = start & ~etherCommandDone;
+#         ipCommandValid = start & ~ipCommandDone;
+#         if start
+#             _type = 8
+#             code = 0
+#             identifier = 0xABCD
+#             sequence_number = 0x5678
+#             total_length_data = 0
+#             checksum_data = 0x12
+#         else
+#             _type = 0
+#             code = 0
+#             sequence_number = 0
+#             total_length_data = 0
+#             checksum_data = 0
+#         end
+#     )
 
-    alctrl = @always (
-        start <= $(Wireexpr(1, 1));
+#     alctrl = @always (
+#         start <= $(Wireexpr(1, 1));
 
-        if etherCommandReady & etherCommandValid
-            etherCommandDone <= $(Wireexpr(1, 1))
-        end;
+#         if etherCommandReady & etherCommandValid
+#             etherCommandDone <= $(Wireexpr(1, 1))
+#         end;
 
-        if ipCommandReady & ipCommandValid
-            ipCommandDone <= $(Wireexpr(1,1))
-        end;
-        if misc_ready & misc_valid
-            misc_done <= $(Wireexpr(1, 1))
-        end
-    )
+#         if ipCommandReady & ipCommandValid
+#             ipCommandDone <= $(Wireexpr(1,1))
+#         end;
+#         if misc_ready & misc_valid
+#             misc_done <= $(Wireexpr(1, 1))
+#         end
+#     )
 
-    vpush!.(v, (
-        prts, al, alctrl
-    ))
+#     vpush!.(v, (
+#         prts, al, alctrl
+#     ))
 
-    return v
-end
+#     return v
+# end
 
 
 function generateEchoMessageBlock(name)

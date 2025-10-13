@@ -193,64 +193,64 @@ function generateEtherFrameGenerator(name)
 end
 
 
-function sampleEtherRequestGen()
-    v = Vmodule("sampleEtherRequestGen")
-    prts = @ports (
-        @out @logic 48 destMacAddr;
-        @out @logic 16 etherType;
+# function sampleEtherRequestGen()
+#     v = Vmodule("sampleEtherRequestGen")
+#     prts = @ports (
+#         @out @logic 48 destMacAddr;
+#         @out @logic 16 etherType;
 
-        @out @logic 32 senderIp, targetIp;
+#         @out @logic 32 senderIp, targetIp;
 
-        @out @logic etherFrameCommandValid, arpReqCommandValid;
-        @in etherFrameCommandReady, arpReqCommandReady;
+#         @out @logic etherFrameCommandValid, arpReqCommandValid;
+#         @in etherFrameCommandReady, arpReqCommandReady;
 
-        @out @logic constHigh;
-        @out @logic 16 opcode;
-        @in btn;
-        @in CLK,RST;
-    )
-    params = @parameters (
-        addrlsb = 10
-    )
+#         @out @logic constHigh;
+#         @out @logic 16 opcode;
+#         @in btn;
+#         @in CLK,RST;
+#     )
+#     params = @parameters (
+#         addrlsb = 10
+#     )
 
-    al = @cpalways (
-        etherType = 0x0806;
-        senderIp = 0;
-        targetIp = 0xA9_FE_0A_00 | addrlsb;
-        destMacAddr = ~0;
-        constHigh = 1;
-        opcode = 1;
+#     al = @cpalways (
+#         etherType = 0x0806;
+#         senderIp = 0;
+#         targetIp = 0xA9_FE_0A_00 | addrlsb;
+#         destMacAddr = ~0;
+#         constHigh = 1;
+#         opcode = 1;
 
-        etherFrameCommandValid = ~etherFrameDone;
-        arpReqCommandValid = ~arpReqDone;
+#         etherFrameCommandValid = ~etherFrameDone;
+#         arpReqCommandValid = ~arpReqDone;
 
-        if etherFrameCommandReady & etherFrameCommandValid
-            etherFrameDone <= 1
-        elseif btn & etherFrameDone & arpReqDone
-            etherFrameDone <= 0
-        end;
+#         if etherFrameCommandReady & etherFrameCommandValid
+#             etherFrameDone <= 1
+#         elseif btn & etherFrameDone & arpReqDone
+#             etherFrameDone <= 0
+#         end;
 
-        if arpReqCommandReady & arpReqCommandValid
-            arpReqDone <= 1
-        elseif btn & etherFrameDone & arpReqDone
-            arpReqDone <= 0
-        end;            
-    )
+#         if arpReqCommandReady & arpReqCommandValid
+#             arpReqDone <= 1
+#         elseif btn & etherFrameDone & arpReqDone
+#             arpReqDone <= 0
+#         end;            
+#     )
 
-    vpush!.(v, (prts, params, al...))
+#     vpush!.(v, (prts, params, al...))
 
-    v = vfinalize(v)
-    wrapper = wrappergen(v)
-    vexport(v)
-    vexport("$(getname(wrapper)).v", wrapper)
-end
+#     v = vfinalize(v)
+#     wrapper = wrappergen(v)
+#     vexport(v)
+#     vexport("$(getname(wrapper)).v", wrapper)
+# end
 
 """
-    generateBufferSelector(num::Int)
+    generateBufferSelector(num::Int, name)
 
 Connect multiple EtherFrameTxBuffer to AXI function controller
 """
-function generateBufferSelector(num::Int)
+function generateBufferSelector(num::Int, name)
     width = 32
     depth = 8
     basePorts = @ports (
@@ -350,12 +350,12 @@ function generateBufferSelector(num::Int)
 
     aldebug = @cpalways (
         prev_debug_data <= debug_data;
-        debug_valid = ~(prev_debug_data == debug_data);
         # TODO: add debug
-        debug_data = 0
+        debug_data = 0;
+        debug_valid = ~(prev_debug_data == debug_data);
     )
 
-    v = Vmodule("BufferSelector$num")
+    v = Vmodule("TxBufferSelector$(num)_$name")
     vpush!(v, @ports (@in CLK,RST))
     vpush!(v, @ports (@out @logic debug_valid ; @out @logic 72 debug_data))
     vpush!.(v, ufpAll)

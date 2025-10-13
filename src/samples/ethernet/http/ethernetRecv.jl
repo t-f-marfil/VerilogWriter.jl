@@ -1,4 +1,4 @@
-function generateRecvBufferSelector()
+function generateRecvBufferSelector(name)
     depth = 8
     prts = @ports (
         @in CLK,RST;
@@ -119,7 +119,7 @@ function generateRecvBufferSelector()
         debug_valid = ~(prev_debug_data == debug_data);
     )
 
-    v = Vmodule("RecvBufferSelector_v2")
+    v = Vmodule("EtherRecvBufferSelector_$name")
     vpush!.(v, (prts, arpPorts, ipv4Ports))
     vpush!.(v, (fsm, alfsm, alio, alheadercomb, aldata, aldebug...))
 
