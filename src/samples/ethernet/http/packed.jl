@@ -1,5 +1,5 @@
 function generateLinkLocalIpClaimerSystem(probe_timeout_cycle, probe_initial_wait_cycle, second_announce_wait_cycle, name)
-    varp = generateArpMessageBlock("llipv4sys_$name")
+    varp, _ = generateArpMessageBlock("llipv4sys_$name")
     varptop = varp[begin]
     buf = generateBufferWithReadRandomAccess("llipv4sys_$name")
     linklocalipclaimer = generateLinkLocalIpClaimer(probe_timeout_cycle, probe_initial_wait_cycle, second_announce_wait_cycle, "llipv4sys_$name")
@@ -71,13 +71,13 @@ function generateLinkLocalIpClaimerSystem(probe_timeout_cycle, probe_initial_wai
     vall = layer2vmod!(g, false, name="linkLocalIpClaimerSystem_$name")
     append!(vall, varp[2:end])
 
-    return vall
+    return vall, g
 end
 
 function generateIcmpEchoServerSystem(name)
     recvParser = generateIcmpRecvParser("echosys_$name")
     echoServer = generateIcmpEchoServer("echosys_$name")
-    vmessage = generateEchoMessageBlock("echosys_$name")
+    vmessage, _ = generateEchoMessageBlock("echosys_$name")
     echoMessage = vmessage[begin]
 
     buf = generateBufferWithReadRandomAccess("echosys_$name")
@@ -197,7 +197,7 @@ function generateIcmpEchoServerSystem(name)
     vs = layer2vmod!(g, false, name="icmpEchoSystem_$name")
     append!(vs, vmessage[2:end])
     
-    return vs
+    return vs, g
 end
 
 
@@ -206,7 +206,7 @@ function generateSimpleTcpServerSystem(name)
 
     server = generateSimpleTcpServer("simTcpSrvSys_$name")
     rcvparser = generateTcpRecvParser("simTcpSrvSys_$name")
-    vsendblock = generateTcpPacketSendBlock("simTcpSrvSys_$name")
+    vsendblock, _ = generateTcpPacketSendBlock("simTcpSrvSys_$name")
     sender = vsendblock[begin]
 
     dummyIo = Vmodule("dummyio_tcpsrvsys_$name")
@@ -250,25 +250,9 @@ function generateSimpleTcpServerSystem(name)
         dfp_valid = ~(tx_trans_count == ether_trans_count)
     ))...)
 
-    # g(
-    #     server => dummyIo,
-    #     @pconnect (
-    #         dfp_rx_data => dummyin32_1,
-    #         dfp_rx_data_strb => dummyin2_1,
-    #         dfp_rx_data_valid => dummyin1_1,
-
-    #         ufp_tx_data_ready => dummyin1_2
-    #     )
-    # )
     g(
         dummyIo => server,
         @pconnect (
-            # dummyout1_1 => dfp_rx_data_ready,
-
-            # dummyout1_0 => ufp_tx_data_valid,
-            # dummyout1_0 => ufp_tx_data_last,
-            # dummyout32_0 => ufp_tx_data,
-
             dummyout16_80 => config_src_port
         )
     )
@@ -351,5 +335,5 @@ function generateSimpleTcpServerSystem(name)
     vall = layer2vmod!(g, false, name="TcpServerSystem_$name")
     append!(vall, vsendblock[2:end])
 
-    return vall
+    return vall, g
 end

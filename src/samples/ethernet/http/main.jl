@@ -22,17 +22,17 @@ function generateSimpleNetworkSystem(name)
     ### link local ip
     probe_timeout_cycle, probe_initial_wait_cycle, second_announce_wait_cycle = 13 << 23, 7 << 24, 14 << 23
     # probe_timeout_cycle, probe_initial_wait_cycle, second_announce_wait_cycle = 100, 100, 50 # for simulation
-    linkLocalIpClaimerVmods = generateLinkLocalIpClaimerSystem(probe_timeout_cycle, probe_initial_wait_cycle, second_announce_wait_cycle, name)
+    linkLocalIpClaimerVmods, _ = generateLinkLocalIpClaimerSystem(probe_timeout_cycle, probe_initial_wait_cycle, second_announce_wait_cycle, name)
     linkLocalIpClaimer = linkLocalIpClaimerVmods[begin]
     vmisc = vcat(vmisc, linkLocalIpClaimerVmods[2:end])
 
     ### ICMP Echo reply
-    icmpEchoServerVmods = generateIcmpEchoServerSystem(name)
+    icmpEchoServerVmods, _ = generateIcmpEchoServerSystem(name)
     icmpEchoServer = icmpEchoServerVmods[begin]
     vmisc = vcat(vmisc, icmpEchoServerVmods[2:end])
 
     ### tcp server
-    tcpServerVmods = generateSimpleTcpServerSystem(name)
+    tcpServerVmods, _ = generateSimpleTcpServerSystem(name)
     tcpServer = tcpServerVmods[begin]
     vmisc = vcat(vmisc, tcpServerVmods[2:end])
 
@@ -323,11 +323,11 @@ function generateSimpleNetworkSystem(name)
         )
     )
 
-    return g, vmisc
+    return vmisc, g
 end
 
 let
-    g, vmisc = generateSimpleNetworkSystem("1")
+    vmisc, g = generateSimpleNetworkSystem("1")
     vmods = layer2vmod!(g, false, name="SimpleNetworkSystem")
     vmods = vcat(vmods, vmisc)
 

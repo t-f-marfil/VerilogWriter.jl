@@ -142,7 +142,6 @@ function generateArpMessageGenerator(name)
 end
 
 function generateArpMessageBlock(name)
-    
     vbuf = generateEtherFrameTxBuffer("arp_$name")
     vethergen = generateEtherFrameGenerator("arp_$name")
     # varpreqgen = generateArpRequestGenerator()
@@ -181,5 +180,5 @@ function generateArpMessageBlock(name)
     )
     
     vs = layer2vmod!(g, false, name="ArpMessageBlock_$name")
-    return vs
+    return vs, g
 end

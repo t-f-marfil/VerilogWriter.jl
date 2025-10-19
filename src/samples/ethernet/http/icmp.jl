@@ -615,7 +615,7 @@ function generateEchoMessageBlock(name)
     )
 
     vs = layer2vmod!(g, false, name="IcmpEchoMessageBlock_$name")
-    return vs
+    return vs, g
 end
 
 function generateIcmpEchoServer(name)

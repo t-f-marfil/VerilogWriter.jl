@@ -745,7 +745,7 @@ function generateTcpPacketSendBlock(name)
     )
 
     vs = layer2vmod!(g, false, name="TcpPacketSendBlock_$name")
-    return vs
+    return vs, g
 end
 
 function generateSampleTcpSendCommand()
