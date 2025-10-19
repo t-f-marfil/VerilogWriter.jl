@@ -1,0 +1,102 @@
+@startuml
+
+class dummyio_llipv4sys_pu {
+- dummy72_1
+- dummy1_1
+- dummy13_1
+..
+- dummy72_2
+- dummy1_2
+..
+- CLK
+- RST
+}
+
+class randomReadAccessBuffer_llipv4sys_pu {
++ dfp_arready
++ dfp_rvalid
++ dfp_rinvalid
++ dfp_rdata
++ dfp_full
+..
++ debug_data
++ debug_valid
++ stored_length
+..
+- dfp_araddr
+- dfp_flush
+- dfp_arvalid
+..
++ ufp_wready
+..
+- CLK
+- RST
+- ufp_wvalid
+- ufp_wlast
+- ufp_wdata
+}
+
+class LinkLocalIpClaimer_llipv4sys_pu {
+- rx_arready
+- rx_rvalid
+- rx_rinvalid
+- rx_rdata
+- rx_full
+..
++ tx_destMacAddr
++ tx_etherType
++ tx_opcode
++ tx_senderIpAddr
++ tx_targetIpAddr
++ tx_etherFrameCommandValid
++ tx_arpReqCommandValid
+..
+- tx_etherFrameCommandReady
+- tx_arpReqCommandReady
+..
++ debug_data
++ debug_valid
+..
++ rx_araddr
++ rx_flush
++ rx_arvalid
+..
++ ip_addr_valid
++ ip_addr
+..
+- CLK
+- RST
+- start
+}
+
+class ArpMessageBlock_llipv4sys_pu {
+- destMacAddr
+- etherType
+- opcode
+- senderProtAddr
+- targetProtAddr
+- commandValid
+- arp_command_valid
+..
++ commandReady
++ arp_command_ready
+..
++ dfp_wlast
++ dfp_wvalid
++ dfp_awvalid
++ dfp_wdata
++ dfp_awlen
+..
+- dfp_awready
+- dfp_wready
+- CLK
+- RST
+}
+
+randomReadAccessBuffer_llipv4sys_pu::dfp_arready ---> LinkLocalIpClaimer_llipv4sys_pu::rx_arready
+LinkLocalIpClaimer_llipv4sys_pu::tx_destMacAddr ---> ArpMessageBlock_llipv4sys_pu::destMacAddr
+ArpMessageBlock_llipv4sys_pu::commandReady ---> LinkLocalIpClaimer_llipv4sys_pu::tx_etherFrameCommandReady
+randomReadAccessBuffer_llipv4sys_pu::debug_data ---> dummyio_llipv4sys_pu::dummy72_1
+LinkLocalIpClaimer_llipv4sys_pu::debug_data ---> dummyio_llipv4sys_pu::dummy72_2
+LinkLocalIpClaimer_llipv4sys_pu::rx_araddr ---> randomReadAccessBuffer_llipv4sys_pu::dfp_araddr
+@enduml

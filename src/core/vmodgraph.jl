@@ -446,7 +446,7 @@ function umlgen!(buf::IO, g::Vmodgraph)
         src_port_repr = port_groups[pg_src][end][begin]
         dest_port_repr = port_groups[pg_dest][end][begin]
 
-        write(buf, "$n_src::$src_port_repr --> $n_dest::$dest_port_repr\n")
+        write(buf, "$n_src::$src_port_repr ---> $n_dest::$dest_port_repr\n")
     end
 
     write(buf, "@enduml\n")

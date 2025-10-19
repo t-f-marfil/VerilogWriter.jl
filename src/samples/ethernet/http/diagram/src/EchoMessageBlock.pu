@@ -1,0 +1,105 @@
+@startuml
+
+class icmpEchoMessageGenerator_echo_pu {
+- dfp_ready
+- dfp_misc_ready
+..
++ dfp_data
++ dfp_valid
++ dfp_last
++ dfp_misc_valid
++ protocol
++ total_length
+..
++ ufp_misc_ready
++ ufp_ready
+..
+- CLK
+- RST
+- ufp_misc_valid
+- _type
+- code
+- identifier
+- sequence_number
+- total_length_data
+- checksum_data
+- ufp_valid
+- ufp_last
+- ufp_data
+}
+
+class IpPacketSimpleGenerator_echo_pu {
+- wready
+..
++ wready_out
++ ufp_misc_ready
+..
++ wdata
++ wvalid
++ wlast
++ etherType
+..
+- wdata_in
+- wvalid_in
+- wlast_in
+- ufp_misc_valid
+- protocol
+- totalLengthData
+..
++ ufp_addr_ready
+..
+- CLK
+- RST
+- ufp_addr_valid
+- sourceAddr
+- destAddr
+}
+
+class etherFrameTxBuffers_echo_pu {
+- ufp_valid
+- ufp_data
+- ufp_last
+..
++ ufp_ready
+..
++ dfp_wvalid
++ dfp_wdata
++ dfp_wlast
++ dfp_awlen
++ dfp_awvalid
+..
+- CLK
+- RST
+- dfp_wready
+- dfp_awready
+}
+
+class etherFrameGenerator_echo_pu {
++ wready_out
+..
++ wvalid
++ wdata
++ wlast
+..
+- wready
+..
+- wdata_in
+- wvalid_in
+- wlast_in
+- etherType
+..
++ commandReady
+..
+- CLK
+- RST
+- destMacAddr
+- commandValid
+}
+
+etherFrameGenerator_echo_pu::wready_out ---> IpPacketSimpleGenerator_echo_pu::wready
+IpPacketSimpleGenerator_echo_pu::wready_out ---> icmpEchoMessageGenerator_echo_pu::dfp_ready
+etherFrameGenerator_echo_pu::wvalid ---> etherFrameTxBuffers_echo_pu::ufp_valid
+etherFrameTxBuffers_echo_pu::ufp_ready ---> etherFrameGenerator_echo_pu::wready
+IpPacketSimpleGenerator_echo_pu::wdata ---> etherFrameGenerator_echo_pu::wdata_in
+icmpEchoMessageGenerator_echo_pu::dfp_data ---> IpPacketSimpleGenerator_echo_pu::wdata_in
+@enduml

@@ -1,0 +1,176 @@
+@startuml
+
+class icmpRecvParser_echosys_pu {
++ code
++ checksum
++ info_core_valid
+..
++ dfp_valid
++ dfp_last
++ dfp_data
+..
++ total_length_data
++ src_addr
++ dest_addr
++ no_data_payload
++ _type
++ identifier
++ sequence_number
++ checksum_data_only
++ info_valid
+..
+- info_ready
+..
+- dfp_ready
+..
++ ufp_ready
+..
+- CLK
+- RST
+- ufp_valid
+- ufp_last
+- ufp_data
+- ufp_src_addr
+- ufp_dest_addr
+- ufp_total_length_data
+}
+
+class dummyio_echosys_pu {
+- dummy8_1
+- dummy16_1
+- dummy1_1
+..
+- dummy1_2
+- dummy72_1
+..
+- CLK
+- RST
+}
+
+class IcmpEchoMessageBlock_echosys_pu {
++ ufp_addr_ready
++ commandReady
++ ufp_ready
++ ufp_misc_ready
+..
+- _type
+- code
+- total_length_data
+- sequence_number
+- identifier
+- checksum_data
+- ufp_misc_valid
+- ufp_valid
+- ufp_last
+- ufp_data
+- sourceAddr
+- destAddr
+- ufp_addr_valid
+- destMacAddr
+- commandValid
+..
++ dfp_wlast
++ dfp_wvalid
++ dfp_awvalid
++ dfp_wdata
++ dfp_awlen
+..
+- dfp_awready
+- dfp_wready
+- CLK
+- RST
+}
+
+class icmpEchoServer_echosys_pu {
+- rx_total_length_data
+- rx_src_ipaddr
+- rx_dest_ipaddr
+- rx_no_data_payload
+- rx_type
+- rx_identifier
+- rx_sequence_number
+- rx_checksum_data_only
+- rx_icmp_info_valid
+..
+- rx_data_arready
+- rx_data_valid
+- rx_data_invalid
+- rx_data
+- rx_data_full
+- rx_data_count
+..
+- tx_ipaddr_ready
+- tx_hwaddr_ready
+- tx_icmp_data_ready
+- tx_icmp_misc_ready
+..
++ rx_icmp_info_ready
+..
++ tx_type
++ tx_code
++ tx_total_length_data
++ tx_sequence_number
++ tx_identifier
++ tx_checksum_data_only
++ tx_icmp_misc_valid
++ tx_icmp_data_valid
++ tx_icmp_data_last
++ tx_icmp_data
++ tx_src_ipaddr
++ tx_dest_ipaddr
++ tx_ipaddr_valid
++ tx_dest_hwaddr
++ tx_hwaddr_valid
+..
++ rx_data_araddr
++ rx_data_arvalid
++ rx_data_flush
+..
++ debug_valid
++ debug_data
+..
+- CLK
+- RST
+- ip_addr_configured
+- configured_ip_addr
+- rx_src_hwaddr
+- rx_dest_hwaddr
+- rx_icmp_last
+}
+
+class randomReadAccessBuffer_echosys_pu {
+- ufp_wvalid
+- ufp_wlast
+- ufp_wdata
+..
++ debug_valid
++ debug_data
+..
++ dfp_arready
++ dfp_rvalid
++ dfp_rinvalid
++ dfp_rdata
++ dfp_full
++ stored_length
+..
++ ufp_wready
+..
+- dfp_araddr
+- dfp_arvalid
+- dfp_flush
+..
+- CLK
+- RST
+}
+
+icmpRecvParser_echosys_pu::code ---> dummyio_echosys_pu::dummy8_1
+icmpRecvParser_echosys_pu::dfp_valid ---> randomReadAccessBuffer_echosys_pu::ufp_wvalid
+randomReadAccessBuffer_echosys_pu::debug_valid ---> dummyio_echosys_pu::dummy1_2
+icmpRecvParser_echosys_pu::total_length_data ---> icmpEchoServer_echosys_pu::rx_total_length_data
+randomReadAccessBuffer_echosys_pu::dfp_arready ---> icmpEchoServer_echosys_pu::rx_data_arready
+IcmpEchoMessageBlock_echosys_pu::ufp_addr_ready ---> icmpEchoServer_echosys_pu::tx_ipaddr_ready
+icmpEchoServer_echosys_pu::rx_icmp_info_ready ---> icmpRecvParser_echosys_pu::info_ready
+icmpEchoServer_echosys_pu::tx_type ---> IcmpEchoMessageBlock_echosys_pu::_type
+randomReadAccessBuffer_echosys_pu::ufp_wready ---> icmpRecvParser_echosys_pu::dfp_ready
+icmpEchoServer_echosys_pu::rx_data_araddr ---> randomReadAccessBuffer_echosys_pu::dfp_araddr
+@enduml
