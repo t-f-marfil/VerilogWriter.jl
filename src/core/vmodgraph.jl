@@ -340,3 +340,116 @@ macro layerconn(arg)
     end
     Layerconn(OrderedSet(v))
 end
+
+
+"""
+    umlgen!(buf::IO, g::Vmodgraph)
+
+Generate PlantUML diagram to show connections between modules.
+"""
+function umlgen!(buf::IO, g::Vmodgraph)
+    # aggregate ports into one port group
+    port_group_index = 0
+    port_group_connection = Vector{Tuple{Tuple{String,Int},Tuple{String,Int}}}()
+    # false for input, true for output
+    port_groups = Dict{Int, Tuple{Bool, Vector{String}}}()
+    vmodule_name_to_groups = Dict{String, Vector{Int}}()
+
+    vmodule_name_to_port_name_to_connection_count = Dict{String, Dict{String, Int}}()
+
+    for v in g.vmods
+        vmodule_name_to_groups[getname(v)] = Int[]
+        vmodule_name_to_port_name_to_connection_count[getname(v)] = Dict([getname(p) => 0 for p in v.ports])
+    end
+
+    for ((src,dest), conn) in g.edges
+        pg_src = [p[begin] for p in conn.ports]
+        pg_dest = [p[end] for p in conn.ports]
+
+        for (ind,pn) in enumerate(pg_src)
+            count_value = vmodule_name_to_port_name_to_connection_count[getname(src)][pn]
+            if count_value > 0
+                pg_src[ind] = pn * "_$count_value"
+            end
+            vmodule_name_to_port_name_to_connection_count[getname(src)][pn] += 1
+        end
+        # no connection duplicate in input ports
+        for pn in pg_dest
+            vmodule_name_to_port_name_to_connection_count[getname(dest)][pn] += 1
+        end
+
+        push!(vmodule_name_to_groups[getname(src)], port_group_index)
+        push!(vmodule_name_to_groups[getname(dest)], port_group_index+1)
+
+        port_groups[port_group_index] = (true, pg_src)
+        port_groups[port_group_index+1] = (false, pg_dest)
+
+        push!(port_group_connection, ((getname(src), port_group_index), (getname(dest), port_group_index+1)))
+        port_group_index += 2
+    end
+
+    for v in g.vmods
+        port_name_to_connection_count = vmodule_name_to_port_name_to_connection_count[getname(v)]
+        
+        out_remainder = String[]
+        in_remainder = String[]
+
+        for p in v.ports
+            connection_count = port_name_to_connection_count[getname(p)]
+            if connection_count == 0
+                if getdirec(p) == pin
+                    push!(in_remainder, getname(p))
+                else
+                    push!(out_remainder, getname(p))
+                end
+            end
+        end
+
+        if length(out_remainder) > 0
+            port_groups[port_group_index] = (true, out_remainder)
+            push!(vmodule_name_to_groups[getname(v)], port_group_index)
+            port_group_index += 1
+        end
+
+        if length(in_remainder) > 0
+            port_groups[port_group_index] = (false, in_remainder)
+            push!(vmodule_name_to_groups[getname(v)], port_group_index)
+            port_group_index += 1
+        end
+    end
+
+    write(buf, "@startuml\n\n")
+    for (vn, gr) in vmodule_name_to_groups
+        write(buf, "class $vn {\n")
+        for (i, gind) in enumerate(gr)
+            direc, pg = port_groups[gind]
+
+            # true for output
+            if direc
+                for p in pg
+                    write(buf, "+ $p\n")
+                end
+            else
+                for p in pg
+                    write(buf, "- $p\n")
+                end
+            end
+
+            if i != length(gr)
+                write(buf, "..\n")
+            end
+        end
+        write(buf, "}\n\n")
+    end
+
+    for ((n_src, pg_src), (n_dest, pg_dest)) in port_group_connection
+        src_port_repr = port_groups[pg_src][end][begin]
+        dest_port_repr = port_groups[pg_dest][end][begin]
+
+        write(buf, "$n_src::$src_port_repr --> $n_dest::$dest_port_repr\n")
+    end
+
+    write(buf, "@enduml\n")
+
+    return nothing
+end

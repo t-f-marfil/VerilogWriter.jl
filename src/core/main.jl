@@ -70,7 +70,7 @@ macro exportCore()
 
         # Vmodgraph
         export
-            Vmodgraph, Layerconn, @pconnect, dotgen, layer2vmod!
+            Vmodgraph, Layerconn, @pconnect, dotgen, layer2vmod!, umlgen!
 
         export
             uartRecv, uartSend

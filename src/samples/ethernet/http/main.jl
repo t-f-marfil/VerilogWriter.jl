@@ -337,7 +337,7 @@ let
     wrapper = wrappergen(vmods[begin])
     vexport("$(getname(wrapper)).v", wrapper)
 
-    txt = dotgen(g, dpi=196)
-    cmd = `dot -Tpng -oSimpleNetworkSystem.png`
-    run(pipeline(cmd, stdin=IOBuffer(txt)))
+    open("$(getname(vmods[begin])).pu", "w") do io
+        umlgen!(io, g)
+    end
 end
