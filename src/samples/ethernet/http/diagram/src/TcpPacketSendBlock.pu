@@ -1,0 +1,115 @@
+@startuml
+
+class tcpPacketGenerator_tcptx_pu {
++ dfp_data
++ dfp_data_valid
++ dfp_data_last
++ dfp_misc_valid
++ protocol
++ dfp_total_length_data_only
++ dfp_addr_valid
++ dfp_src_addr
++ dfp_dest_addr
+..
+- dfp_data_ready
+- dfp_misc_ready
+- dfp_addr_ready
+..
++ ufp_misc_ready
++ ufp_data_ready
++ debug_valid
++ debug_data
+..
+- CLK
+- RST
+- ufp_misc_valid
+- src_addr
+- dest_addr
+- src_port
+- dest_port
+- seq_number
+- ack_number
+- flags
+- window
+- urg_pointer
+- checksum_data_only
+- total_length_data_only
+- ufp_data_valid
+- ufp_data_last
+- ufp_data
+}
+
+class IpPacketSimpleGenerator_tcptx_pu {
+- wready
+..
+- wdata_in
+- wvalid_in
+- wlast_in
+- ufp_misc_valid
+- protocol
+- totalLengthData
+- ufp_addr_valid
+- sourceAddr
+- destAddr
+..
++ wready_out
++ ufp_misc_ready
++ ufp_addr_ready
+..
++ wdata
++ wvalid
++ wlast
++ etherType
+..
+- CLK
+- RST
+}
+
+class etherFrameTxBuffers_tcptx_pu {
++ ufp_ready
+..
+- ufp_valid
+- ufp_data
+- ufp_last
+..
++ dfp_wvalid
++ dfp_wdata
++ dfp_wlast
++ dfp_awlen
++ dfp_awvalid
+..
+- CLK
+- RST
+- dfp_wready
+- dfp_awready
+}
+
+class etherFrameGenerator_tcptx_pu {
+- wready
+..
++ wvalid
++ wdata
++ wlast
+..
++ wready_out
+..
+- wdata_in
+- wvalid_in
+- wlast_in
+- etherType
+..
++ commandReady
+..
+- CLK
+- RST
+- destMacAddr
+- commandValid
+}
+
+etherFrameTxBuffers_tcptx_pu::ufp_ready ---> etherFrameGenerator_tcptx_pu::wready
+etherFrameGenerator_tcptx_pu::wvalid ---> etherFrameTxBuffers_tcptx_pu::ufp_valid
+etherFrameGenerator_tcptx_pu::wready_out ---> IpPacketSimpleGenerator_tcptx_pu::wready
+tcpPacketGenerator_tcptx_pu::dfp_data ---> IpPacketSimpleGenerator_tcptx_pu::wdata_in
+IpPacketSimpleGenerator_tcptx_pu::wready_out ---> tcpPacketGenerator_tcptx_pu::dfp_data_ready
+IpPacketSimpleGenerator_tcptx_pu::wdata ---> etherFrameGenerator_tcptx_pu::wdata_in
+@enduml

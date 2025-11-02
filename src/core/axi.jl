@@ -1,4 +1,4 @@
-function generateAxiLitePort(addrlen, datalen, isManager, suffix)
+function generateAxiLitePort(addrlen, datalen, isManager::Bool, suffix)
     datalen % 8 == 0 || error("datalen $datalen is not multiple of eight")
     strblen = Int(datalen / 8)
 
@@ -45,6 +45,55 @@ function generateAxiLitePort(addrlen, datalen, isManager, suffix)
     end
 
     return ans
+end
+
+function generateAxi4Port(addrlen, datalen, idlen, userlen, isManager, suffix)
+    # Manager side port
+    axi4ports = @ports (
+        @out @logic $idlen awid;
+        @out @logic 8 awlen;
+        @out @logic 3 awsize;
+        @out @logic 2 awburst;
+        @out @logic 2 awlock;
+        @out @logic 4 awcache;
+        @out @logic 3 awprot;
+        @out @logic 4 awqos;
+        @out @logic 4 awregion;
+        @out @logic $userlen awuser;
+        
+        @out @logic wlast;
+        @out @logic $userlen wuser;
+        
+        @in $idlen bid;
+        @in $userlen buser;
+
+        @out @logic $idlen arid;
+        @out @logic 8 arlen;
+        @out @logic 3 arsize;
+        @out @logic 2 arburst;
+        @out @logic 2 arlock;
+        @out @logic 4 arcache;
+        @out @logic 3 arprot;
+        @out @logic 4 arqos;
+        @out @logic 4 arregion;
+        @out @logic $userlen aruser;
+
+        @in $idlen rid;
+        @in rlast;
+        @in $userlen ruser;
+    )
+
+    result = generateAxiLitePort(addrlen, datalen, true, "")
+
+    vpush!(result, axi4ports)
+
+    if !isManager
+        result = invports(result)
+    end
+
+    result = Ports([vrename(p, string(getname(p), suffix)) for p in result])
+
+    return result
 end
 
 function addAxiLitePort!(v, addrlen, datalen, isManager)

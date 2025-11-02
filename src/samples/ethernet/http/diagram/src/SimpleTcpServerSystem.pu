@@ -1,0 +1,171 @@
+@startuml
+
+class TcpPacketSendBlock_simTcpSrvSys_pu {
++ commandReady
++ ufp_misc_ready
+..
++ ufp_misc_ready_1
++ ufp_data_ready
+..
+- commandValid
+- destMacAddr
+..
+- ufp_misc_valid
+- src_addr
+- dest_addr
+- src_port
+- dest_port
+- seq_number
+- ack_number
+- flags
+- window
+- urg_pointer
+- checksum_data_only
+- total_length_data_only
+- ufp_data_valid
+- ufp_data_last
+- ufp_data
+..
++ dfp_wlast
++ dfp_wvalid
++ dfp_awvalid
++ dfp_wdata
++ dfp_awlen
++ debug_valid
++ debug_data
+..
+- dfp_awready
+- dfp_wready
+- CLK
+- RST
+}
+
+class dummyio_tcpsrvsys_pu {
++ dummyout16_80
+..
+- CLK
+- RST
+}
+
+class macLoopBack_tcpsrvsys_pu {
+- dfp_ready
+- tx_misc_ready
+..
++ dfp_valid
++ dfp_hwaddr
+..
+- tx_misc_valid
+..
+- CLK
+- RST
+- ufp_hwaddr_valid
+- ufp_hwaddr
+}
+
+class TcpRecvParser_simTcpSrvSys_pu {
++ dfp_valid
++ dfp_last
++ dfp_data
++ src_addr
++ dest_addr
++ dfp_no_data_payload
++ src_port
++ dest_port
++ seq_number
++ ack_number
++ flags
++ window
++ checksum
++ urg_pointer
++ payload_length
++ info_valid
+..
+- info_ready
+- dfp_ready
+..
++ ufp_ready
++ debug_valid_rcvparse
++ debug_data_rcvparse
+..
+- CLK
+- RST
+- ufp_valid
+- ufp_last
+- ufp_data
+- ufp_src_addr
+- ufp_dest_addr
+- ufp_total_length_data
+}
+
+class SimpleTcpServer_simTcpSrvSys_pu {
+- tx_misc_ready
+- tx_data_ready
+..
++ tx_misc_valid
+..
+- rx_data_valid
+- rx_data_last
+- rx_data
+- rx_src_addr
+- rx_dest_addr
+- rx_no_data_payload
+- rx_src_port
+- rx_dest_port
+- rx_seq_number
+- rx_ack_number
+- rx_flags
+- rx_window
+- rx_checksum
+- rx_urg_pointer
+- rx_payload_length
+- rx_misc_valid
+..
++ tx_misc_valid_1
++ tx_src_addr
++ tx_dest_addr
++ tx_src_port
++ tx_dest_port
++ tx_seq_number
++ tx_ack_number
++ tx_flags
++ tx_window
++ tx_urg_pointer
++ tx_checksum_data_only
++ tx_total_length_data_only
++ tx_data_valid
++ tx_data_last
++ tx_data
+..
+- config_src_port
+..
++ rx_misc_ready
++ rx_data_ready
+..
++ dfp_rx_data
++ dfp_rx_data_strb
++ dfp_rx_data_valid
++ ufp_tx_data_ready
++ debug_valid_srv
++ debug_data_srv
+..
+- CLK
+- RST
+- config_valid
+- config_src_addr
+- dfp_rx_data_ready
+- ufp_tx_data
+- ufp_tx_data_valid
+- ufp_tx_data_last
+- ufp_tx_checksum_data_only
+- ufp_tx_total_length_data_only
+}
+
+TcpPacketSendBlock_simTcpSrvSys_pu::commandReady ---> macLoopBack_tcpsrvsys_pu::dfp_ready
+TcpPacketSendBlock_simTcpSrvSys_pu::ufp_misc_ready_1 ---> SimpleTcpServer_simTcpSrvSys_pu::tx_misc_ready
+macLoopBack_tcpsrvsys_pu::dfp_valid ---> TcpPacketSendBlock_simTcpSrvSys_pu::commandValid
+SimpleTcpServer_simTcpSrvSys_pu::tx_misc_valid ---> macLoopBack_tcpsrvsys_pu::tx_misc_valid
+TcpRecvParser_simTcpSrvSys_pu::dfp_valid ---> SimpleTcpServer_simTcpSrvSys_pu::rx_data_valid
+SimpleTcpServer_simTcpSrvSys_pu::tx_misc_valid_1 ---> TcpPacketSendBlock_simTcpSrvSys_pu::ufp_misc_valid
+dummyio_tcpsrvsys_pu::dummyout16_80 ---> SimpleTcpServer_simTcpSrvSys_pu::config_src_port
+SimpleTcpServer_simTcpSrvSys_pu::rx_misc_ready ---> TcpRecvParser_simTcpSrvSys_pu::info_ready
+@enduml

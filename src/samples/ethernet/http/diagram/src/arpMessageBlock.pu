@@ -1,0 +1,65 @@
+@startuml
+
+class ArpMessageGenerator_arp_pu {
++ wdata
++ wvalid
++ wlast
+..
+- wready
+..
++ arp_command_ready
+..
+- CLK
+- RST
+- senderProtAddr
+- targetProtAddr
+- opcode
+- arp_command_valid
+}
+
+class etherFrameGenerator_arp_pu {
+- wdata_in
+- wvalid_in
+- wlast_in
+..
+- wready
+..
++ wready_out
+..
++ wvalid
++ wdata
++ wlast
+..
++ commandReady
+..
+- CLK
+- RST
+- destMacAddr
+- etherType
+- commandValid
+}
+
+class etherFrameTxBuffers_arp_pu {
++ ufp_ready
+..
+- ufp_valid
+- ufp_data
+- ufp_last
+..
++ dfp_wvalid
++ dfp_wdata
++ dfp_wlast
++ dfp_awlen
++ dfp_awvalid
+..
+- CLK
+- RST
+- dfp_wready
+- dfp_awready
+}
+
+ArpMessageGenerator_arp_pu::wdata ---> etherFrameGenerator_arp_pu::wdata_in
+etherFrameTxBuffers_arp_pu::ufp_ready ---> etherFrameGenerator_arp_pu::wready
+etherFrameGenerator_arp_pu::wready_out ---> ArpMessageGenerator_arp_pu::wready
+etherFrameGenerator_arp_pu::wvalid ---> etherFrameTxBuffers_arp_pu::ufp_valid
+@enduml

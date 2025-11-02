@@ -45,7 +45,7 @@ Using, for example, Graphviz, the graph below would be generated.
 
 ## Connect Ports between Verilog Modules
 
-The connection in the example above connected Vmodule `a` and `b`. However, there is no data transaction available between the modules. You may explicitly register name of ports to be connected between `Vmodule`s. Here we construct new connection from Midmodule `a` to `c`.
+The connection in the example above connected Vmodule `a` and `b`. However, there is no data transaction available between the modules. You may explicitly register name of ports to be connected between `Vmodule`s. Here we construct new connection from Vmodule `a` to `c`.
 
 ```jldoctest m1
 julia> c = Vmodule("c");
@@ -53,7 +53,7 @@ julia> c = Vmodule("c");
 julia> g(a => c, @pconnect dout => din);
 ```
 
-Here we declared the connection between `a` and `c`. Note that at this time the Midmodules do not contain ports declared here. You also need to add the ports to each Midmodule object.
+Here we declared the connection between `a` and `c`. Note that at this time the Vmodules do not contain ports declared here. You also need to add the ports to each Vmodule object.
 
 ```jldoctest m1
 julia> vpush!(a, @ports @out @logic 8 dout);

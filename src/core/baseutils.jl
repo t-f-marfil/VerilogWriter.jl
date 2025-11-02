@@ -154,6 +154,9 @@ end
 #     length(iter.val)
 # end
 @valIterBcast Ports
+function Base.getindex(p::Ports, key...)
+    return getindex(p.val, key...)
+end
 
 @nonIternonBcast Onelocalparam
 

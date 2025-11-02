@@ -430,11 +430,11 @@ function vexport(io::IO, x::Vector{Vmodule})
 end
 
 """
-    portsNameMod(prts::Ports, namemod)
+    renamedPorts(prts::Ports, namemod)
 
 Return a new `Ports` object whose `Oneport` objects' name is modified
-by `namemod` function.
+by `namemod` method.
 """
-function portsNameMod(prts::Ports, namemod)
+function renamedPorts(prts::Ports, namemod)
     return Ports([Oneport(p.direc, p.wtype, p.width, namemod(p.name)) for p in prts])
 end
