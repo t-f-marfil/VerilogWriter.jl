@@ -34,9 +34,9 @@ function generateAsciiEncoderForServer()
 end
 
 
-function generateAxiControllerForEtherCore()
+function generateAxiControllerForEtherCore(name)
     prts = VerilogWriter.Core.generateAxi4Port(13, 32, 4, 4, true, "")
-    v = Vmodule("EtherCoreAxiController")
+    v = Vmodule("EtherCoreAxiController_$name")
 
     vpush!(v, prts)
 
@@ -160,8 +160,8 @@ function generateAxiControllerForEtherCore()
     return v
 end
 
-function generateEtherCoreController()
-    v = Vmodule("EtherCoreFunctionController")
+function generateEtherCoreController(name)
+    v = Vmodule("EtherCoreFunctionController_$name")
 
     debug_width = 64 + 8
 
@@ -653,11 +653,11 @@ function generateEtherCoreController()
     return v
 end
 
-function generateServerAll()
+function generateEtherLiteControllerAll(name)
     g = Vmodgraph()
 
-    v_axi_controller = generateAxiControllerForEtherCore()
-    v_func_controller = generateEtherCoreController()
+    v_axi_controller = generateAxiControllerForEtherCore(name)
+    v_func_controller = generateEtherCoreController(name)
 
     g(
         v_func_controller => v_axi_controller,
@@ -690,47 +690,5 @@ function generateServerAll()
         )
     )
 
-    vs = layer2vmod!(g, name="EtherCoreSimpleInterface")
-    vs = vfinalize(vs)
-    vexport(vs)
-
-
-    wrapper_raw = wrappergen(vs[begin])
-
-    vwrapper = Vmodule("EtherCoreSimpleInterface_wrapper")
-    vpush!(vwrapper, wrapper_raw.insts)
-
-    axi_controller_name = getname(v_axi_controller)
-
-    for p in wrapper_raw.ports
-        if occursin("$axi_controller_name", getname(p))
-            newname = replace(getname(p), "_$axi_controller_name" => "")
-            newp = Oneport(p.direc, p.direc == pin ? p.wtype : reg, p.width, newname)
-            vpush!(vwrapper, newp)
-
-            if p.direc == pin
-                vpush!(vwrapper, @always (
-                    $(getname(p)) = $(getname(newp))
-                ))
-                vpush!(vwrapper, @decls @reg $(p.width) $(getname(p)))
-            else
-                vpush!(vwrapper, @always (
-                    $(getname(newp)) = $(getname(p))
-                ))
-                vpush!(vwrapper, @decls @wire $(p.width) $(getname(p)))
-            end
-        else
-            vpush!(vwrapper, p)
-        end
-    end
-    
-    vwrapper = vfinalize(vwrapper)
-    open("$(getname(vwrapper)).v", "w") do io
-        write(io, string(vwrapper, false))
-    end
-
-    dot = dotgen(g)
-    txt = dot
-    cmd = `dot -Tpng -oEtherCoreController.png`
-    run(pipeline(cmd, stdin=IOBuffer(txt)))
+    return g
 end

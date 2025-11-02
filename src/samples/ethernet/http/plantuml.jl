@@ -1,4 +1,9 @@
 let
+    open("samples/ethernet/http/diagram/src/EtherCoreSimpleInterface.pu", "w") do io
+        g = generateEtherLiteControllerAll("pu")
+        umlgen!(io, g)
+    end
+
     open("samples/ethernet/http/diagram/src/ArpMessageBlock.pu", "w") do io
         _, g = generateArpMessageBlock("pu")
         umlgen!(io, g)

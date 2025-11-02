@@ -20,6 +20,9 @@ function docgen(prettyurls)
                 "Module Connection" => "vmodgraph.md",
                 "Reference" => "reference.md",
             ],
+            "Samples" => [
+                "HTTP" => "samples/ethernet/http.md",
+            ],
             "Release Note" => "release.md",
         ],
         warnonly = [:missing_docs],
